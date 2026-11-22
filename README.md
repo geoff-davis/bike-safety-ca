@@ -51,7 +51,7 @@ streets.
 
 ## An interactive crash map
 
-[![The crash movement map on the demo city: intersections coloured by the worst injury, with the most common crash patterns listed beside the map](docs/images/demo_crash_map.png)](docs/demo/crash_movement_map.html)
+[![The crash movement map on the demo city: intersections coloured by the worst injury, with the most common crash patterns listed beside the map](docs/images/demo_crash_map.png)](https://geoff-davis.github.io/bike-safety-ca/demo/crash_movement_map.html)
 
 A single-file map of the bike injury crashes police recorded (from TIMS and
 the state's crash records) that can be placed on the map. Zoomed out, each
@@ -73,9 +73,9 @@ cyclist going straight north and a car turning right across them.
 
 ![A collision diagram at one demo corner, showing five right-hook crashes drawn as arrows](docs/images/demo_collision_diagram.png)
 
-To try it, download
-[`docs/demo/crash_movement_map.html`](docs/demo/crash_movement_map.html) and
-open it in a browser; it works offline.
+[Open the demo map](https://geoff-davis.github.io/bike-safety-ca/demo/crash_movement_map.html) in a browser. It is one file,
+[`docs/demo/crash_movement_map.html`](docs/demo/crash_movement_map.html) in
+the repository, and works offline once downloaded.
 
 Before comparing years, a reporting check flags police departments whose
 crash counts rose or fell abruptly. A flag is not proof, since real crashes
