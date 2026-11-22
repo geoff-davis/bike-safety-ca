@@ -17,9 +17,9 @@ lint: ## lint, check formatting and check the notebook
 typecheck: ## run mypy
 	uv run --locked mypy
 test: ## run the tests with coverage, without the slow ones
-	uv run --locked pytest -q --cov
+	uv run --locked pytest -q -n 4 --cov
 test-all: ## run every test, the slow ones too (as CI does)
-	uv run --locked pytest -q --cov -m ''
+	uv run --locked pytest -q -n 4 --cov -m ''
 # Separate recursive calls keep this order under make -j: a failed cheap check
 # stops before the tests start.
 check: ## all local quality gates

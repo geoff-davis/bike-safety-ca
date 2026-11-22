@@ -79,8 +79,11 @@ jobs:
           for i in 1 2 3; do uv sync --locked && break; echo "retry $i"; sleep 10; done
           uv sync --locked
 
+      # Four pytest-xdist workers: the runners have four cores, and more workers
+      # were slower even on a 32-core laptop. conftest.py gives each worker one
+      # numerical thread.
       - name: Test, the slow tests included
-        run: uv run --locked pytest -q --cov -m ''
+        run: uv run --locked pytest -q -n 4 --cov -m ''
 
       - name: Hold-out check on the synthetic city
         run: uv run --locked python -m bike_safety_ca.checks.holdout --synthetic
