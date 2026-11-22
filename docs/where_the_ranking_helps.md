@@ -535,7 +535,19 @@ Berkeley's shortfall against the model's own simulated score is small (about
 0.02 of rank score, see above), but the misplaced streets are specific. If the Berkeley
 reading is right, the model needs a measure of where people
 ride, such as a bike-route layer, or a weight on car crashes that can differ
-by city. Neither has been tried. The hold-out does not yet report how car crashes
+by city. The weight has not been tried. A bike-route layer has, from today's
+OpenStreetMap (`python -m bike_safety_ca.checks.bike_routes`): each
+intersection is marked as on a bike lane or track, on a mapped bike route
+without one, or neither, and the model is refitted with the two marks. In
+seven cities (Menlo Park, Palo Alto, Mountain View, Berkeley, Davis, Santa
+Monica, San Francisco; 20 windows, one of Menlo Park's being left to the
+blend), corners on a bike lane had 1.3 to 2.6 times the bike crashes the
+model expected (1.6 or more outside Menlo Park), and the marks fitted better in nearly every window (p below
+0.01 in 17). But the rankings barely moved: the rank score rose by 0.002 to
+0.012 in 16 windows and fell by up to 0.005 in four, two of them Davis's.
+Lanes draw riders, so the mark mostly measures where people ride, which the
+street's bike history already carries; it does not say that lanes are
+dangerous. The marks come from today's map applied to past years. The hold-out does not yet report how car crashes
 alone rank later bike crashes, which is the figure that set Berkeley apart.
 Until then, in a city where many people ride on streets away from the main
 car routes, treat the ranking of the car arterials with caution and look at
