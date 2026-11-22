@@ -137,6 +137,7 @@ def fit_street_model(
     pull: float = 20.0,
     car_pull: float = 1.0,
     spread_power: float | None = None,
+    extra: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Fit expected bike crashes to the street's bike record and the corner's car record.
 
@@ -154,9 +155,16 @@ def fit_street_model(
     record count for more where little is expected).  Each intersection's own
     bike count is then blended in with ``gamma_blend``.
 
+    ``extra`` adds columns to the fit as they are (not logged), one row per
+    intersection, for trying another term such as a 0/1 flag: its fitted
+    coefficient multiplies the expectation by ``exp(coefficient)`` where the
+    column is 1.
+
     Returns the per-site table (``observed``, ``predicted``, ``prior_shape``
-    and the blend ``eb`` to rank by), the fitted ``powers``, ``spread_power``,
-    ``alpha``, ``car_shape`` and the AIC.  Raises if the fit does not converge.
+    and the blend ``eb`` to rank by), the fitted ``powers`` (the coefficients
+    of the terms and of any ``extra`` columns), ``spread_power``, ``alpha``,
+    ``car_shape``, the AIC and the log-likelihood.  Raises if the fit does not
+    converge.
     """
     bike = bike.astype(float)
     car = car.reindex(bike.index).astype(float)
@@ -168,6 +176,8 @@ def fit_street_model(
             "car": np.log(gamma_blend(car, car_street, car_shape)),
         }
     )
+    if extra is not None:
+        terms = pd.concat([terms, extra.reindex(bike.index).astype(float)], axis=1)
     count = bike.to_numpy()
     design = np.column_stack([np.ones(len(terms)), terms.to_numpy()])
     fitted_power = spread_power is None
@@ -198,6 +208,7 @@ def fit_street_model(
         "alpha": alpha,
         "car_shape": car_shape,
         "aic": 2 * (len(coefficients) + 1 + fitted_power) - 2 * log_likelihood,
+        "log_likelihood": log_likelihood,
     }
 
 

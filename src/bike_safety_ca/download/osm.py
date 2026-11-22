@@ -52,20 +52,22 @@ def build_query(bounds: Bounds, date: str | None = None) -> str:
     )
 
 
-def check(body: dict[str, Any]) -> None:
+def check(body: dict[str, Any], require_elements: bool = True) -> None:
     """Refuse a reply that is not a whole street extract.
 
     Overpass answers a query that timed out or ran out of memory with HTTP 200:
     a ``remark`` giving the reason, and whatever elements it had by then.
+    ``require_elements`` False accepts an empty answer, for a query that may
+    rightly find nothing.
     """
     if body.get("remark"):
         raise ValueError(f"Overpass did not finish the query ({body['remark']})")
-    if not body.get("elements"):
+    if require_elements and not body.get("elements"):
         raise ValueError("Overpass returned no streets for the area")
 
 
 @retry(stop=stop_after_attempt(4), wait=wait_exponential(min=10, max=120), reraise=True)
-def run(query: str) -> dict[str, Any]:
+def run(query: str, require_elements: bool = True) -> dict[str, Any]:
     last: Exception | None = None
     for url in OVERPASS:
         try:
@@ -75,7 +77,7 @@ def run(query: str) -> dict[str, Any]:
                 )
                 response.raise_for_status()
                 body: dict[str, Any] = response.json()
-                check(body)
+                check(body, require_elements)
                 return body
         except Exception as error:  # noqa: BLE001
             last = error
