@@ -40,7 +40,7 @@ repos:
         files: ^(pyproject\.toml|uv\.lock)$
       - id: pytest
         name: pytest (without the slow tests; CI runs them)
-        entry: uv run --locked pytest -q
+        entry: uv run --locked pytest -q -n 4
         language: system
         pass_filenames: false
         always_run: true
