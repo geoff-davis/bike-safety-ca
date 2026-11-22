@@ -7,7 +7,7 @@ the other intersections on the same named streets have had.
 
 ``rank_intersections`` is the entry point: it uses ``fit_street_model`` and
 falls back to ``street_blend_score`` when there are too few crashes to fit.
-``fit_street_model`` is the main method; ``docs/crash_history_method.md`` gives
+``fit_street_model`` is the main method; ``docs/forecasting_model.md`` gives
 the argument for its form.  ``street_blend_score`` is a score that needs no
 fitting, and ``fit_history_model`` an earlier fitted formula kept for
 comparison.
