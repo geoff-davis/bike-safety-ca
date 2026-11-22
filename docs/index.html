@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bike-safety-ca</title>
+  <meta name="description" content="Bicycle injuries in California: county hospital reports, a crash map and an intersection ranking, from public records.">
+  <style>
+    :root { --bg: #fff; --fg: #1d1d1f; --muted: #5a5a60; --link: #0b57d0; --rule: #ddd; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #141416; --fg: #ececee; --muted: #a4a4ab; --link: #8ab4f8; --rule: #333; }
+    }
+    body { background: var(--bg); color: var(--fg); margin: 0;
+           font: 17px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 16px 3rem; }
+    h1 { font-size: 1.7rem; margin: 0 0 .25rem; }
+    h2 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
+    p.lede { color: var(--muted); margin-top: 0; }
+    a { color: var(--link); }
+    ul { padding-left: 1.2rem; }
+    li { margin: .35rem 0; }
+    img { max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 4px; }
+    footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+             color: var(--muted); font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>bike-safety-ca</h1>
+  <p class="lede">How often people on bikes end up in hospital in a California county,
+    where the crashes were, and where to look next.</p>
+
+  <p>The code turns public records (state hospital counts, police crash reports and
+    OpenStreetMap) into a county hospital report, an interactive crash map and a
+    ranking of intersections by expected bike crashes. The samples here are made
+    from made-up data.</p>
+
+  <h2>Try it</h2>
+  <a href="demo/crash_movement_map.html"><img src="images/demo_crash_map.png"
+     width="1400" height="900"
+     alt="The crash movement map on the demo city: intersections coloured by the worst injury"></a>
+  <ul>
+    <li><a href="demo/crash_movement_map.html">The crash movement map</a> on a demo
+      city: real Claremont streets and made-up crashes. One file; it works offline.</li>
+    <li><a href="demo/hospital_sample.pdf">A sample county hospital report</a> (PDF):
+      the real report code on made-up counts for an invented county.</li>
+  </ul>
+
+  <h2>Read more</h2>
+  <ul>
+    <li><a href="https://github.com/geoff-davis/bike-safety-ca">The repository</a>,
+      with how to install and run it</li>
+    <li><a href="https://github.com/geoff-davis/bike-safety-ca/blob/main/docs/guide.md">The guide</a>:
+      every step, from downloading records to the report</li>
+    <li><a href="https://github.com/geoff-davis/bike-safety-ca/blob/main/docs/where_the_ranking_helps.md">Where
+      the ranking helps most and least</a></li>
+    <li><a href="https://github.com/geoff-davis/bike-safety-ca/blob/main/docs/case_study_los_altos.md">Case
+      study: Los Altos</a></li>
+  </ul>
+
+  <footer>Demo map streets © OpenStreetMap contributors (ODbL 1.0). Code under the MIT
+    licence.</footer>
+</main>
+</body>
+</html>

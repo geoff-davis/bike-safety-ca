@@ -3,6 +3,11 @@
 Everything here is made from made-up data and can be shown freely. Nothing
 comes from a police record or from CDPH.
 
+They are also served by GitHub Pages: the
+[crash movement map](https://geoff-davis.github.io/bike-safety-ca/demo/crash_movement_map.html)
+and the
+[sample hospital report](https://geoff-davis.github.io/bike-safety-ca/demo/hospital_sample.pdf).
+
 | File | What it is | How it was made |
 |---|---|---|
 | `crash_movement_map.html` | The crash movement map on the demo city: real Claremont streets (OpenStreetMap, © OpenStreetMap contributors, ODbL 1.0) and made-up crashes. One file; opens offline. | `python -m bike_safety_ca.demo --out <folder>`, then `python -m bike_safety_ca.report map --config config/demo_claremont.yaml --crashes <folder>/processed/crashes --processed <folder>/processed --out <out> --offline` |
