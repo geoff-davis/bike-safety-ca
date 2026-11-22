@@ -18,3 +18,9 @@ ccrs_cities:
   - Los Altos
 latitude: [36.0, 38.5]
 longitude: [-123.0, -120.5]
+# Reports filed under another agency's code, as in config/los_altos.yaml. From
+# 2023 some Los Altos PD (4305) reports carry Palo Alto PD's code (4312); they
+# are recognised by a Los Altos beat or a Los Altos city location. Without
+# this the reporting check reads Los Altos PD as filing nothing from 2024.
+agency_reassignments:
+  - {filed_as: "4312", agency: "4305", beat_prefix: LA, city: Los Altos, from_year: 2023}

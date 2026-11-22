@@ -35,8 +35,10 @@ package = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # A hung test fails instead of running to the CI job cap, and dumps stacks.
-timeout = 60
-faulthandler_timeout = 120
+# CI runners are about three times slower than a laptop: 180 s leaves room for
+# the 18 s demo tests (one passed 60 s on a 3.12 runner, 2026-11-22).
+timeout = 180
+faulthandler_timeout = 300
 markers = ["slow: takes most of a minute (deselected by default; `make test-all` runs it)"]
 addopts = "-m 'not slow'"
 filterwarnings = [
