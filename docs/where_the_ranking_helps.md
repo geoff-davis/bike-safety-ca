@@ -561,12 +561,12 @@ name in brackets, which is the one crash reports use. Other differences
 ### When the street download fails
 
 The public Overpass servers were unavailable for much of the test, and
-refused San Diego's area outright. The
-network step uses a street file that is already in place, so the streets can
-be cut from a regional OpenStreetMap extract instead and saved in the same
-form, with the metadata note the download writes. Cut from an extract a day
-older than the server's copy, Mountain View's streets differed only by that
-day's edits.
+refused San Diego's area outright. The streets can be cut from a regional
+OpenStreetMap extract instead, with the network step's `--extract` option
+(see "The area and its streets" in `docs/guide.md`), and are saved in the
+same form, with the metadata note the download writes. Cut from an extract a
+day older than the server's copy, Mountain View's streets differed only by
+that day's edits.
 
 ## Data credits
 

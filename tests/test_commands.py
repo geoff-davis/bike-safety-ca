@@ -338,6 +338,40 @@ def test_a_ready_made_street_extract_or_outline_is_used_in_place_of_a_download(
     assert bounds == pytest.approx(BIRCH.bounds) and date is None
 
 
+def test_a_regional_extract_is_cut_in_place_of_a_download(
+    fetched: Fetched, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cuts = []
+    monkeypatch.setattr(
+        network_command.osm_extract,
+        "cut",
+        lambda pbf, bounds, out, overwrite: cuts.append((pbf, bounds, out, overwrite)),
+    )
+    own = _outline(tmp_path / "own.geojson", BIRCH)
+    raw = tmp_path / "raw"
+    arguments = ["download", "--area", own, "--raw", raw, "--out", tmp_path / "processed"]
+    pbf = tmp_path / "region.osm.pbf"
+    _run(
+        monkeypatch,
+        network_command.main,
+        *arguments,
+        "--config",
+        _settings(tmp_path / "plain"),
+        "--extract",
+        pbf,
+    )
+    ((cut_from, bounds, out, overwrite),) = cuts
+    assert cut_from == pbf and out == raw / "osm" and not overwrite
+    assert bounds == pytest.approx(BIRCH.bounds)
+    assert fetched.streets_asked == []  # Overpass is not asked
+
+    # An extract holds the map of its own date, so a config asking for another is refused.
+    dated = _settings(tmp_path / "dated", osm_date="2031-01-01T00:00:00Z")
+    with pytest.raises(SystemExit):
+        _run(monkeypatch, network_command.main, *arguments, "--config", dated, "--extract", pbf)
+    assert len(cuts) == 1
+
+
 def test_the_network_command_rejects_a_step_it_does_not_have(
     fetched: Fetched,
     monkeypatch: pytest.MonkeyPatch,

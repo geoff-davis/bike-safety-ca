@@ -87,6 +87,25 @@ takes in the unincorporated pockets between and beside the listed cities, not
 the whole unincorporated county. To use your own outline instead, pass
 `--area` (GeoJSON, shapefile or GeoParquet) here and to the checks below.
 
+If the public servers refuse the area, or you would rather not load them, cut
+the streets from a regional OpenStreetMap extract instead:
+
+```bash
+uv sync --extra extract
+uv run python -m bike_safety_ca.network --config config/san_diego.yaml \
+    --extract path/to/socal-latest.osm.pbf
+```
+
+Geofabrik publishes extracts of Northern and Southern California
+(download.geofabrik.de, under North America, United States, California). The
+cut is written in the same form as a download, with a note naming the
+extract, and it takes the ways that touch the area's padded box, as the
+server does: cut from an extract three days newer, Santa Monica's 26,309
+saved ways were all there, plus one. It holds the map of the extract's date,
+so a config that pins `osm_date` (as `config/los_altos.yaml` does) refuses
+it. Reading a regional extract takes
+about half a minute and 2.5 GB of memory.
+
 ## Building the crash tables
 
 ```bash
