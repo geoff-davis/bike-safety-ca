@@ -80,7 +80,8 @@ jobs:
           uv sync --locked
 
       # Four pytest-xdist workers: the runners have four cores, and more workers
-      # were slower even on a 32-core laptop (each worker runs several threads).
+      # were slower even on a 32-core laptop. conftest.py gives each worker one
+      # numerical thread.
       - name: Test, the slow tests included
         run: uv run --locked pytest -q -n 4 --cov -m ''
 

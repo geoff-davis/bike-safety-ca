@@ -79,3 +79,46 @@
 - Findings: none.
 - Verdict: **accepted, round 1**. This completes the review loop; acceptance
   authorizes no commit, push or merge.
+
+## Loop ci-xdist-2, round 1
+
+- Implementer: `bsc-implementer` (Claude), pane `wF:p1`, worktree `/home/geoff/Projects/personal/bike-safety-ca-ci-xdist`. Reviewer: `bsc-reviewer`.
+- Base commit: `dd5e8e7`; snapshot: `/tmp/bsc-review/ci-xdist-2-r1/`. Round 1 of at most 3; expires (UTC): 2026-11-22 21:13.
+- Why: on CI the first run with four workers was slower, not faster (3.12 took 1,145 s and two tests hit the 180 s timeout). Locally, pinned to four cores: four workers took 213 s with default threading and 64 s with OMP/OpenBLAS/MKL limited to one thread each. Each worker's BLAS/OpenMP started a thread per core, oversubscribing the machine.
+- Change: a new root `conftest.py` uses `os.environ.setdefault` to set OMP_NUM_THREADS, OPENBLAS_NUM_THREADS and MKL_NUM_THREADS to 1, plus a comment in `ci.yml`.
+- Settled: a plugin already imports numpy in the controller before `conftest.py` runs (an assert to that effect failed), so a serial run keeps the default. The xdist workers start after the initial conftests load and inherit the environment: measured 63.6 s with the conftest, the same as with the variables exported by hand.
+- Checks: `make check` passed (592 tests, 60 s).
+- Please check: that workers inherit the environment for every way the tests are run (Makefile, pre-push hook, CI), and that `setdefault` leaves a caller's own setting alone.
+
+## Review — loop ci-xdist-2, round 1 — bsc-reviewer
+
+- Snapshot reviewed: `/tmp/bsc-review/ci-xdist-2-r1/staged.diff`, root
+  `conftest.py`, Makefile test targets, pre-push pytest hook, CI test step
+  and pytest configuration.
+- Verified the coordination lock names `bsc-implementer ci-xdist-2`,
+  `HERDR_ENV=1`, and the requesting Claude's repository and pane `wF:p1`.
+- Independent checks: parsed the staged Python file and executed that exact
+  file via `runpy` in isolated Python subprocesses. With the three variables
+  absent, a subsequently launched child inherited all three as `1`. With
+  caller values OMP=3, OpenBLAS=2 and MKL=5, the child retained those values.
+  These probes wrote no files and did not load numerical libraries.
+- Invocation paths: Makefile `test`/`test-all`, the pre-push hook and CI all
+  invoke pytest from the project checkout with local `-n 4` workers. None
+  disables conftest loading or narrows discovery away from the root file.
+  The controller loads the root conftest before starting the local workers;
+  its environment settings therefore reach fresh worker interpreters before
+  their plugin/numerical-library imports. Worker-local conftest loading is
+  not relied on to reset an already loaded numerical runtime.
+- `setdefault` preserves an existing caller setting intentionally. The
+  serial-controller import-order limitation is already stated in the file
+  and handoff; the patch does not claim to reconfigure an initialized BLAS.
+- Evidence reused: implementer's pinned-four-core comparison, measured
+  63.6-second run with this conftest, and reported `make check` success
+  (592 tests, 60 seconds).
+- Limits: did not independently execute pytest-xdist, inspect BLAS thread
+  pools or reproduce CI timings. The subprocess probe verifies environment
+  defaults, preservation and inheritance, not actual BLAS thread counts.
+  No protected data or implementer files beyond the handoff were opened.
+- Findings: none.
+- Verdict: **accepted, ci-xdist-2 round 1**. This completes this review loop;
+  acceptance authorizes no commit, push or merge.
