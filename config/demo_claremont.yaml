@@ -1,0 +1,29 @@
+# Demo city: real streets, made-up crashes. Nothing here needs crash records.
+# Build the tables with `python -m bike_safety_ca.demo`, or open
+# notebooks/walkthrough.py, which does it for you.
+city: Claremont
+county: Los Angeles
+synthetic: true
+crash_source: tims+ccrs
+first_year: 2014
+child_max_age: 18
+holdout_windows:
+  - [2018, 2019, 2022]
+  - [2020, 2021, 2022]
+  - [2022, 2023, null]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+# Not used by the demo (nothing is downloaded), but every config needs them.
+ccrs_county_code: 19
+ccrs_cities:
+  - Claremont
+latitude: [33.5, 34.9]
+longitude: [-118.5, -117.0]
+
+# Map files kept in this repository (see demo/claremont/README.md for sources):
+# the Census Bureau's city outline, the same outline widened by 1.5 km, and
+# OpenStreetMap streets as of 16 November 2026 (footpaths left out).
+city_limit_file: ../demo/claremont/city_limit.geojson
+area_file: ../demo/claremont/area.geojson
+streets_file: ../demo/claremont/streets.json.gz

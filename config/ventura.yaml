@@ -1,0 +1,22 @@
+# A test city for the ranking: Ventura alone, with the settings of the Los
+# Altos case study left as they are (same windows, same child age).
+# The Census Bureau's boundary file names this city "San Buenaventura
+# (Ventura)"; the name in brackets is the one matched here.
+city: Ventura
+county: Ventura
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+holdout_windows:
+  - [2018, 2019, 2022]
+  - [2020, 2021, 2022]
+  - [2022, 2023, null]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+ccrs_county_code: 56
+ccrs_cities:
+  - Ventura
+latitude: [33.9, 34.95]
+longitude: [-119.7, -118.6]

@@ -1,0 +1,20 @@
+# A test city for the ranking: Palo Alto alone, with the settings of the Los
+# Altos case study left as they are (same windows, same child age).
+city: Palo Alto
+county: Santa Clara
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+holdout_windows:
+  - [2018, 2019, 2022]
+  - [2020, 2021, 2022]
+  - [2022, 2023, null]
+
+# UTM zone 10N, metres.
+crs: EPSG:26910
+ccrs_county_code: 43
+ccrs_cities:
+  - Palo Alto
+latitude: [36.0, 38.5]
+longitude: [-123.0, -120.5]

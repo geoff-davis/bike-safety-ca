@@ -1,0 +1,20 @@
+# A test city for the ranking: Encinitas alone, with the settings of the Los
+# Altos case study left as they are (same windows, same child age).
+city: Encinitas
+county: San Diego
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+holdout_windows:
+  - [2018, 2019, 2022]
+  - [2020, 2021, 2022]
+  - [2022, 2023, null]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+ccrs_county_code: 37
+ccrs_cities:
+  - Encinitas
+latitude: [32.5, 33.6]
+longitude: [-117.7, -116.0]

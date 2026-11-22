@@ -1,0 +1,74 @@
+# Every local choice for one city lives here. Copy and edit for another city.
+city: Los Altos
+county: Santa Clara
+# TIMS + CCRS is the only source supported so far. CCRS alone would start in
+# 2016 and has no party ages for 2016-2023, so it could not give child rankings
+# for those years.
+crash_source: tims+ccrs
+first_year: 2014
+child_max_age: 18
+# Hold-out windows: [last training year, first test year, last test year or null].
+holdout_windows:
+  - [2018, 2019, 2022]
+  - [2020, 2021, 2022]
+  - [2022, 2023, null]
+
+# Projected coordinate system in metres for distances (UTM zone 10N here).
+crs: EPSG:26910
+# CCRS download: the county's code and the "City Name" values to keep. Use the
+# same cities as the TIMS export. "Unincorporated" is the whole unincorporated county.
+ccrs_county_code: 43
+ccrs_cities:
+  - Cupertino
+  - Los Altos
+  - Los Altos Hills
+  - Mountain View
+  - Palo Alto
+  - Sunnyvale
+  - Unincorporated
+# CCRS coordinates outside this box are treated as missing (TIMS ones are used as given).
+latitude: [36.0, 38.5]
+longitude: [-123.0, -120.5]
+# Reports filed under another agency's code. From 2023 some Los Altos PD (4305)
+# reports carry Palo Alto PD's code (4312); they are recognised by a Los Altos
+# beat or a Los Altos city location.
+agency_reassignments:
+  - {filed_as: "4312", agency: "4305", beat_prefix: LA, city: Los Altos, from_year: 2023}
+# Crash-report city name -> municipality name in the road-centerline layer.
+municipality_aliases:
+  UNINCORPORATED: SANTA CLARA COUNTY
+
+# The settings below repeat the original Los Altos analysis exactly (see
+# docs/case_study_los_altos.md). Delete them to use the outline built from the
+# city list above, the Census city limit and today's streets.
+# City limit: the City of Los Altos's own layer, fetched from its map service.
+# If it cannot be fetched the Census outline is used and results differ slightly.
+city_limit_url: https://map.losaltosca.gov/arcgis/rest/services/Public/PublicGISLayers/MapServer/63
+# Study area: 2-mile circles around the study's public schools, plus the city
+# limit. The schools are looked up in the state's public school directory,
+# which the area step downloads; it is not kept in this repository.
+area_schools:
+  - {school: "Almond Elementary", district: "Los Altos Elementary"}
+  - {school: "Ardis G. Egan Junior High", district: "Los Altos Elementary"}
+  - {school: "Bullis Charter", district: "Santa Clara County Office of Education"}
+  - {school: "Covington Elementary", district: "Los Altos Elementary"}
+  - {school: "Cupertino Middle", district: "Cupertino Union"}
+  - {school: "Gardner Bullis Elementary", district: "Los Altos Elementary"}
+  - {school: "Georgina P. Blach Junior High", district: "Los Altos Elementary"}
+  - {school: "Homestead High", district: "Fremont Union High"}
+  - {school: "John F. Kennedy Middle", district: "Cupertino Union"}
+  - {school: "Los Altos High", district: "Mountain View-Los Altos Union High"}
+  - {school: "Loyola Elementary", district: "Los Altos Elementary"}
+  - {school: "Monta Vista High", district: "Fremont Union High"}
+  - {school: "Montclaire Elementary", district: "Cupertino Union"}
+  - {school: "Oak Avenue Elementary", district: "Los Altos Elementary"}
+  - {school: "Santa Rita Elementary", district: "Los Altos Elementary"}
+  - {school: "Springer Elementary", district: "Los Altos Elementary"}
+  - {school: "Stevens Creek Elementary", district: "Cupertino Union"}
+  - {school: "West Valley Elementary", district: "Cupertino Union"}
+# Bullis Charter's second campus (beside Blach), placed by hand: [longitude, latitude].
+area_points:
+  - [-122.0838, 37.3641]
+area_buffer_m: 3218.688
+# OpenStreetMap as it stood when the original streets were downloaded.
+osm_date: "2026-08-22T23:47:01Z"

@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crash Movement Map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f6f5f2;--fg:#1d2126;--muted:#5d646c;--line:#d5d3cd;--panel:#ffffff;--warn-bg:#fff3d6;--warn-fg:#5c4300;
+--bicycle:#d1382c;--car:#2563c9;--child:#0e8a7d;--moto:#8b3fc4;--ped:#b8860b;--other:#5b6470;
+--sev1:#1a1a1a;--sev2:#a3171c;--sev3:#e07b24;--sev4:#e9c46a;--sev0:#b9b9b9;--dark:#1f3a8a;--hi:#ffe066}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.warn{background:var(--warn-bg);color:var(--warn-fg);padding:6px 16px;font-weight:600;font-size:13px}
+header{padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:16px;margin:0 8px 0 0}
+label{display:inline-flex;gap:5px;align-items:center;color:var(--muted);font-size:13px}
+select,input[type=number]{font:inherit;padding:2px 4px}input[type=number]{width:5em}
+button{font:inherit;padding:3px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel);cursor:pointer}button:hover{background:var(--bg)}
+#count{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+main{flex:1;display:flex;min-height:0}
+#map{flex:1;min-height:300px;background:#e6e3dc}
+.sl span{position:absolute;white-space:nowrap;font-size:11px;color:#4a4f55;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;pointer-events:none}
+#panel{width:400px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);padding:10px 14px;font-size:12.5px}
+#panel h2{font-size:13px;margin:12px 0 4px}#panel h2:first-child{margin-top:0}
+#panel table{border-collapse:collapse;width:100%}#panel td,#panel th{text-align:left;vertical-align:top;padding:2px 6px 2px 0;border-bottom:1px solid #eeece8}
+#panel th{font-weight:600;color:var(--muted)}#panel .n{text-align:right;font-variant-numeric:tabular-nums}
+#panel .note{color:var(--muted)}
+#panel table.st{table-layout:fixed}#panel table.st th{font-size:11.5px;line-height:1.25;vertical-align:bottom}#panel table.st th.n{width:50px}#panel table.st th.n:first-child{width:54px}
+#panel tr.top td{border-bottom:0;padding-bottom:0}#panel tr.sub td{color:var(--muted);padding-top:0}
+#panel .picked{margin:6px 0;padding:5px 8px;background:var(--hi);border-radius:5px}#panel .picked button{margin-top:3px;font-size:12px}
+.pat{cursor:pointer}.pat:hover td{background:var(--bg)}.pat.on td{background:var(--hi)}
+.sevdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:baseline}
+#ptitle,#pkey{display:none}
+.leaflet-control-layers{font-size:12px}
+.leaflet-tile-pane{filter:grayscale(1) contrast(.85) brightness(1.08)}
+.legend{background:var(--panel);padding:8px 10px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3);font-size:12px;line-height:1.5}
+.legend .kb{max-width:220px}.legend .k1{max-width:min(460px,60vw);margin-top:3px}.legend .k1:empty,.legend details[open]~.k1{display:none}.legend .k1 span{white-space:nowrap;margin-right:8px}.legend .k1 .sw{margin-right:4px}
+.legend b{display:block;margin-top:4px}.legend b:first-child{margin-top:0}
+.legend summary{cursor:pointer;font-weight:700;list-style-position:inside}.legend details[open] summary{margin-bottom:4px}
+.legend .kb{max-height:calc(100vh - 260px);overflow-y:auto}
+.sw{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.legend svg{vertical-align:middle;margin-right:4px}
+.cr{background:none;border:none}.cr svg{overflow:visible;pointer-events:none}.cr .hit{pointer-events:all;cursor:pointer}
+.ct{background:none;border:none;font-size:11px;font-weight:700;color:#333;text-align:center;line-height:1;text-shadow:0 0 2px #fff,0 0 2px #fff}
+.pop h3{margin:0 0 4px;font-size:14px}.pop table{border-collapse:collapse;margin-top:6px}.pop td{padding:2px 8px 2px 0;vertical-align:top;font-size:12.5px}
+.pop .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.pop .meta{color:var(--muted);font-size:12.5px}
+@media (max-width:760px){main{flex-direction:column}#map{min-height:60vh}#panel{width:auto;border-left:0;border-top:1px solid var(--line);max-height:40vh}}
+body.printing main{display:block}
+body.printing #map{width:10.2in;height:5.5in;flex:none;border:1px solid #999}
+body.printing .leaflet-control-attribution{display:none}
+@media print{
+  @page{size:landscape;margin:.35in}
+  html,body{height:auto;display:block;background:#fff}
+  header,.leaflet-control-layers,.leaflet-control-zoom{display:none!important}
+  #ptitle{display:block;margin:0 0 6px;font-size:12px}#ptitle h1{font-size:15px;margin:0 0 2px}
+  .warn{padding:4px 8px}
+  main{display:block}
+  #map{width:10.2in;height:5.5in;flex:none}
+  #panel{width:auto;max-height:none;overflow:visible;border:0;padding:8px 0 0;font-size:11px}
+  #panel tr{break-inside:avoid}
+  .leaflet-popup-pane,.leaflet-control-container .legend{display:none!important}
+  #pkey{display:block;columns:4;column-gap:14px;font-size:10px;line-height:1.3;margin-top:5px}
+  #panel h2{break-after:avoid}
+  #pkey b{display:block;margin-top:3px;break-after:avoid}#pkey svg{vertical-align:middle;margin-right:3px}
+  #pkey .sw{display:inline-block;width:14px;height:4px;margin-right:4px;vertical-align:middle}
+}
+</style></head><body>
+<div class="warn">/*WARN*/</div>
+<div id="ptitle"><h1>Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/.</div></div>
+<header>
+<h1>Crash movement map</h1>
+<label>Cyclists <select id="who"><option value="all">all ages</option><option value="child">/*CHILD*/</option><option value="adult">adult</option></select></label>
+<label>Area <select id="area"><option value="la">/*CITY*/</option><option value="all">whole area</option></select></label>
+<label>Years <input type="number" id="y0"> to <input type="number" id="y1"></label>
+<label><input type="checkbox" id="com"> school commute hours only</label>
+<label>Other party <select id="mv"><option value="">any movement</option><option value="turn">turning</option><option value="straight">going straight</option><option value="still">stopped or parked</option><option value="solo">no other party</option></select></label>
+<label>Wrong side <select id="ws"><option value="">any</option><option value="coded">riding, coded for the cyclist</option><option value="inf">riding, suggested by movements only</option><option value="either">riding, coded or suggested</option><option value="unclear">cited, party unclear</option></select></label>
+<label><input type="checkbox" id="dk"> after dark only</label>
+<button id="print" type="button">Print this view</button>
+<span id="count"></span>
+</header>
+<main><div id="map"></div><div id="pkey"></div><aside id="panel"></aside></main>
+<script>
+const DATA=/*DATA*/;const MOVE=/*MOVE*/;const SITES=/*SITES*/;const SEV=/*SEVERITY*/;const LIGHT=/*LIGHT*/;const DARK=/*DARK*/;
+const SITE={};for(const s of SITES)SITE[s.i]=s;
+const COL={"bicycle":"--bicycle","car or truck":"--car","motorcycle":"--moto","pedestrian":"--ped","bus or other":"--other"};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sevc=v=>css("--sev"+(SEV[v]?v:"0")),dark=r=>DARK.includes(r.lt);
+const TURN={D:"R",E:"L",M:"T",F:"U"},STILL={A:1,O:1},L=34;
+const KERB={L:"out",K:"in"},DRIFT={J:1,P:1},LEAD={A:1,H:1}; // KERB: entering traffic or parking, from or to the kerb; DRIFT: changing lanes or merging; LEAD: stopped or slowing, so ahead in a rear end
+// Zoom levels: 0 intersections sized by their crashes, 1 one dot per crash, 2 collision diagrams.
+const level=()=>{const z=map.getZoom();return z<=14?0:z<=16?1:2;},LEVEL=["city","neighbourhood","intersection"];
+function glyph(p,i,n){
+  const c=css(COL[p.k]||"--other"),w=p.k==="bicycle"?3:2.4;
+  if(p.b===null){ // no direction recorded: ring beside the centre
+    const a=i*2*Math.PI/Math.max(n,1),x=(9*Math.cos(a)).toFixed(1),y=(9*Math.sin(a)).toFixed(1);
+    return `<circle cx="${x}" cy="${y}" r="4.5" fill="#fff" stroke="${c}" stroke-width="2.4"/>`;}
+  const dash=p.m==="G"?' stroke-dasharray="4 3"':"",t=TURN[p.m];let d,head;
+  if(STILL[p.m]){ // stopped or parked: short stub ending in a bar
+    return `<g transform="rotate(${p.b}) translate(${p.o||4},0)"><path d="M0,${L-8} L0,14" stroke="#fff" stroke-width="${w+2.5}" stroke-linecap="round" fill="none"/><path d="M0,${L-8} L0,14" stroke="${c}" stroke-width="${w}" stroke-linecap="round" fill="none"/><rect x="-6" y="8" width="12" height="5" rx="1" fill="${c}" stroke="#fff" stroke-width="1.2"/>${p.f?`<circle cx="0" cy="${L-8}" r="3.6" fill="${c}" stroke="#fff" stroke-width="1.2"/>`:""}</g>`;}
+  if(t==="R"){d=`M0,${L} L0,12 Q0,2 12,2`;head="M12,-3 L21,2 L12,7 Z";}
+  else if(t==="L"){d=`M0,${L} L0,12 Q0,2 -12,2`;head="M-12,-3 L-21,2 L-12,7 Z";}
+  else if(t==="U"){d=`M0,${L} L0,10 A5 5 0 0 0 -10,10 L-10,18`;head="M-15,18 L-10,27 L-5,18 Z";}
+  else if(t==="T"){d=`M0,${L} L0,12 M-12,4 Q0,2 0,12 Q0,2 12,4`;head="";} // a turn, side not recorded: a fork
+  else if(p.m==="-"){d=`M0,${L} L0,6`;head="M-5,5 L5,5 L5,8 L-5,8 Z";} // movement not stated: no arrowhead, a flat end
+  else{d=`M0,${L} L0,8`;head="M-5,9 L0,-1 L5,9 Z";}
+  return `<g transform="rotate(${p.b}) translate(${p.o||4},0)"><path d="${d}" stroke="#fff" stroke-width="${w+2.5}" stroke-linecap="round" fill="none"/><path d="${head}" fill="#fff" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/><path d="${d}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" fill="none"${dash}/><path d="${head}" fill="${c}"/>${p.f?`<circle cx="0" cy="${L}" r="3.6" fill="${c}" stroke="#fff" stroke-width="1.2"/>`:""}</g>`;
+}
+// Collision diagrams. Each road user follows a path in its own right-hand lane through a
+// schematic intersection turned to the real streets and sized to them: each street is as
+// wide as its mapped lanes (movement.half_widths), a cyclist rides near the kerb, a parked
+// vehicle sits at it, a motor vehicle turning right comes from the right-hand lane, one
+// turning left from the lane by the centre line, and others from the middle of their half.
+// A party is put on the other side only where the record says so (movement "travelling
+// wrong way" or "crossed into opposing lane", or a cyclist whose wrong-side riding is coded
+// or suggested by the movements) or where only that makes the movements meet (see plan).
+// Coded means a cyclist's own movement is "travelling wrong way", or the cause is wrong side
+// of road and that cyclist is the party at fault (p.wr); only that cyclist is moved.  A
+// wrong-side cause with no such cyclist (r.wu) moves nobody, and in a crash that is coded or
+// cited no cyclist is put against traffic to make the movements meet.  "Crossed into
+// opposing lane" is drawn across the centre line and is not wrong-side riding.
+// The crash is drawn where the cyclist's path first meets the other party's. Lanes are
+// assumed, not recorded. Sizes are metres from the centre.
+const ROAD=10,RUN=60,TRAIL=46,CLOSE=5,GAP=4,BESIDE=5,BEHIND=7,EDGE=1e-6; // ROAD: half width where no street is mapped; GAP: pixels between a drawn cyclist and the lane they are given; BESIDE: pixels (plus GAP) between a cyclist and a road user making the same movement the same way; BEHIND: pixels a rear-ending party's arrow stops short of the one it hit; CLOSE: parallel paths this near meet (rear end, sideswipe, door), or anywhere in the same half of a wider road; EDGE: slack in the geometry tests, so a path ending exactly on another, or two points that tie, sort the same way on every compass bearing
+const scale=()=>Math.pow(2,map.getZoom())/(156543.03*Math.cos(map.getCenter().lat*Math.PI/180)); // pixels per metre
+function legs(r){return r.si!==null&&r.si!==undefined&&SITE[r.si]?SITE[r.si].w||[]:r.w||[];}
+function half(W,b,along){ // half width of the street a party on bearing b travels along (or crosses)
+  // A street is often several mapped ways at a corner (a median, turn lanes); the widest counts.
+  const sep=lb=>{const d=((lb-b)%180+180)%180;return Math.min(d,180-d);}; // 0 parallel, 90 square
+  const most=Math.max(...W.map(([lb])=>sep(lb)),0);
+  const hs=W.filter(([lb])=>along?sep(lb)<=30:sep(lb)>30&&sep(lb)>=most-30).map(([,h])=>h);
+  return hs.length?Math.max(...hs):ROAD;
+}
+function lane(k,m,h){ // distance of a party's path from the centre line of a street of half width h
+  const o=k==="bicycle"?h-1.5:m==="O"?h-1:TURN[m]==="R"?h-3.5:TURN[m]==="L"?1.7:(h-2)/2;
+  return Math.max(1.5,Math.min(o,h-0.5));
+}
+function against(p,r){return p.m==="Q"||p.m==="N"||(p.k==="bicycle"&&(!!p.wr||!!r.ws));}
+function offset(p,r){const o=lane(p.k,p.m,half(legs(r),p.b,true));return against(p,r)?-o:o;}
+function route(p,o,k,W,shift=0,exit=null,kerb=null){ // the party's path as points [x,y], screen pixels from the intersection centre; k pixels per metre
+  // Drawing only: shift moves the exit lane out (metres), exit sets it, kerb sets the kerb line (default h-1).
+  const t=p.b*Math.PI/180,f=[Math.sin(t),-Math.cos(t)],rt=[Math.cos(t),Math.sin(t)];
+  const P=(a,b)=>[(a*f[0]+b*rt[0])*k,(a*f[1]+b*rt[1])*k]; // a along the travel, b to the right of it
+  const bend=(e,c,x)=>{const out=[];for(let i=0;i<=8;i++){const u=i/8,v=1-u;out.push(P(v*v*e[0]+2*u*v*c[0]+u*u*x[0],v*v*e[1]+2*u*v*c[1]+u*u*x[1]));}return out;};
+  // box: half width of the street crossed, own: of the street travelled; a turn leaves in the same kind of lane on the cross street
+  const box=half(W,p.b,false),own=half(W,p.b,true),out=Math.sign(o||1)*(exit!==null?exit:lane(p.k,"B",box)+shift),turn=TURN[p.m];
+  if(STILL[p.m])return [P(-box-RUN,o),P(-box-4,o)];
+  // Pulling out from the kerb (a parking space or driveway), pulling in to park, or moving across: the
+  // sideways move is on the approach, so it crosses the line of a cyclist riding along the kerb.
+  const kb=Math.sign(o||1)*(kerb!==null?kerb:Math.max(1.5,own-1)),bk=p.k==="bicycle";
+  const across=(a,b)=>[P(-box-RUN,a),P(-box-12,a),P(-box-6,b),P(box,b),P(box+RUN,b)]; // steep enough to count as crossing (see meet)
+  if(!bk&&KERB[p.m]==="out")return across(kb,o);
+  if(!bk&&KERB[p.m]==="in")return [P(-box-RUN,o),P(-box-12,o),P(-box-6,kb),P(-box-4,kb)];
+  if(DRIFT[p.m])return across(o,bk?Math.sign(o||1)*Math.max(1.5,(own-2)/2-1):kb); // a cyclist moves out into traffic, a driver over toward the kerb
+  if(turn==="R"||turn==="L"){ // leave along the real street on that side (90 degrees where none is mapped)
+    const side=turn==="R"?1:-1;let rel=null;
+    for(const [lb] of W){const x=side*((((lb-p.b)%360)+540)%360-180);if(x>30&&x<150&&(rel===null||Math.abs(x-90)<Math.abs(rel-90)))rel=x;}
+    const f=side*(rel===null?90:rel)*Math.PI/180,d=[Math.cos(f),Math.sin(f)],n=[-Math.sin(f),Math.cos(f)]; // exit direction and its right, in (along, right)
+    const sc=(o-out*n[1])/d[1],C=[out*n[0]+sc*d[0],o],sx=Math.max(own,sc+2),X=[out*n[0]+sx*d[0],out*n[1]+sx*d[1]];
+    return [P(-box-RUN,o),...bend([Math.min(-box,C[0]-2),o],C,X),P(X[0]+RUN*d[0],X[1]+RUN*d[1])];}
+  if(turn==="U")return [P(-box-RUN,o),...bend([-box/2,o],[-box/2+2*Math.abs(o),0],[-box/2,-o]),P(-box-RUN,-o)]; // round to the other side
+  // A turn whose side was not recorded goes straight here and ends in a fork (see arrow).
+  return [P(-box-RUN,o),P(-box,o),P(box,o),P(box+RUN,o)];
+}
+function cut(A,i,u){ // A up to fraction u of segment i, without repeated points (an arrowhead needs a last segment of some length)
+  const out=[...A.slice(0,i+1),[A[i][0]+u*(A[i+1][0]-A[i][0]),A[i][1]+u*(A[i+1][1]-A[i][1])]];
+  return out.filter((q,n)=>n===0||Math.hypot(q[0]-out[n-1][0],q[1]-out[n-1][1])>1e-6);}
+function meet(A,B,near,turnA=false,turnB=false,k=1){ // where path A first crosses path B; failing that, their closest approach nearest `near`; k pixels per metre
+  // A turning party's crash happens in or after its turn, so a crossing on its approach does not count.
+  let best=null;
+  for(let i=turnA?1:0;i<A.length-1;i++)for(let j=turnB?1:0;j<B.length-1;j++){
+    const [a,b]=[A[i],A[i+1]],[c,d]=[B[j],B[j+1]],den=(b[0]-a[0])*(d[1]-c[1])-(b[1]-a[1])*(d[0]-c[0]);
+    if(Math.abs(den)<1e-9)continue;
+    // Long straight runs within 30 degrees of each other meet only far down the street, which is not a
+    // crash point; the end of a turn may run that close to another path and still cross it.
+    const la=Math.hypot(b[0]-a[0],b[1]-a[1]),lb=Math.hypot(d[0]-c[0],d[1]-c[1]);
+    if(Math.abs(den)<0.5*la*lb&&la>10*k&&lb>10*k)continue;
+    const u=((c[0]-a[0])*(d[1]-c[1])-(c[1]-a[1])*(d[0]-c[0]))/den,v=((c[0]-a[0])*(b[1]-a[1])-(c[1]-a[1])*(b[0]-a[0]))/den;
+    if(u>=-EDGE&&u<=1+EDGE&&v>=-EDGE&&v<=1+EDGE&&(!best||i+u<best.i+best.u-EDGE))best={i,u:Math.max(0,Math.min(1,u)),j,v,crossed:true};}
+  if(best)return best;
+  let score=Infinity;
+  for(let i=0;i<A.length-1;i++)for(let j=0;j<B.length-1;j++){
+    // The angle between the two segments, 0 when parallel either way.
+    const ha=Math.atan2(A[i+1][1]-A[i][1],A[i+1][0]-A[i][0]),hb=Math.atan2(B[j+1][1]-B[j][1],B[j+1][0]-B[j][0]);
+    const g=((ha-hb)*180/Math.PI%180+180)%180,sep=Math.min(g,180-g),same=Math.cos(ha-hb)>0;
+    for(let s=0;s<=10;s++){const u=s/10,q=[A[i][0]+u*(A[i+1][0]-A[i][0]),A[i][1]+u*(A[i+1][1]-A[i][1])];
+      for(let w=0;w<=10;w++){const v=w/10,z=[B[j][0]+v*(B[j+1][0]-B[j][0]),B[j][1]+v*(B[j+1][1]-B[j][1])];
+        const d=Math.hypot(q[0]-z[0],q[1]-z[1]),sc=d+0.05*Math.hypot(q[0]-near[0],q[1]-near[1]);
+        // A point where a path bends ends one segment and starts the next, with the same score;
+        // the more parallel segment wins, whatever the compass bearing.
+        if(sc<score-EDGE||(best&&Math.abs(sc-score)<=EDGE&&sep<best.sep-EDGE)){score=sc;best={i,u,j,v,d,sep,same};}}}}
+  return best;
+}
+function rearer(r,bike,others,sameWay){ // drawing a rear end: the party that ran into the other, if the record says which
+  if(r.coll!=="rear end")return null;
+  const q=others.filter(p=>sameWay(p)&&!TURN[p.m]);
+  if(q.length!==1)return null;
+  const [a,b]=[bike,q[0]],by=(t)=>t(a)&&!t(b)?a:t(b)&&!t(a)?b:null;
+  const ahead=by(p=>!!LEAD[p.m]); // stopped or slowing: the one ahead
+  return ahead?(ahead===a?b:a):by(p=>p.f); // otherwise the one at fault
+}
+function short(A,px){ // A without its last px pixels; unchanged if that would leave too little for an arrowhead
+  let left=-px;for(let i=1;i<A.length;i++)left+=Math.hypot(A[i][0]-A[i-1][0],A[i][1]-A[i-1][1]);
+  if(left<8)return A;
+  const out=[A[0]];
+  for(let i=1;i<A.length&&left>0;i++){const d=Math.hypot(A[i][0]-A[i-1][0],A[i][1]-A[i-1][1]);
+    if(d>=left){const u=left/d;out.push([A[i-1][0]+u*(A[i][0]-A[i-1][0]),A[i-1][1]+u*(A[i][1]-A[i-1][1])]);left=0;}else{out.push(A[i]);left-=d;}}
+  return out;
+}
+function trail(A,keep){ // the last `keep` pixels of a path
+  let left=keep,out=[A[A.length-1]];
+  for(let i=A.length-1;i>0&&left>0;i--){const d=Math.hypot(A[i][0]-A[i-1][0],A[i][1]-A[i-1][1]);
+    if(d>=left){const u=left/d;out.unshift([A[i][0]+u*(A[i-1][0]-A[i][0]),A[i][1]+u*(A[i-1][1]-A[i][1])]);left=0;}else{out.unshift(A[i-1]);left-=d;}}
+  return out;
+}
+function plan(r,k=scale(),side){ // the crash point, from the intersection centre, and each party's path up to it
+  // Without `side`, plan sorts how the movements fit (see below), in metres.  With it (from fit: true for the
+  // cyclist on the other side), plan draws: the cyclist keeps GAP pixels further from the other road users,
+  // so arrows running side by side do not overlap at any zoom, and the sorting is not redone.
+  const bike=r.p.find(p=>p.k==="bicycle"&&p.b!==null);
+  if(!bike)return null;
+  const others=r.p.filter(p=>p!==bike&&p.b!==null),t=bike.b*Math.PI/180;
+  const W=legs(r),drawn=side===undefined?null:(side?-1:1)*offset(bike,r);
+  const lift=p=>{ // drawing only: a road user making the same movement the same way as the cyclist rides just beside them
+    const o=offset(p,r);if(drawn===null||TURN[p.m]!==TURN[bike.m]||STILL[p.m]||KERB[p.m]||DRIFT[p.m]||Math.cos((p.b-bike.b)*Math.PI/180)<Math.cos(Math.PI/6)||Math.sign(o)!==Math.sign(drawn))return o;
+    return Math.sign(o)*Math.max(Math.abs(o),Math.abs(drawn)-BESIDE/k);};
+  const sameWay=p=>drawn!==null&&Math.cos((p.b-bike.b)*Math.PI/180)>=Math.cos(Math.PI/6)&&Math.sign(offset(p,r))===Math.sign(drawn);
+  const routes=new Map(others.map(p=>{const o=lift(p),moved=o!==offset(p,r),box=half(W,p.b,false); // beside the cyclist through the turn too
+    const c=Math.cos((p.b-bike.b)*Math.PI/180),sameSide=drawn!==null&&Math.abs(c)>=Math.cos(Math.PI/6)&&(Math.sign(offset(p,r))===Math.sign(drawn))===(c>0); // same side of the road, either way; exact for parties snapped to one street, while a skewed compass heading may miss and fall back to the nearest approach
+    const kerb=sameSide?Math.max(half(W,p.b,true)-1,Math.abs(drawn)+(GAP+BESIDE)/k):null; // a kerb outside the drawn cyclist
+    return [p,route(p,o,k,W,0,moved?Math.max(lane(p.k,"B",box),lane("bicycle","B",box)-BESIDE/k):null,kerb)];}));
+  const turns=p=>["R","L","U"].includes(TURN[p.m]),reach=Math.max(CLOSE,half(W,bike.b,true)-1);
+  const attempt=o=>{ // the cyclist at lane offset o: their path and where it first meets another's
+    const B=route(bike,o,k,W,Math.abs(o)-Math.abs(offset(bike,r))),a=half(W,bike.b,false)+4,near=[(-Math.sin(t)*a+Math.cos(t)*o)*k,(Math.cos(t)*a+Math.sin(t)*o)*k];
+    // Side by side counts only where the paths run parallel within reach and on the same half of the
+    // road: same direction and the same side of the centre line, or opposite directions and opposite sides.
+    const beside=(m,q)=>!m.crossed&&m.sep<=30+EDGE&&m.d/k<=reach+EDGE&&(m.same===(Math.sign(o)===Math.sign(offset(q,r))));
+    let crossed=null,close=null,first=null;
+    for(const [q,A] of routes){const m=meet(B,A,near,turns(bike),turns(q),k);if(!m)continue;
+      if(!first||m.i+m.u<first.i+first.u)first=m;
+      if(m.crossed&&(!crossed||m.i+m.u<crossed.i+crossed.u))crossed=m;
+      else if(beside(m,q)&&(!close||m.i+m.u<close.i+close.u))close=m;}
+    return {B,near,at:crossed||close,first,none:!routes.size};};
+  // How the reported movements fit, in order of preference:
+  //  1. as the record puts the cyclist (keeping right unless it says otherwise), the paths cross, or run
+  //     parallel in the same half of the road (rear end, sideswipe, door, lane change);
+  //  2. only with the cyclist on the other side: against traffic, on the sidewalk or in the crosswalk (a
+  //     car turning right onto the street a cyclist rides straight along goes into the far lanes), or head on;
+  //  3. neither: the movements as reported do not meet, and no crash point is made up for them.
+  let chosen;
+  if(side!==undefined){const o=drawn,a=attempt(o+Math.sign(o)*GAP/k);chosen=[{...a,at:a.at||a.first},side];}
+  else{const own=attempt(offset(bike,r)),flip=against(bike,r)||r.wc||r.wu?null:attempt(-offset(bike,r));
+    chosen=own.none||own.at?[own,false]:flip&&flip.at?[flip,true]:null;}
+  if(!chosen)return {nomeet:true};
+  const [{B,near,at},inferred]=chosen;
+  const paths=new Map();
+  const bp=at?cut(B,at.i,at.u):[B[0],near]; // no other party with a direction: stop on the approach
+  const end=bp[bp.length-1];
+  paths.set(bike,bp);
+  for(const [p,A] of routes){ // every other party up to its point nearest the crash
+    let best=null;
+    for(let j=0;j<A.length-1;j++){const dx=A[j+1][0]-A[j][0],dy=A[j+1][1]-A[j][1],l2=dx*dx+dy*dy;
+      const v=l2?Math.max(0,Math.min(1,((end[0]-A[j][0])*dx+(end[1]-A[j][1])*dy)/l2)):0,d=Math.hypot(A[j][0]+v*dx-end[0],A[j][1]+v*dy-end[1]);
+      if(!best||d<best.d-1e-6)best={j,v,d};}
+    paths.set(p,cut(A,best.j,best.v));}
+  const back=rearer(r,bike,others,sameWay);
+  if(back)paths.set(back,short(paths.get(back),BEHIND));
+  return {x:end[0],y:end[1],paths,k,inferred};
+}
+function arrow(p,pts,x0,y0,dotted=false){ // a party's path as an SVG polyline ending in an arrowhead (or a bar if stopped)
+  const c=css(COL[p.k]||"--other"),w=p.k==="bicycle"?3:2.4,q=pts.map(([x,y])=>[x-x0,y-y0]);
+  const d="M"+q.map(([x,y])=>x.toFixed(1)+","+y.toFixed(1)).join(" L"),[a,b]=[q[q.length-2],q[q.length-1]];
+  const ang=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI,dash=p.m==="G"?' stroke-dasharray="4 3"':dotted?' stroke-dasharray="0.1 5" stroke-linecap="round"':"";
+  const head=TURN[p.m]==="T"?`<path d="M-12,0 L-4,0 M-4,0 Q0,0 2,-7 M-4,0 Q0,0 2,7" stroke="${c}" stroke-width="${w}" fill="none" transform="translate(${b[0].toFixed(1)},${b[1].toFixed(1)}) rotate(${ang.toFixed(0)})"/>`
+    :STILL[p.m]||p.m==="-"?`<rect x="-3" y="-6" width="5" height="12" rx="1" fill="${c}" stroke="#fff" stroke-width="1.2" transform="translate(${b[0].toFixed(1)},${b[1].toFixed(1)}) rotate(${ang.toFixed(0)})"/>`
+    :`<path d="M-9,-5 L1,0 L-9,5 Z" fill="${c}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" transform="translate(${b[0].toFixed(1)},${b[1].toFixed(1)}) rotate(${ang.toFixed(0)})"/>`;
+  const fault=p.f?`<circle cx="${q[0][0].toFixed(1)}" cy="${q[0][1].toFixed(1)}" r="3.6" fill="${c}" stroke="#fff" stroke-width="1.2"/>`:"";
+  return `<path d="${d}" stroke="#fff" stroke-width="${w+2.5}" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="${d}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" fill="none"${dash}/>${head}${fault}`;
+}
+function diagram(r){ // one crash: each party's path up to the crash point, its severity there and a ring if after dark
+  const ring=dark(r)?`<circle r="6.6" fill="none" stroke="${css("--dark")}" stroke-width="2.4"/>`:"",dot=`<circle r="4.2" fill="${sevc(r.sv)}" stroke="#fff" stroke-width="1.2"/>`;
+  let g="",half=48;
+  if(r.plan){const keep=TRAIL;
+    for(const [p,pts] of r.plan.paths)g+=arrow(p,trail(pts,keep),r.plan.x,r.plan.y,r.plan.inferred&&p.k==="bicycle");
+    half=Math.ceil(keep+16);}
+  else{const same={};for(const p of r.p){p.o=4;if(p.b===null)continue;(same[p.b]=same[p.b]||[]).push(p);}
+    for(const k in same){const s=same[k];if(s.length<2)continue;s.slice().sort((x,y)=>(x.k==="bicycle")-(y.k==="bicycle")).forEach((p,i)=>{p.o=-3+9*i;});}
+    g=r.p.map((p,i)=>glyph(p,i,r.p.length)).join("");}
+  // parties with no direction recorded: a ring beside the crash point
+  if(r.plan)r.p.filter(p=>p.b===null).forEach((p,i,a)=>{const t=i*2*Math.PI/Math.max(a.length,1);half=Math.max(half,24);g+=`<circle cx="${(11*Math.cos(t)).toFixed(1)}" cy="${(11*Math.sin(t)).toFixed(1)}" r="4.5" fill="#fff" stroke="${css(COL[p.k]||"--other")}" stroke-width="2.4"/>`;});
+  return L_.divIcon({className:"cr",iconSize:[2*half,2*half],iconAnchor:[half-(r.ox||0),half-(r.oy||0)],popupAnchor:[r.ox||0,(r.oy||0)-6], // the pop-up opens at the drawn crash point, not the corner centre
+    
+    html:`<svg width="${2*half}" height="${2*half}" viewBox="${-half} ${-half} ${2*half} ${2*half}"><circle class="hit" r="15" fill="transparent"/>${g}${ring}${dot}</svg>`});
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DIRN={N:"northbound",S:"southbound",E:"eastbound",W:"westbound"};
+const hour=r=>r.h===null?"hour not stated":(r.h%12||12)+(r.h<12?" am":" pm");
+function popup(r){
+  const rows=r.p.map((p,i)=>`<tr><td><span class="dot" style="background:${css(COL[p.k]||"--other")}"></span>${i+1}. ${esc(p.k)}${p.a?" ("+esc(p.a)+")":""}</td><td>${DIRN[p.d]?DIRN[p.d]+(p.s?"":" (compass direction; no mapped street runs that way)"):"direction not stated"}, ${esc(MOVE[p.m])}</td><td>${p.f?"<b>at fault</b>":""}</td></tr>`).join("");
+  const sv=r.sv?`<div class="meta"><span class="sevdot" style="background:${sevc(r.sv)}"></span>${esc(SEV[r.sv])}${r.lt?"; "+esc(LIGHT[r.lt]):""}</div>`:(r.lt?`<div class="meta">${esc(LIGHT[r.lt])}</div>`:"");
+  return `<div class="pop"><h3>${esc(r.st||"Location not named")}</h3><div class="meta">${esc(r.ym)}, ${hour(r)}${r.com?" (school commute hours)":""}</div>${sv}<div class="meta">${esc(r.coll)}; cause coded: ${esc(r.cause)}</div>${r.nomeet?'<div class="meta"><b>Movements as reported do not meet:</b> each party is drawn beside the corner in its reported direction, and the dot shows the injury, not where they met, because no lane placement makes their paths meet. A direction or movement on the report may be wrong.</div>':""}${r.plan&&r.plan.inferred?'<div class="meta"><b>Cyclist drawn against traffic (dotted):</b> the reported movements cross only with the cyclist on that side, so the cyclist was probably riding against traffic, on the sidewalk or in the crosswalk. The report does not say which.</div>':""}${r.p.some(p=>p.k!=="bicycle"&&KERB[p.m])?'<div class="meta"><b>Drawn to or from the kerb:</b> entering traffic or parking, from or into a parking space or a driveway. The report does not say which.</div>':""}${r.ap?'<div class="meta"><b>Shown at the corner:</b> the report gave a distance from it and no direction.</div>':""}${r.p.some(p=>p.m==="N")?'<div class="meta"><b>Crossed into the opposing lane:</b> that party is drawn across the centre line. This is not counted as wrong-side riding.</div>':""}${r.wc?'<div class="meta"><b>Wrong-side riding coded:</b> the cyclist is coded as travelling the wrong way, or as at fault for wrong side of road.</div>':""}${r.wu?'<div class="meta"><b>Wrong side cited, party unclear:</b> the cause is wrong side of road, but the cyclist is not recorded as the party at fault. No cyclist is drawn against traffic.</div>':""}${r.ws?`<div class="meta"><b>Possible wrong-side or sidewalk riding${r.wc?"":" (not coded)"}:</b> ${esc(r.ws)}.</div>`:""}<table>${rows||"<tr><td>No party records matched</td></tr>"}</table></div>`;
+}
+// Worst known injury; "0" (no injury) only if recorded, "" if no crash has a severity.
+const worst=rs=>{let w="";for(const r of rs)if(r.sv&&r.sv!=="0"&&(!w||r.sv<w))w=r.sv;return w||(rs.some(r=>r.sv==="0")?"0":"");};
+function street(rs){ // one street's row in the streets table: its crashes' totals and what they have in common
+  const most=key=>{const c=counted(rs,key);return c.length&&c[0][1]>1?`${c[0][0]} (${c[0][1]})`:"";};
+  const pats=counted(rs,r=>r.pk&&!r.pk.endsWith(SOLO)&&r.pk),[pk,n]=pats[0]||["",0];
+  const types=counted(rs.filter(r=>r.pk===pk),r=>r.coll!=="not stated"&&r.coll); // the pattern's most common collision type
+  const pattern=n>1?`${pk} (${n}${types.length&&types[0][1]>1?`; ${types[0][1]} ${types[0][0]}`:""})`:"";
+  return {child:rs.filter(r=>r.child).length,serious:rs.filter(r=>r.sv==="1"||r.sv==="2").length,
+    wrong:rs.filter(r=>side(r)==="coded"||side(r)==="suggested").length, // coded for a cyclist, suggested, or the only way the movements meet
+    unclear:rs.filter(r=>side(r)==="unclear").length, // wrong side cited, no cyclist the party at fault
+    common:[pattern,most(r=>r.cause&&!/unknown|not stated/i.test(r.cause)&&r.cause)].filter(Boolean).join("; ")};
+}
+function side(r){ // the one wrong-side category a crash is counted in (movement.wrong_side): coded for a cyclist, cited with the party unclear, or neither and suggested by the movements
+  return r.wc?"coded":r.wu?"unclear":r.ws||fit(r)==="against"?"suggested":"";}
+function counted(rs,key){const n={};for(const r of rs){const k=key(r);if(k)n[k]=(n[k]||0)+1;}return Object.entries(n).sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:a[0]>b[0]?1:0));} // most first; ties by name, not record order
+function sitePopup(s,rs){
+  const ys=rs.map(r=>r.y),sev=counted(rs,r=>r.sv&&SEV[r.sv]),pats=counted(rs,r=>r.pk).slice(0,3),nd=rs.filter(dark).length;
+  return `<div class="pop"><h3>${esc(s.n||"Intersection")}</h3><div class="meta">${rs.length} cyclist crash${rs.length===1?"":"es"}, ${Math.min(...ys)}${Math.max(...ys)>Math.min(...ys)?"–"+Math.max(...ys):""}${nd?`; ${nd} after dark`:""}</div><div class="meta">${sev.map(([k,n])=>`${esc(k)}: ${n}`).join("; ")}</div>${pats.length?`<table>${pats.map(([k,n])=>`<tr><td class="n">${n}</td><td>${esc(k)}</td></tr>`).join("")}</table>`:""}<div class="meta">Zoom in for the collision diagram.</div></div>`;
+}
+const L_=window.L;
+const hv=location.hash.slice(1).split(",").map(Number),map=L_.map("map").setView(hv.length===3&&hv.every(isFinite)?[hv[0],hv[1]]:/*CENTRE*/,hv.length===3&&hv.every(isFinite)?hv[2]:14);
+map.on("moveend",()=>{const c=map.getCenter();history.replaceState(null,"","#"+c.lat.toFixed(5)+","+c.lng.toFixed(5)+","+map.getZoom());});
+const STREETS=/*STREETS*/,LABELS=/*LABELS*/;
+const SW={P:[.8,"#b9cfa6"],S:[1,"#ffffff"],L:[2.6,"#ffffff"],T:[3.6,"#fff7da"],M:[5,"#fde9a8"]},cv=L_.svg({padding:.4});
+const lines=Object.keys(SW).map(k=>[k,L_.polyline(STREETS[k],{renderer:cv,color:SW[k][1],interactive:false,lineCap:"round",dashArray:k==="P"?"3 4":null})]);
+const labs=L_.layerGroup(),builtin=L_.layerGroup([...lines.map(x=>x[1]),labs]).addTo(map);
+map.attributionControl.addAttribution("Streets &copy; OpenStreetMap contributors | /*CREDIT*/");
+const osm=L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:""});
+L_.control.layers({"Built-in streets":builtin,"OpenStreetMap tiles (need a web server)":osm},null,{position:"topright",collapsed:false}).addTo(map);
+L_.control.scale({position:"bottomleft"}).addTo(map);
+function base(){const z=map.getZoom(),f=Math.max(.35,Math.min(6,Math.pow(2,z-16)));
+  for(const [k,l] of lines)l.setStyle({weight:Math.max(.6,SW[k][0]*f)});
+  labs.clearLayers();if(z<16||!map.hasLayer(builtin))return;const b=map.getBounds().pad(.05);
+  for(const [nm,la,lo,ang,k] of LABELS){if(!b.contains([la,lo])||(z<17&&(k==="S"||k==="L")))continue;if(z<18&&k==="S")continue;
+    L_.marker([la,lo],{interactive:false,icon:L_.divIcon({className:"sl",iconSize:[0,0],html:`<span style="transform:translate(-50%,-50%) rotate(${ang}deg)">${esc(nm)}</span>`})}).addTo(labs);}}
+map.on("zoomend moveend",base);map.on("baselayerchange",base);base();
+map.createPane("crashes").style.zIndex=450;
+const dots=L_.svg({pane:"crashes",padding:.3}),layer=L_.layerGroup().addTo(map);
+const ys=DATA.map(r=>r.y),Y0=Math.min(...ys),Y1=Math.max(...ys),$=id=>document.getElementById(id);
+$("y0").value=Y0;$("y1").value=Y1;["y0","y1"].forEach(i=>{$(i).min=Y0;$(i).max=Y1;});
+function fit(r){ // how the diagram fits the movements (see plan): stored on each crash by diagram.fit, worked out here only if missing
+  if(r.fit===undefined){const q=plan(r,1);r.fit=!q?null:q.nomeet?"nomeet":q.inferred?"against":"fits";}
+  return r.fit;}
+function keep(r){
+  const w=$("who").value,m=$("mv").value;
+  if(w==="child"&&!r.child||w==="adult"&&!r.adult)return false;
+  if($("area").value==="la"&&!r.la)return false;
+  if(r.y<+$("y0").value||r.y>+$("y1").value)return false;
+  if($("com").checked&&!r.com)return false;
+  if($("dk").checked&&!dark(r))return false;
+  const v=$("ws").value,sd=side(r);if(v==="coded"&&sd!=="coded"||v==="inf"&&sd!=="suggested"||v==="either"&&sd!=="coded"&&sd!=="suggested"||v==="unclear"&&sd!=="unclear")return false;
+  if(m){const o=r.p.filter(p=>p.k!=="bicycle");
+    if(m==="solo")return r.pk.endsWith(SOLO); // as the panel counts them: one cyclist and nobody else, not a crash with no party records
+    if(m==="turn")return o.some(p=>TURN[p.m]);
+    if(m==="straight")return o.some(p=>p.m==="B");
+    if(m==="still")return o.some(p=>STILL[p.m]);}
+  return true;
+}
+let hi=""; // the pattern picked in the panel; other crashes are drawn faint
+const faded=r=>hi&&r.pk!==hi;
+const SOLO="; no other party"; // the end of a pattern with only the cyclist (movement.pattern)
+const where=r=>r.si!==null&&SITE[r.si]?[SITE[r.si].lat,SITE[r.si].lon]:[r.lat,r.lon];
+function bySite(rows){const g={};for(const r of rows)if(r.si!==null&&SITE[r.si])(g[r.si]=g[r.si]||[]).push(r);return g;}
+const radius=n=>4+3*Math.sqrt(n);
+function layout(rows){ // collision diagrams: each crash at its crash point (see plan)
+  const seen={},queue={},arms={};
+  for(const r of rows){r.plan=null;r.nomeet=false;
+    if(r.si!==null&&SITE[r.si]){
+      const bike=r.p.find(p=>p.k==="bicycle"),b=bike&&bike.b!==null?bike.b:null;
+      if(b===null){const n=queue[r.si]=(queue[r.si]||0)+1;const a=(n-1)*1.1;r.ox=Math.round(22*Math.cos(a)+Math.floor((n-1)/6)*14*Math.cos(a));r.oy=Math.round(22*Math.sin(a)+Math.floor((n-1)/6)*14*Math.sin(a));continue;}
+      // At its crash point; repeats at about the same point fan out around it.
+      r.plan=fit(r)==="nomeet"?{nomeet:true}:plan(r,scale(),fit(r)==="against");
+      if(r.plan&&r.plan.nomeet){r.plan=null;r.nomeet=true;const n=queue[r.si]=(queue[r.si]||0)+1;const a=(n-1)*1.1;r.ox=Math.round(22*Math.cos(a)+Math.floor((n-1)/6)*14*Math.cos(a));r.oy=Math.round(22*Math.sin(a)+Math.floor((n-1)/6)*14*Math.sin(a));continue;}
+      const key=r.si+":"+Math.round(r.plan.x/10)+","+Math.round(r.plan.y/10),m=arms[key]=(arms[key]||0)+1,a=(m-1)*2.4,sp=m>1?10+3*m:0;
+      r.ox=Math.round(r.plan.x+sp*Math.cos(a));r.oy=Math.round(r.plan.y+sp*Math.sin(a));continue;}
+    r.plan=fit(r)==="nomeet"?{nomeet:true}:fit(r)===null?null:plan(r,scale(),fit(r)==="against"); // away from an intersection: drawn at the recorded point, lanes as at a corner
+    if(r.plan&&r.plan.nomeet){r.plan=null;r.nomeet=true;}
+    const k=Math.round(r.lat*8000)+","+Math.round(r.lon*6500),n=seen[k]=(seen[k]||0)+1; // fan out mid-block crashes at one point
+    if(n>1){const a=(n-2)*2.4;r.ox=Math.round(44*Math.cos(a));r.oy=Math.round(44*Math.sin(a));}else{r.ox=0;r.oy=0;}}
+}
+const crashes=n=>n+" crash"+(n===1?"":"es");
+function draw(){
+  layer.clearLayers();const lv=level(),all=DATA.filter(keep),size=map.getSize();
+  if(lv===2)layout(all); // a long approach reaches far from its corner, so test where each crash is drawn
+  // Where a crash is drawn at this zoom, in pixels from the window's corner: its intersection's circle or its own dot, then its dot, then its diagram.
+  const spot=r=>lv===2?map.latLngToContainerPoint(where(r)).add([r.ox,r.oy]):map.latLngToContainerPoint(lv===1?[r.lat,r.lon]:where(r));
+  const within=(r,mx,my)=>{const q=spot(r);return q.x>=-mx&&q.y>=-my&&q.x<=size.x+mx&&q.y<=size.y+my;};
+  // In view is the visible window exactly, at every zoom: the panel and the printed tables count only these.
+  // Drawing reaches a margin further, so a mark at the edge is whole; the margin is never counted.
+  const seen=all.filter(r=>within(r,0,0)),rows=lv===0?all:all.filter(r=>lv===2?within(r,80,80):within(r,.15*size.x,.15*size.y));
+  if(lv<2){
+    const sites=bySite(all),near=new Set(rows.map(r=>r.si)); // a circle carries every crash at its intersection, in view or not
+    for(const [i,rs] of Object.entries(sites)){const s=SITE[i],dim=hi&&!rs.some(r=>r.pk===hi);if(!near.has(rs[0].si))continue;
+      L_.circleMarker([s.lat,s.lon],{renderer:dots,radius:radius(rs.length),color:lv===0?"#fff":"#555",weight:lv===0?1.2:1.4,
+        fillColor:sevc(worst(rs)),fillOpacity:lv===0?(dim?.2:.85):0,opacity:dim?.3:1}).bindPopup(()=>sitePopup(s,rs),{maxWidth:380}).addTo(layer);
+      if(lv===1&&rs.length>1)L_.marker([s.lat,s.lon],{interactive:false,keyboard:false,icon:L_.divIcon({className:"ct",iconSize:[24,12],iconAnchor:[12,radius(rs.length)+13],html:String(rs.length)})}).addTo(layer);}
+    for(const r of rows){if(lv===0&&r.si!==null&&SITE[r.si])continue;
+      // A child's dot is a little larger with an outline in its own colour, so the injury colour still shows inside.
+      L_.circleMarker([r.lat,r.lon],{renderer:dots,radius:(lv===0?2.6:4.5)+(r.child?1:0),color:r.child?css("--child"):"#fff",weight:r.child?2:1,
+        fillColor:sevc(r.sv),fillOpacity:faded(r)?.15:.95,opacity:faded(r)?.2:1}).bindPopup(()=>popup(r),{maxWidth:380}).addTo(layer);}
+  }else{
+    for(const s of Object.values(bySite(rows)).map(rs=>SITE[rs[0].si]))
+      L_.circleMarker([s.lat,s.lon],{renderer:dots,radius:5,color:"#555",weight:1,fillColor:"#fff",fillOpacity:.9,interactive:false}).addTo(layer);
+    for(const r of rows)L_.marker(where(r),{icon:diagram(r),keyboard:false,opacity:faded(r)?.2:1}).bindPopup(()=>popup(r),{maxWidth:380}).addTo(layer);
+  }
+  $("count").textContent=`${all.length} cyclist crash${all.length===1?"":"es"} match${all.length===1?"es":""} the filters · ${LEVEL[lv]} view${lv<2?" · zoom in for collision diagrams":""}`;
+  panel(lv,seen,all);
+}
+function panel(lv,rows,all=rows){
+  const solo=r=>r.pk.endsWith(SOLO),sites=bySite(rows),ns=Object.keys(sites).length,mid=rows.filter(r=>r.si===null||!SITE[r.si]).length;
+  const pats=counted(rows.filter(r=>!solo(r)),r=>r.pk).filter(([,n])=>n>1),alone=counted(rows.filter(solo),r=>r.pk),na=alone.reduce((t,[,n])=>t+n,0);
+  // Patterns are relative; within one intersection, also say which approaches they came from.
+  const ways=k=>{if(ns!==1)return "";const by=counted(rows.filter(r=>r.pk===k&&r.pd),r=>r.pd);return by.length>1||(by.length===1&&by[0][1]<rows.filter(r=>r.pk===k).length)?" ("+by.map(([d,c])=>`${d} ${c}`).join(", ")+")":by.length===1?` (all ${by[0][0]})`:"";};
+  const patRow=(k,n,label)=>`<tr class="pat${k===hi?" on":""}" data-k="${esc(k)}"><td class="n">${n}</td><td>${esc(label+ways(k))}</td></tr>`;
+  // The header counts every crash that matches the filters; this counts those in the window.
+  let h=`<h2>In view</h2><div>${rows.length} of the ${crashes(all.length)} that match${all.length===1?"es":""} the filters ${rows.length===1?"is":"are"} in view. ${rows.length-mid} at ${ns} intersection${ns===1?"":"s"}. ${mid} away from an intersection.</div>`;
+  // The picked pattern is always named here with a way out, also when its row has left the tables below.
+  if(hi)h+=`<div class="picked"><b>Picked pattern:</b> ${esc(hi)}. ${rows.filter(r=>r.pk===hi).length} in view. Other crashes are drawn faint.<br><button id="unpick" type="button">Show every crash</button></div>`;
+  if(lv===2){ // how the collision diagrams fit the reported movements (see plan)
+    const inf=rs=>rs.filter(r=>r.plan&&r.plan.inferred).length,nm=rs=>rs.filter(r=>r.nomeet).length,un=rs=>rs.filter(r=>side(r)==="unclear").length;
+    const line=(f,text)=>f(all)?`<tr><td class="n">${f(rows)}</td><td class="n">${f(all)}</td><td>${text}</td></tr>`:"";
+    if(inf(all)||nm(all)||un(all))h+=`<h2>Diagram check</h2><table class="note"><tr><th class="n">In view</th><th class="n">All matching</th><th></th></tr>`+
+      line(inf,"Cyclist drawn against traffic (dotted). The reported movements meet only that way.")+
+      line(nm,"Reported movements do not meet. Drawn beside the corner; the dot is not where they met.")+
+      line(un,"Wrong side cited, party unclear. No cyclist is drawn against traffic.")+"</table>";}
+  h+=`<h2>Repeated patterns</h2>`+(pats.length?`<table>${pats.slice(0,15).map(([k,n])=>patRow(k,n,k)).join("")}</table>${pats.length>15?`<div class="note">and ${pats.length-15} more repeated pattern${pats.length===16?"":"s"}.</div>`:""}`:`<div class="note">No pattern with another party repeats in view.</div>`);
+  if(na)h+=`<h2>No other party recorded: ${na}</h2><div class="note">Nobody else is on the report. Listed by what the cyclist was doing.</div><table>${alone.filter(([,n])=>n>1).map(([k,n])=>patRow(k,n,k.slice(0,-SOLO.length))).join("")}</table>${alone.some(([,n])=>n===1)?`<div class="note">and ${alone.filter(([,n])=>n===1).length} more, one crash each.</div>`:""}`;
+  if((pats.length||na)&&!hi)h+=`<div class="note">Click a pattern to pick out its crashes.</div>`;
+  // Corridors: streets with several crashes in view, and what their crashes have in common.
+  const busy=counted(rows.flatMap(r=>(r.cs||[]).map(c=>({c}))),x=>x.c).filter(([,n])=>n>=3),streets=busy.slice(0,12);
+  if(streets.length){
+    h+=`<h2>Streets in view</h2><div class="note">Streets with 3 or more crashes in view. A crash at an intersection counts for both streets. Under each street: its most common pattern and cause, where one repeats.</div><table class="st"><tr><th class="n">Crashes</th><th>Street</th><th class="n">/*CHILD*/</th><th class="n">Fatal or serious</th><th class="n">Wrong-side riding</th><th class="n">Cited, party unclear</th></tr>${streets.map(([c,n])=>{const t=street(rows.filter(r=>(r.cs||[]).includes(c)));
+      return `<tr class="top"><td class="n">${n}</td><td>${esc(c)}</td><td class="n">${t.child}</td><td class="n">${t.serious}</td><td class="n">${t.wrong}</td><td class="n">${t.unclear}</td></tr><tr class="sub"><td></td><td colspan="5">${esc(t.common||"nothing repeats")}</td></tr>`;}).join("")}</table>${busy.length>12?`<div class="note">and ${busy.length-12} more street${busy.length===13?"":"s"} with 3 or more crashes.</div>`:""}<div class="note">Wrong-side riding: coded for the cyclist, or suggested by the movements. Cited, party unclear: the cause is wrong side of road, but no cyclist is recorded as at fault. A crash is in one column at most.</div>`;}
+  if(lv===0){const top=Object.entries(sites).sort((a,b)=>b[1].length-a[1].length).slice(0,40);
+    h+=`<h2>Intersections, most crashes first</h2><table><tr><th class="n">Crashes</th><th>Intersection</th><th>Worst</th><th class="n">Dark</th></tr>${top.map(([i,rs])=>`<tr><td class="n">${rs.length}</td><td>${esc(SITE[i].n||"unnamed")}</td><td><span class="sevdot" style="background:${sevc(worst(rs))}"></span>${esc(SEV[worst(rs)]||"not recorded")}</td><td class="n">${rs.filter(dark).length}</td></tr>`).join("")}</table>${ns>40?`<div class="note">and ${ns-40} more; zoom in to list them.</div>`:""}`;}
+  else{const list=rows.slice().sort((a,b)=>String(a.si!==null&&SITE[a.si]?SITE[a.si].n:"~"+a.st).localeCompare(String(b.si!==null&&SITE[b.si]?SITE[b.si].n:"~"+b.st))||b.y-a.y),cap=400;
+    h+=`<h2>Crashes in view</h2><table><tr><th>When</th><th>Where</th><th>Severity, light</th><th>Pattern</th></tr>${list.slice(0,cap).map(r=>`<tr><td>${esc(r.ym)}, ${hour(r)}</td><td>${esc(r.si!==null&&SITE[r.si]?SITE[r.si].n:(r.st||"not named"))}</td><td><span class="sevdot" style="background:${sevc(r.sv)}"></span>${esc(r.sv?SEV[r.sv]:"not stated")}${r.lt?", "+esc(LIGHT[r.lt]):""}</td><td>${esc(r.pk||r.coll)}</td></tr>`).join("")}</table>${list.length>cap?`<div class="note">and ${list.length-cap} more; zoom in to list them.</div>`:""}`;}
+  $("panel").innerHTML=h;
+  for(const tr of $("panel").querySelectorAll(".pat"))tr.addEventListener("click",()=>{hi=hi===tr.dataset.k?"":tr.dataset.k;draw();});
+  const un=$("unpick");if(un)un.addEventListener("click",()=>{hi="";draw();});
+}
+map.on("zoomend moveend",draw);["who","area","y0","y1","com","mv","ws","dk"].forEach(i=>$(i).addEventListener("change",()=>{hi="";draw();})); // a new filter drops the picked pattern, whose crashes may no longer be shown
+function filters(){const t=[`${$("y0").value}–${$("y1").value}`,$("who").selectedOptions[0].text==="all ages"?"cyclists of all ages":"cyclists "+$("who").selectedOptions[0].text,$("area").selectedOptions[0].text];
+  if($("com").checked)t.push("school commute hours only");if($("dk").checked)t.push("after dark only");
+  if($("mv").value)t.push("other party: "+$("mv").selectedOptions[0].text);if($("ws").value)t.push("wrong side: "+$("ws").selectedOptions[0].text);
+  if(hi)t.push("pattern: "+hi);
+  return t.join(" · ")+` · ${LEVEL[level()]} view, zoom ${map.getZoom()} · background: ${map.hasLayer(osm)?"OpenStreetMap tiles":"built-in streets"} · printed ${new Date().toLocaleDateString()}`;}
+let saved=null;
+function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=lg.getContainer().querySelector(".kb").innerHTML;
+  document.body.classList.add("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});draw();}
+function fromPrint(){if(!saved)return;document.body.classList.remove("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});saved=null;draw();}
+$("print").addEventListener("click",()=>{toPrint();setTimeout(()=>window.print(),400);}); // time for the map to redraw at page size
+addEventListener("beforeprint",toPrint);addEventListener("afterprint",fromPrint);
+const lg=L_.control({position:"bottomright"});let legendLevel=-1;
+function legend(){const lv=level();if(lv===legendLevel)return;legendLevel=lv;const box=lg.getContainer(),d=box.querySelector(".kb");const a=(inner)=>`<svg width="26" height="22" viewBox="-13 -11 26 22">${inner}</svg>`,c=css("--other");
+  // The key lists only what is drawn at this zoom: after dark is marked on collision diagrams, a child's outline on dots.
+  const party=Object.entries(COL).map(([k,v])=>`<span><span class="sw" style="background:${css(v)}"></span>${k}</span>`);
+  box.querySelector(".k1").innerHTML=lv===2?"Arrows: "+party.join(" "):""; // shown while the key is closed
+  const child=where=>`<div>${a(`<circle r="5.5" fill="${sevc("4")}" stroke="${css("--child")}" stroke-width="2"/>`)}outlined dot: cyclist /*CHILD*/${where}</div>`;
+  d.innerHTML="<b>Worst injury</b>"+Object.entries(SEV).map(([k,v])=>`<div><span class="sevdot" style="background:${sevc(k)}"></span>${esc(v)}</div>`).join("")+
+  (lv===0?`<div><svg width="50" height="30" viewBox="-9 -15 50 30"><circle r="${radius(1)}" fill="${sevc("3")}" stroke="#fff"/><circle cx="26" r="${radius(10).toFixed(1)}" fill="${sevc("3")}" stroke="#fff"/></svg>1 and 10 crashes</div>`+
+    `<div style='color:#5d646c'>Circles are intersections, sized by their crashes. Small dots are crashes away from an intersection.</div>`+child(" (small dots only)")+
+    `<div style='color:#5d646c'>Zoom in for collision diagrams. They also mark crashes after dark.</div>`:
+  lv===1?child("")+`<div style='color:#5d646c'>Each dot is a crash. Outlined circles are intersections, with their crash count. Zoom in for collision diagrams. They also mark crashes after dark.</div>`:
+  `<div>${a(`<circle r="6.6" fill="none" stroke="${css("--dark")}" stroke-width="2.4"/><circle r="4.2" fill="${sevc("3")}"/>`)}ring: after dark</div>`+
+  "<b>Party</b>"+party.map(x=>`<div>${x}</div>`).join("")+
+  "<b>Movement before the crash</b>"+
+  `<div>${a(`<path d="M-9,0 L5,0" stroke="${c}" stroke-width="2.4"/><path d="M4,-5 L12,0 L4,5 Z" fill="${c}"/>`)}going straight</div>`+
+  `<div>${a(`<path d="M-9,6 L-2,6 Q4,6 4,0" stroke="${c}" stroke-width="2.4" fill="none"/><path d="M-1,0 L4,-9 L9,0 Z" fill="${c}"/>`)}turning (left or right)</div>`+
+  `<div>${a(`<path d="M-9,0 L0,0 M8,-8 Q-2,-2 0,0 Q-2,2 8,8" stroke="${c}" stroke-width="2.4" fill="none"/>`)}turning, side not recorded</div>`+
+  `<div>${a(`<path d="M-9,0 L5,0" stroke="${c}" stroke-width="2.4"/><rect x="5" y="-5" width="3" height="10" fill="${c}"/>`)}movement not stated</div>`+
+  `<div>${a(`<path d="M-9,0 L2,0" stroke="${c}" stroke-width="2.4"/><rect x="2" y="-6" width="5" height="12" rx="1" fill="${c}"/>`)}stopped or parked</div>`+
+  `<div>${a(`<path d="M-9,0 L5,0" stroke="${c}" stroke-width="2.4" stroke-dasharray="4 3"/><path d="M4,-5 L12,0 L4,5 Z" fill="${c}"/>`)}backing</div>`+
+  `<div>${a(`<circle r="4.5" fill="#fff" stroke="${c}" stroke-width="2.4"/>`)}direction not stated</div>`+
+  `<div>${a(`<circle cx="-7" r="3.6" fill="${c}"/><path d="M-7,0 L5,0" stroke="${c}" stroke-width="2.4"/><path d="M4,-5 L12,0 L4,5 Z" fill="${c}"/>`)}dot on the tail: at fault</div>`+
+  `<div>${a(`<path d="M-9,0 L5,0" stroke="${css("--bicycle")}" stroke-width="3" stroke-dasharray="0.1 5" stroke-linecap="round"/><path d="M4,-5 L12,0 L4,5 Z" fill="${css("--bicycle")}"/>`)}dotted cyclist: drawn against traffic, where the movements meet</div>`+
+  "<div style='margin-top:4px;color:#5d646c'>Each road user is drawn keeping right, a cyclist near the kerb, and the crash where their paths meet. Reports do not give lanes: a party is drawn on the other side only where its report says travelling wrong way or crossed into the opposing lane, or a cyclist's wrong-side riding is coded or suggested by the movements. At an intersection the crash is placed by these paths, not where it was recorded. Directions are the officer's N/S/E/W, turned to the nearest street; a turning party's is taken as its heading before the turn.</div>");}
+lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
+  // Open on a tall screen; on a small one the key would cover the map, so it starts closed.
+  d.innerHTML=`<details${innerHeight>=800?" open":""}><summary>Key</summary><div class="kb"></div></details><div class="k1"></div>`;
+  L_.DomEvent.disableClickPropagation(d);L_.DomEvent.disableScrollPropagation(d);return d;};
+lg.addTo(map);map.on("zoomend",legend);legend();draw();
+</script></body></html>
