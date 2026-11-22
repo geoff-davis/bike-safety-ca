@@ -48,7 +48,10 @@ main{flex:1;display:flex;min-height:0}
 body.printing main{display:block}
 body.printing #map{width:10.2in;height:5.5in;flex:none;border:1px solid #999}
 body.printing .leaflet-control-attribution{display:none}
+[data-tip]{border-bottom:1px dotted var(--muted);cursor:help}
+#tip{position:fixed;z-index:2000;max-width:20rem;background:var(--fg);color:var(--bg);padding:.4rem .6rem;border-radius:4px;font-size:13px;line-height:1.35;pointer-events:none}
 @media print{
+  #tip{display:none!important}[data-tip]{border:0}
   @page{size:landscape;margin:.35in}
   html,body{height:auto;display:block;background:#fff}
   header,.leaflet-control-layers,.leaflet-control-zoom{display:none!important}
@@ -72,14 +75,15 @@ body.printing .leaflet-control-attribution{display:none}
 <label>Cyclists <select id="who"><option value="all">all ages</option><option value="child">/*CHILD*/</option><option value="adult">adult</option></select></label>
 <label>Area <select id="area"><option value="la">/*CITY*/</option><option value="all">whole area</option></select></label>
 <label>Years <input type="number" id="y0"> to <input type="number" id="y1"></label>
-<label><input type="checkbox" id="com"> school commute hours only</label>
-<label>Other party <select id="mv"><option value="">any movement</option><option value="turn">turning</option><option value="straight">going straight</option><option value="still">stopped or parked</option><option value="solo">no other party</option></select></label>
-<label>Wrong side <select id="ws"><option value="">any</option><option value="coded">riding, coded for the cyclist</option><option value="inf">riding, suggested by movements only</option><option value="either">riding, coded or suggested</option><option value="unclear">cited, party unclear</option></select></label>
-<label><input type="checkbox" id="dk"> after dark only</label>
+<label><input type="checkbox" id="com"> <span data-term="commute">school commute hours</span> only</label>
+<label><span data-term="other">Other party</span> <select id="mv"><option value="">any movement</option><option value="turn">turning</option><option value="straight">going straight</option><option value="still">stopped or parked</option><option value="solo">no other party</option></select></label>
+<label><span data-term="wrong">Wrong side</span> <select id="ws"><option value="">any</option><option value="coded">riding, coded for the cyclist</option><option value="inf">riding, suggested by movements only</option><option value="either">riding, coded or suggested</option><option value="unclear">cited, party unclear</option></select></label>
+<label><input type="checkbox" id="dk"> <span data-term="dark">after dark</span> only</label>
 <button id="print" type="button">Print this view</button>
 <span id="count"></span>
 </header>
 <main><div id="map"></div><div id="pkey"></div><aside id="panel"></aside></main>
+<div id="tip" role="tooltip" hidden></div>
 <script>
 const DATA=/*DATA*/;const MOVE=/*MOVE*/;const SITES=/*SITES*/;const SEV=/*SEVERITY*/;const LIGHT=/*LIGHT*/;const DARK=/*DARK*/;
 const SITE={};for(const s of SITES)SITE[s.i]=s;
@@ -293,12 +297,32 @@ function diagram(r){ // one crash: each party's path up to the crash point, its 
     html:`<svg width="${2*half}" height="${2*half}" viewBox="${-half} ${-half} ${2*half} ${2*half}"><circle class="hit" r="15" fill="transparent"/>${g}${ring}${dot}</svg>`});
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// What the map's terms mean, shown on hover or focus by the script at the end of the page.
+const TIPS={
+ commute:"Weekdays outside the summer break, with the crash in the hours starting 7 or 8 am or 2, 3 or 4 pm (7:00 to 8:59 am, 2:00 to 4:59 pm). A rough flag: other school holidays are not known.",
+ other:"The other vehicle or person on the crash report, and what it was doing just before the crash.",
+ wrong:"Wrong-side riding is riding against the flow of traffic. Coded: the report has the cyclist travelling the wrong way, or at fault with the cause wrong side of road. Suggested by movements: the reported directions and movements meet only if the cyclist was on the wrong side, which the report does not say. Cited, party unclear: the cause is wrong side of road, but the cyclist is not the party recorded at fault.",
+ dark:"Lighting recorded as dark, with street lights, without them, or with them not working. Dusk and dawn are not counted.",
+ fault:"The party the reporting officer judged most at fault: the officer's view at the scene, not a court finding.",
+ cause:"The primary collision factor: the officer's judgement of the main cause, as a category of California Vehicle Code violation.",
+ pattern:"What the parties were doing just before the crash, such as a car turning left and a cyclist going straight.",
+ repeated:"Patterns with another party that appear in more than one crash in view.",
+ check:"Crashes drawn with a caveat: movements that do not meet as reported, a cyclist drawn against traffic from the movements alone, or wrong side cited with the party unclear.",
+ serious:"Crashes whose worst injury was fatal or serious (in police terms a suspected serious injury, such as broken bones, severe cuts or burns, or loss of consciousness).",
+ worst:"A crash's severity is the worst injury anyone in it suffered, as the officer recorded it.",
+ movement:"What each party was doing just before the crash, as the officer recorded it.",
+ diagram:"A sketch of each crash at the corner, drawn from each party's reported direction and movement. It is not a reconstruction of the crash.",
+ light:"The worst injury in the crash, then the lighting the officer recorded.",
+};
+const SEVTIP={"1":"Someone in the crash died of their injuries within 30 days.","2":"A suspected serious injury, such as broken bones, severe cuts or burns, or loss of consciousness.","3":"A visible injury that is not serious, such as bruises or minor cuts.","4":"No visible injury, but someone reported pain.","0":"The report records no injury."};
+const COLLTIP={"broadside":"The front of one party hit the side of the other (a T-bone).","sideswipe":"The parties' sides touched as they passed.","rear end":"One party hit the back of the other.","head-on":"The parties' fronts met.","hit object":"A party hit a fixed object, not another road user."};
+const tip=(html,def)=>def?`<span tabindex="0" data-tip="${esc(def)}">${html}</span>`:html;
 const DIRN={N:"northbound",S:"southbound",E:"eastbound",W:"westbound"};
 const hour=r=>r.h===null?"hour not stated":(r.h%12||12)+(r.h<12?" am":" pm");
 function popup(r){
-  const rows=r.p.map((p,i)=>`<tr><td><span class="dot" style="background:${css(COL[p.k]||"--other")}"></span>${i+1}. ${esc(p.k)}${p.a?" ("+esc(p.a)+")":""}</td><td>${DIRN[p.d]?DIRN[p.d]+(p.s?"":" (compass direction; no mapped street runs that way)"):"direction not stated"}, ${esc(MOVE[p.m])}</td><td>${p.f?"<b>at fault</b>":""}</td></tr>`).join("");
-  const sv=r.sv?`<div class="meta"><span class="sevdot" style="background:${sevc(r.sv)}"></span>${esc(SEV[r.sv])}${r.lt?"; "+esc(LIGHT[r.lt]):""}</div>`:(r.lt?`<div class="meta">${esc(LIGHT[r.lt])}</div>`:"");
-  return `<div class="pop"><h3>${esc(r.st||"Location not named")}</h3><div class="meta">${esc(r.ym)}, ${hour(r)}${r.com?" (school commute hours)":""}</div>${sv}<div class="meta">${esc(r.coll)}; cause coded: ${esc(r.cause)}</div>${r.nomeet?'<div class="meta"><b>Movements as reported do not meet:</b> each party is drawn beside the corner in its reported direction, and the dot shows the injury, not where they met, because no lane placement makes their paths meet. A direction or movement on the report may be wrong.</div>':""}${r.plan&&r.plan.inferred?'<div class="meta"><b>Cyclist drawn against traffic (dotted):</b> the reported movements cross only with the cyclist on that side, so the cyclist was probably riding against traffic, on the sidewalk or in the crosswalk. The report does not say which.</div>':""}${r.p.some(p=>p.k!=="bicycle"&&KERB[p.m])?'<div class="meta"><b>Drawn to or from the kerb:</b> entering traffic or parking, from or into a parking space or a driveway. The report does not say which.</div>':""}${r.ap?'<div class="meta"><b>Shown at the corner:</b> the report gave a distance from it and no direction.</div>':""}${r.p.some(p=>p.m==="N")?'<div class="meta"><b>Crossed into the opposing lane:</b> that party is drawn across the centre line. This is not counted as wrong-side riding.</div>':""}${r.wc?'<div class="meta"><b>Wrong-side riding coded:</b> the cyclist is coded as travelling the wrong way, or as at fault for wrong side of road.</div>':""}${r.wu?'<div class="meta"><b>Wrong side cited, party unclear:</b> the cause is wrong side of road, but the cyclist is not recorded as the party at fault. No cyclist is drawn against traffic.</div>':""}${r.ws?`<div class="meta"><b>Possible wrong-side or sidewalk riding${r.wc?"":" (not coded)"}:</b> ${esc(r.ws)}.</div>`:""}<table>${rows||"<tr><td>No party records matched</td></tr>"}</table></div>`;
+  const rows=r.p.map((p,i)=>`<tr><td><span class="dot" style="background:${css(COL[p.k]||"--other")}"></span>${i+1}. ${esc(p.k)}${p.a?" ("+esc(p.a)+")":""}</td><td>${DIRN[p.d]?DIRN[p.d]+(p.s?"":" (compass direction; no mapped street runs that way)"):"direction not stated"}, ${esc(MOVE[p.m])}</td><td>${p.f?tip("<b>at fault</b>",TIPS.fault):""}</td></tr>`).join("");
+  const sv=r.sv?`<div class="meta"><span class="sevdot" style="background:${sevc(r.sv)}"></span>${tip(esc(SEV[r.sv]),SEVTIP[r.sv])}${r.lt?"; "+esc(LIGHT[r.lt]):""}</div>`:(r.lt?`<div class="meta">${esc(LIGHT[r.lt])}</div>`:"");
+  return `<div class="pop"><h3>${esc(r.st||"Location not named")}</h3><div class="meta">${esc(r.ym)}, ${hour(r)}${r.com?" (school commute hours)":""}</div>${sv}<div class="meta">${tip(esc(r.coll),COLLTIP[r.coll])}; ${tip("cause coded",TIPS.cause)}: ${esc(r.cause)}</div>${r.nomeet?'<div class="meta"><b>Movements as reported do not meet:</b> each party is drawn beside the corner in its reported direction, and the dot shows the injury, not where they met, because no lane placement makes their paths meet. A direction or movement on the report may be wrong.</div>':""}${r.plan&&r.plan.inferred?'<div class="meta"><b>Cyclist drawn against traffic (dotted):</b> the reported movements cross only with the cyclist on that side, so the cyclist was probably riding against traffic, on the sidewalk or in the crosswalk. The report does not say which.</div>':""}${r.p.some(p=>p.k!=="bicycle"&&KERB[p.m])?'<div class="meta"><b>Drawn to or from the kerb:</b> entering traffic or parking, from or into a parking space or a driveway. The report does not say which.</div>':""}${r.ap?'<div class="meta"><b>Shown at the corner:</b> the report gave a distance from it and no direction.</div>':""}${r.p.some(p=>p.m==="N")?'<div class="meta"><b>Crossed into the opposing lane:</b> that party is drawn across the centre line. This is not counted as wrong-side riding.</div>':""}${r.wc?'<div class="meta"><b>Wrong-side riding coded:</b> the cyclist is coded as travelling the wrong way, or as at fault for wrong side of road.</div>':""}${r.wu?'<div class="meta"><b>Wrong side cited, party unclear:</b> the cause is wrong side of road, but the cyclist is not recorded as the party at fault. No cyclist is drawn against traffic.</div>':""}${r.ws?`<div class="meta"><b>Possible wrong-side or sidewalk riding${r.wc?"":" (not coded)"}:</b> ${esc(r.ws)}.</div>`:""}<table>${rows||"<tr><td>No party records matched</td></tr>"}</table></div>`;
 }
 // Worst known injury; "0" (no injury) only if recorded, "" if no crash has a severity.
 const worst=rs=>{let w="";for(const r of rs)if(r.sv&&r.sv!=="0"&&(!w||r.sv<w))w=r.sv;return w||(rs.some(r=>r.sv==="0")?"0":"");};
@@ -421,22 +445,22 @@ function panel(lv,rows,all=rows){
   if(lv===2){ // how the collision diagrams fit the reported movements (see plan)
     const inf=rs=>rs.filter(r=>r.plan&&r.plan.inferred).length,nm=rs=>rs.filter(r=>r.nomeet).length,un=rs=>rs.filter(r=>side(r)==="unclear").length;
     const line=(f,text)=>f(all)?`<tr><td class="n">${f(rows)}</td><td class="n">${f(all)}</td><td>${text}</td></tr>`:"";
-    if(inf(all)||nm(all)||un(all))h+=`<h2>Diagram check</h2><table class="note"><tr><th class="n">In view</th><th class="n">All matching</th><th></th></tr>`+
+    if(inf(all)||nm(all)||un(all))h+=`<h2>${tip("Diagram check",TIPS.check)}</h2><table class="note"><tr><th class="n">In view</th><th class="n">All matching</th><th></th></tr>`+
       line(inf,"Cyclist drawn against traffic (dotted). The reported movements meet only that way.")+
       line(nm,"Reported movements do not meet. Drawn beside the corner; the dot is not where they met.")+
       line(un,"Wrong side cited, party unclear. No cyclist is drawn against traffic.")+"</table>";}
-  h+=`<h2>Repeated patterns</h2>`+(pats.length?`<table>${pats.slice(0,15).map(([k,n])=>patRow(k,n,k)).join("")}</table>${pats.length>15?`<div class="note">and ${pats.length-15} more repeated pattern${pats.length===16?"":"s"}.</div>`:""}`:`<div class="note">No pattern with another party repeats in view.</div>`);
+  h+=`<h2>${tip("Repeated patterns",TIPS.repeated)}</h2>`+(pats.length?`<table>${pats.slice(0,15).map(([k,n])=>patRow(k,n,k)).join("")}</table>${pats.length>15?`<div class="note">and ${pats.length-15} more repeated pattern${pats.length===16?"":"s"}.</div>`:""}`:`<div class="note">No pattern with another party repeats in view.</div>`);
   if(na)h+=`<h2>No other party recorded: ${na}</h2><div class="note">Nobody else is on the report. Listed by what the cyclist was doing.</div><table>${alone.filter(([,n])=>n>1).map(([k,n])=>patRow(k,n,k.slice(0,-SOLO.length))).join("")}</table>${alone.some(([,n])=>n===1)?`<div class="note">and ${alone.filter(([,n])=>n===1).length} more, one crash each.</div>`:""}`;
   if((pats.length||na)&&!hi)h+=`<div class="note">Click a pattern to pick out its crashes.</div>`;
   // Corridors: streets with several crashes in view, and what their crashes have in common.
   const busy=counted(rows.flatMap(r=>(r.cs||[]).map(c=>({c}))),x=>x.c).filter(([,n])=>n>=3),streets=busy.slice(0,12);
   if(streets.length){
-    h+=`<h2>Streets in view</h2><div class="note">Streets with 3 or more crashes in view. A crash at an intersection counts for both streets. Under each street: its most common pattern and cause, where one repeats.</div><table class="st"><tr><th class="n">Crashes</th><th>Street</th><th class="n">/*CHILD*/</th><th class="n">Fatal or serious</th><th class="n">Wrong-side riding</th><th class="n">Cited, party unclear</th></tr>${streets.map(([c,n])=>{const t=street(rows.filter(r=>(r.cs||[]).includes(c)));
+    h+=`<h2>Streets in view</h2><div class="note">Streets with 3 or more crashes in view. A crash at an intersection counts for both streets. Under each street: its most common pattern and cause, where one repeats.</div><table class="st"><tr><th class="n">Crashes</th><th>Street</th><th class="n">/*CHILD*/</th><th class="n">${tip("Fatal or serious",TIPS.serious)}</th><th class="n">${tip("Wrong-side riding",TIPS.wrong)}</th><th class="n">${tip("Cited, party unclear",TIPS.wrong)}</th></tr>${streets.map(([c,n])=>{const t=street(rows.filter(r=>(r.cs||[]).includes(c)));
       return `<tr class="top"><td class="n">${n}</td><td>${esc(c)}</td><td class="n">${t.child}</td><td class="n">${t.serious}</td><td class="n">${t.wrong}</td><td class="n">${t.unclear}</td></tr><tr class="sub"><td></td><td colspan="5">${esc(t.common||"nothing repeats")}</td></tr>`;}).join("")}</table>${busy.length>12?`<div class="note">and ${busy.length-12} more street${busy.length===13?"":"s"} with 3 or more crashes.</div>`:""}<div class="note">Wrong-side riding: coded for the cyclist, or suggested by the movements. Cited, party unclear: the cause is wrong side of road, but no cyclist is recorded as at fault. A crash is in one column at most.</div>`;}
   if(lv===0){const top=Object.entries(sites).sort((a,b)=>b[1].length-a[1].length).slice(0,40);
     h+=`<h2>Intersections, most crashes first</h2><table><tr><th class="n">Crashes</th><th>Intersection</th><th>Worst</th><th class="n">Dark</th></tr>${top.map(([i,rs])=>`<tr><td class="n">${rs.length}</td><td>${esc(SITE[i].n||"unnamed")}</td><td><span class="sevdot" style="background:${sevc(worst(rs))}"></span>${esc(SEV[worst(rs)]||"not recorded")}</td><td class="n">${rs.filter(dark).length}</td></tr>`).join("")}</table>${ns>40?`<div class="note">and ${ns-40} more; zoom in to list them.</div>`:""}`;}
   else{const list=rows.slice().sort((a,b)=>String(a.si!==null&&SITE[a.si]?SITE[a.si].n:"~"+a.st).localeCompare(String(b.si!==null&&SITE[b.si]?SITE[b.si].n:"~"+b.st))||b.y-a.y),cap=400;
-    h+=`<h2>Crashes in view</h2><table><tr><th>When</th><th>Where</th><th>Severity, light</th><th>Pattern</th></tr>${list.slice(0,cap).map(r=>`<tr><td>${esc(r.ym)}, ${hour(r)}</td><td>${esc(r.si!==null&&SITE[r.si]?SITE[r.si].n:(r.st||"not named"))}</td><td><span class="sevdot" style="background:${sevc(r.sv)}"></span>${esc(r.sv?SEV[r.sv]:"not stated")}${r.lt?", "+esc(LIGHT[r.lt]):""}</td><td>${esc(r.pk||r.coll)}</td></tr>`).join("")}</table>${list.length>cap?`<div class="note">and ${list.length-cap} more; zoom in to list them.</div>`:""}`;}
+    h+=`<h2>Crashes in view</h2><table><tr><th>When</th><th>Where</th><th>${tip("Severity, light",TIPS.light)}</th><th>${tip("Pattern",TIPS.pattern)}</th></tr>${list.slice(0,cap).map(r=>`<tr><td>${esc(r.ym)}, ${hour(r)}</td><td>${esc(r.si!==null&&SITE[r.si]?SITE[r.si].n:(r.st||"not named"))}</td><td><span class="sevdot" style="background:${sevc(r.sv)}"></span>${r.sv?tip(esc(SEV[r.sv]),SEVTIP[r.sv]):"not stated"}${r.lt?", "+esc(LIGHT[r.lt]):""}</td><td>${esc(r.pk||r.coll)}</td></tr>`).join("")}</table>${list.length>cap?`<div class="note">and ${list.length-cap} more; zoom in to list them.</div>`:""}`;}
   $("panel").innerHTML=h;
   for(const tr of $("panel").querySelectorAll(".pat"))tr.addEventListener("click",()=>{hi=hi===tr.dataset.k?"":tr.dataset.k;draw();});
   const un=$("unpick");if(un)un.addEventListener("click",()=>{hi="";draw();});
@@ -459,14 +483,14 @@ function legend(){const lv=level();if(lv===legendLevel)return;legendLevel=lv;con
   const party=Object.entries(COL).map(([k,v])=>`<span><span class="sw" style="background:${css(v)}"></span>${k}</span>`);
   box.querySelector(".k1").innerHTML=lv===2?"Arrows: "+party.join(" "):""; // shown while the key is closed
   const child=where=>`<div>${a(`<circle r="5.5" fill="${sevc("4")}" stroke="${css("--child")}" stroke-width="2"/>`)}outlined dot: cyclist /*CHILD*/${where}</div>`;
-  d.innerHTML="<b>Worst injury</b>"+Object.entries(SEV).map(([k,v])=>`<div><span class="sevdot" style="background:${sevc(k)}"></span>${esc(v)}</div>`).join("")+
+  d.innerHTML=tip("<b>Worst injury</b>",TIPS.worst)+Object.entries(SEV).map(([k,v])=>`<div><span class="sevdot" style="background:${sevc(k)}"></span>${tip(esc(v),SEVTIP[k])}</div>`).join("")+
   (lv===0?`<div><svg width="50" height="30" viewBox="-9 -15 50 30"><circle r="${radius(1)}" fill="${sevc("3")}" stroke="#fff"/><circle cx="26" r="${radius(10).toFixed(1)}" fill="${sevc("3")}" stroke="#fff"/></svg>1 and 10 crashes</div>`+
     `<div style='color:#5d646c'>Circles are intersections, sized by their crashes. Small dots are crashes away from an intersection.</div>`+child(" (small dots only)")+
-    `<div style='color:#5d646c'>Zoom in for collision diagrams. They also mark crashes after dark.</div>`:
-  lv===1?child("")+`<div style='color:#5d646c'>Each dot is a crash. Outlined circles are intersections, with their crash count. Zoom in for collision diagrams. They also mark crashes after dark.</div>`:
+    `<div style='color:#5d646c'>Zoom in for ${tip("collision diagrams",TIPS.diagram)}. They also mark crashes after dark.</div>`:
+  lv===1?child("")+`<div style='color:#5d646c'>Each dot is a crash. Outlined circles are intersections, with their crash count. Zoom in for ${tip("collision diagrams",TIPS.diagram)}. They also mark crashes after dark.</div>`:
   `<div>${a(`<circle r="6.6" fill="none" stroke="${css("--dark")}" stroke-width="2.4"/><circle r="4.2" fill="${sevc("3")}"/>`)}ring: after dark</div>`+
   "<b>Party</b>"+party.map(x=>`<div>${x}</div>`).join("")+
-  "<b>Movement before the crash</b>"+
+  tip("<b>Movement before the crash</b>",TIPS.movement)+
   `<div>${a(`<path d="M-9,0 L5,0" stroke="${c}" stroke-width="2.4"/><path d="M4,-5 L12,0 L4,5 Z" fill="${c}"/>`)}going straight</div>`+
   `<div>${a(`<path d="M-9,6 L-2,6 Q4,6 4,0" stroke="${c}" stroke-width="2.4" fill="none"/><path d="M-1,0 L4,-9 L9,0 Z" fill="${c}"/>`)}turning (left or right)</div>`+
   `<div>${a(`<path d="M-9,0 L0,0 M8,-8 Q-2,-2 0,0 Q-2,2 8,8" stroke="${c}" stroke-width="2.4" fill="none"/>`)}turning, side not recorded</div>`+
@@ -482,4 +506,16 @@ lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
   d.innerHTML=`<details${innerHeight>=800?" open":""}><summary>Key</summary><div class="kb"></div></details><div class="k1"></div>`;
   L_.DomEvent.disableClickPropagation(d);L_.DomEvent.disableScrollPropagation(d);return d;};
 lg.addTo(map);map.on("zoomend",legend);legend();draw();
+
+// A term's meaning on hover or keyboard focus, as in walkbike-routes' reports.
+(function(){var t=document.getElementById("tip");
+document.querySelectorAll("[data-term]").forEach(function(e){e.dataset.tip=TIPS[e.dataset.term];e.tabIndex=0;});
+function show(e){var el=e.target.closest&&e.target.closest("[data-tip]");if(!el)return;
+t.textContent=el.dataset.tip;t.hidden=false;var r=el.getBoundingClientRect();
+t.style.left=Math.max(8,Math.min(r.left,innerWidth-t.offsetWidth-8))+"px";
+t.style.top=(r.bottom+6+t.offsetHeight>innerHeight?r.top-6-t.offsetHeight:r.bottom+6)+"px";}
+function hide(){t.hidden=true;}
+["mouseover","focusin"].forEach(function(n){document.addEventListener(n,show);});
+["mouseout","focusout"].forEach(function(n){document.addEventListener(n,hide);});
+document.addEventListener("scroll",hide,true);})();
 </script></body></html>
