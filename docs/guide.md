@@ -204,8 +204,11 @@ Things the code assumes, which may not hold for your city:
 - Street names are matched loosely ("Oak Street" and "Oak Avenue" are one
   name), and the street table is matched as drawn lines, so two streets that
   cross on a bridge look like an intersection. A crash is placed where the
-  two names meet at one place in the report's city or, failing that, where
-  they come within 60 m of each other.
+  two names cross at one place in the report's city (crossings all within
+  60 m of each other, as on a divided road, count as one place), or where
+  they pass within 15 m without crossing. A looser second pass accepts a
+  cross street that stops up to 60 m short of the other road. Section 8.5 of
+  `docs/forecasting_model.md` gives the rules in full.
 - With `--area`, the network command still builds the config's own outline
   first, so the Census files are fetched anyway.
 - The licence here covers the code. TIMS and CCRS data have their own terms
