@@ -194,43 +194,45 @@ were computed for the figures in the table.
   expect if the model were exactly right about the city. The fitted
   parameters are taken as known.
 
-  The table below is from before the fixes of 15 to 21 November 2026 to
-  crash placement, street names and the merge, and has not been rerun (its
-  rank scores differ from the current table above); see issue #2.
+  The check is `python -m bike_safety_ca.checks.attainable --config <city>`
+  (`--synthetic` runs it on the made-up city). Rerun on the crash tables of
+  21 November 2026, 2,000 replicates per window, seed 20261117:
 
   | City | Rank score, three windows | Mean simulated score | Share of simulations below the real score |
   |---|---|---|---|
-  | Berkeley | 0.804, 0.787, 0.791 | 0.806, 0.811, 0.819 | 43%, 10%, 2% |
-  | Huntington Beach | 0.902, 0.886, 0.897 | 0.891, 0.901, 0.897 | 82%, 12%, 49% |
-  | Oakland | 0.856, 0.864, 0.851 | 0.844, 0.846, 0.854 | 87%, 91%, 36% |
-  | San Francisco | 0.847, 0.855, 0.859 | 0.856, 0.863, 0.863 | 10%, 17%, 30% |
-  | Santa Cruz | 0.839, 0.850, 0.831 | 0.834, 0.839, 0.837 | 60%, 66%, 38% |
-  | Long Beach | 0.858, 0.864, 0.866 | 0.848, 0.859, 0.867 | 86%, 66%, 46% |
-  | Davis | 0.874, 0.875, 0.856 | 0.872, 0.879, 0.879 | 50%, 42%, 14% |
-  | Santa Monica | 0.783, 0.759, 0.804 | 0.775, 0.783, 0.791 | 62%, 19%, 74% |
-  | San Diego | 0.873, 0.881, 0.881 | 0.866, 0.873, 0.877 | 85%, 82%, 75% |
+  | Berkeley | 0.804, 0.788, 0.793 | 0.809, 0.813, 0.820 | 37%, 9%, 2% |
+  | Huntington Beach | 0.902, 0.886, 0.897 | 0.891, 0.902, 0.898 | 80%, 11%, 48% |
+  | Oakland | 0.860, 0.868, 0.855 | 0.847, 0.849, 0.857 | 91%, 92%, 42% |
+  | San Francisco | 0.849, 0.855, 0.862 | 0.856, 0.863, 0.863 | 18%, 16%, 49% |
+  | Santa Cruz | 0.839, 0.849, 0.832 | 0.831, 0.836, 0.834 | 62%, 67%, 45% |
+  | Long Beach | 0.858, 0.864, 0.869 | 0.849, 0.859, 0.867 | 87%, 69%, 60% |
+  | Davis | 0.873, 0.877, 0.859 | 0.876, 0.878, 0.880 | 44%, 45%, 16% |
+  | Santa Monica | 0.786, 0.762, 0.801 | 0.776, 0.786, 0.793 | 66%, 20%, 65% |
+  | San Diego | 0.875, 0.883, 0.883 | 0.867, 0.874, 0.877 | 89%, 83%, 85% |
 
   Berkeley is about 0.10 below Huntington Beach, and the simulated scores
-  differ by about 0.085: under the fitted model, its own ranking has a lower
+  differ by about 0.083: under the fitted model, its own ranking has a lower
   expected score in Berkeley, where the fitted risk is spread more evenly
   over more corners. Berkeley's real score is below the simulated mean by
-  0.002, 0.024 and 0.028, about 0.018 on average. In its last window only 2%
+  0.005, 0.025 and 0.027, about 0.019 on average. In its last window only 2%
   of the replicates score as low; that is one of 27 city-windows looked at,
   the windows overlap, and nothing was adjusted for that, so read it as a
   pointer. The other cities fall on both sides of their simulated means; San
-  Francisco is a little below in all three windows (0.004 to 0.009) and San
-  Diego a little above in all three (0.004 to 0.008). Santa Monica, a compact
+  Francisco is a little below in all three windows (0.001 to 0.008) and San
+  Diego a little above in all three (0.006 to 0.009). Santa Monica, a compact
   city with a later bike crash at 7% to 14% of its intersections, scores
-  lower than Berkeley and within 0.001 of its simulated mean on average
-  (0.008 and 0.013 above it in two windows, 0.024 below in one): its mean
+  lower than Berkeley and within 0.002 of its simulated mean on average
+  (0.010 and 0.008 above it in two windows, 0.024 below in one): its mean
   score is close to the simulated mean under the fitted model. Its 2020
   police injury-crash records are missing (see the results), which the simulation does
   not allow for. Davis, another cycling city, has a high simulated score and is within
-  0.004 of it in two windows of three (0.023 below in the third): a cycling city can score highly. The
+  0.003 of it in two windows of three (0.021 below in the third): a cycling city can score highly.
+  Ranking each replicate by its own drawn rates, the best any ranking could
+  do if the model's rates were the truth, scores 0.82 to 0.93 across these
+  windows. The
   simulation takes the fitted model as the truth, so it cannot say whether
   risk in Berkeley really is that evenly spread or the model fails to see
-  differences that are there, and it does not show how well another ranking
-  could do.
+  differences that are there.
 - **A fixed top 100 is not comparable either**: it is 1% of Fresno's
   intersections and 36% of East Palo Alto's.
 

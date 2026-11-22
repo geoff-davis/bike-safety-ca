@@ -388,6 +388,22 @@ schools, and the city-list outline gives somewhat lower ones. Street data is
 © OpenStreetMap contributors, ODbL 1.0; credit them in anything you publish
 from it.
 
+A city's rank score depends on how evenly its risk is spread, so a low score
+need not mean a poor ranking.
+
+```bash
+uv run python -m bike_safety_ca.checks.attainable --config config/berkeley.yaml \
+    --crashes data/processed/berkeley/crashes --processed data/processed/berkeley
+```
+
+draws later crashes many times from the fitted model's own rates and scores
+the ranking on each draw, window by window: the simulated mean is the score
+to expect if the model were exactly right about the city, and the share of
+draws below the real score says how unusual the real score is. It takes the
+fitted parameters as known and skips windows where the model fell back to the
+blend. `--synthetic` runs it on the made-up city. See "What the rank score
+does and does not tell you" in `docs/where_the_ranking_helps.md`.
+
 ## The intersection ranking
 
 ```bash
