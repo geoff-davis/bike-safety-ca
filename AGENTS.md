@@ -145,7 +145,8 @@ licences. Tests use made-up data. See "Crash records" in `docs/guide.md`.
 
 - Tests that take most of a minute carry `@slow` (see
   `tests/test_hospital_rates.py`): deselected locally and at push, run in CI.
-  Every other test fails after 60 seconds.
+  Every other test fails after 180 seconds; CI runs about three times
+  slower than a laptop, so a test over about 20 s locally may need `@slow`.
 - A `Pandas4Warning` is an error: pandas 4 turns these into failures.
 - Do not change an expected value to make a failing test pass without saying
   why the new value is right.
