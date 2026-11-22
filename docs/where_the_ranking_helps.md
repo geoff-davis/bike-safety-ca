@@ -23,7 +23,7 @@ streets" and "Building the crash tables", into `data/processed/<config name>/`. 
 in this note (the results, pooling, ranking children, lasting changes of
 level, and with and without minor crashes) are then printed by
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out output/cities
 ```
 
@@ -281,7 +281,7 @@ same commands as a city. The folders are not chosen from the config's name,
 so pass them, and name the processed folder after the config, which is where
 the cross-city command looks:
 
-```
+```bash
 P=pool_san_mateo
 uv run python -m bike_safety_ca.network --config config/$P.yaml \
     --raw data/raw/$P --out data/processed/$P

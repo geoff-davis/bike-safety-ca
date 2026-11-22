@@ -14,7 +14,7 @@ is described.
 | CCRS records | data.ca.gov dataset `ccrs`, years 2016–2026, county code 43 and the same cities, downloaded 28 October 2026. | Nearly. CCRS is updated monthly, so later downloads have more recent crashes and some corrections. |
 | Road centerlines | The City of Los Altos citywide road-centerline layer, used only to place crashes that have no coordinates. | Yes, from the city's public map service. |
 | City limit | The City of Los Altos city-limit layer, fetched from the city's map service (`city_limit_url` in the config). It is not kept in this repository: the city's website policy does not allow passing its content on without permission. | Yes, the download fetches it. If it fails, the Census outline is used instead and the result differs slightly (see below). |
-| Study area | 2-mile (3,218.7 m) circles around 19 public school sites, joined with the city limit: 124 km². Eighteen schools are named in the config (`area_schools`) and placed from the California Department of Education's public school directory, which the area step downloads; the second Bullis Charter campus is a point placed by hand (`area_points`). The directory is not kept in this repository: the department's copyright statement asks for permission before its material is reproduced. | Yes, while the directory lists these schools at the same coordinates (checked with the copy downloaded in August 2026). If the automated download is turned away, download "Public Schools and Districts (TXT)" from https://www.cde.ca.gov/ds/si/ds/pubschls.asp and save it as `data/raw/schools/pubschls.txt`. |
+| Study area | 2-mile (3,218.7 m) circles around 19 public school sites, joined with the city limit: 124 km². Eighteen schools are named in the config (`area_schools`) and placed from the California Department of Education's public school directory, which the area step downloads; the second Bullis Charter campus is a point placed by hand (`area_points`). The directory is not kept in this repository: the department's copyright statement asks for permission before its material is reproduced. | Yes, while the directory lists these schools at the same coordinates (checked with the copy downloaded in August 2026). If the automated download is turned away, download "Public Schools and Districts (TXT)" from <https://www.cde.ca.gov/ds/si/ds/pubschls.asp> and save it as `data/raw/schools/pubschls.txt`. |
 | Streets | OpenStreetMap as of 22 August 2026 (`osm_date` in the config). © OpenStreetMap contributors, ODbL 1.0. | Yes, the download asks for the map at that time. |
 
 ## Settings
@@ -34,7 +34,7 @@ From `config/los_altos.yaml`:
 
 With the TIMS exports in `data/raw/crashes/tims/<batch>/`:
 
-```
+```bash
 uv run python -m bike_safety_ca.network --config config/los_altos.yaml
 uv run python -m bike_safety_ca.crashes download --config config/los_altos.yaml
 uv run python -m bike_safety_ca.crashes --config config/los_altos.yaml \
@@ -106,7 +106,7 @@ with fewer than 100 child crashes the all-cyclist ranking did better: see
 
 ## What changes the result
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.sensitivity --config config/los_altos.yaml \
     --other-ways path/to/streets_of_another_date.parquet \
     --wide-ways path/to/streets_for_the_city_list_area.parquet --leave-out "Palo Alto"

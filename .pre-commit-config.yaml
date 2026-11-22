@@ -1,38 +1,73 @@
 # Install with `make hooks`. Commit runs the fast checks; push runs the tests.
 default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+# Generated or vendored files, kept byte for byte as produced.
+exclude: ^(docs/demo/crash_movement_map\.html|src/bike_safety_ca/report/vendor/)
 repos:
   - repo: local
     hooks:
+      - id: no-private-data
+        name: nothing under data/ or output/ (crash records stay off the repository)
+        entry: "refusing to commit a file under data/ or output/"
+        language: fail
+        files: ^(data|output)/
       - id: ruff-check
         name: ruff lint
         entry: uv run --locked ruff check --force-exclude
         language: system
         types_or: [python, pyi]
-        stages: [pre-commit]
       - id: ruff-format
         name: ruff format (check only)
         entry: uv run --locked ruff format --check --force-exclude
         language: system
         types_or: [python, pyi]
-        stages: [pre-commit]
+      - id: marimo-check
+        name: marimo check
+        entry: uv run --locked marimo check --strict
+        language: system
+        files: ^notebooks/.*\.py$
       - id: mypy
         name: mypy
         entry: uv run --locked mypy
         language: system
         pass_filenames: false
         files: ^(src/|tests/|pyproject\.toml$)
-        stages: [pre-commit]
       - id: uv-lock
         name: uv.lock matches pyproject.toml
         entry: uv lock --check
         language: system
         pass_filenames: false
         files: ^(pyproject\.toml|uv\.lock)$
-        stages: [pre-commit]
       - id: pytest
-        name: pytest
+        name: pytest (without the slow tests; CI runs them)
         entry: uv run --locked pytest -q
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      # These three declare pre-push in their own definitions, which overrides
+      # default_stages; pinned so they do not run again on every push.
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+        exclude: ^demo/claremont/streets\.json\.gz$  # the demo city's streets, 1.1 MB
+        stages: [pre-commit]
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.19.0
+    hooks:
+      - id: markdownlint-cli2
+        exclude: ^CLAUDE\.md$  # a one-line @AGENTS.md import, not a document

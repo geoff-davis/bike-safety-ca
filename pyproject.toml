@@ -34,6 +34,15 @@ package = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# A hung test fails instead of running to the CI job cap, and dumps stacks.
+timeout = 60
+faulthandler_timeout = 120
+markers = ["slow: takes most of a minute (deselected by default; `make test-all` runs it)"]
+addopts = "-m 'not slow'"
+filterwarnings = [
+    # pandas 4 turns these into errors; fail now, while the fix is small.
+    "error::pandas.errors.Pandas4Warning",
+]
 
 [dependency-groups]
 dev = [
@@ -43,6 +52,7 @@ dev = [
     "pre-commit>=4.0",
     "pytest>=8.3",
     "pytest-cov>=7.1.0",
+    "pytest-timeout>=2.3",
     "ruff>=0.8",
     "types-geopandas>=1.0",
     "types-markdown>=3.11.3.20261108",
@@ -55,7 +65,7 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "B"]
+select = ["E4", "E7", "E9", "W", "F", "I", "B", "C4", "UP"]
 ignore = ["B905"]  # paired columns of one table are the same length by construction
 
 [tool.ruff.lint.per-file-ignores]

@@ -289,7 +289,7 @@ was not rerun: it uses its own crash placement.
 
 ### Rank score
 
-Average over the three windows 
+Average over the three windows
 
 | Ranking | Study area, all cyclists | Study area, children | Los Altos, all cyclists | Los Altos, children |
 |---|---|---|---|---|

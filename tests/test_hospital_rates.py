@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,11 @@ import pytest
 from scipy import stats
 
 from bike_safety_ca.hospital import population, rates, report
+
+
+def slow(test: Callable[[], None]) -> Callable[[], None]:
+    """Each of these fits several made-up states: most of a minute apiece."""
+    return pytest.mark.slow(pytest.mark.timeout(600)(test))
 
 
 def _counties(seed: int = 1, counties: int = 58, years: int = 9, shape: float = 6.0):
@@ -68,6 +74,7 @@ def test_cells_refuse_a_small_published_count_and_a_repeated_cell():
         rates.cells(pd.DataFrame({"Year": [2031], "Count": [20]}), ["Year"], every)
 
 
+@slow
 def test_the_spread_is_recovered_with_and_without_hidden_cells():
     # With six cells in ten hidden the spread is learned less sharply, so the
     # comparison is over several made-up states, not one.
@@ -83,6 +90,7 @@ def test_the_spread_is_recovered_with_and_without_hidden_cells():
     assert 4.5 < np.median(seen) < 8 and 4.5 < np.median(censored) < 8  # the truth is 6
 
 
+@slow
 def test_estimates_beat_the_raw_ratio_and_the_ranges_hold_the_truth():
     errors, raw_errors, inside, total = [], [], 0, 0
     for seed in range(1, 7):
@@ -211,6 +219,7 @@ def test_calls_compare_with_the_reference_not_the_fitted_mean():
     assert "call" not in _one([12], [12], [11.0], prior).index
 
 
+@slow
 def test_calls_are_rarely_wrong():
     wrong = called = 0
     for seed in range(1, 7):
