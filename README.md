@@ -51,7 +51,7 @@ streets.
 
 ## An interactive crash map
 
-[![The crash movement map on the demo city: intersections coloured by the worst injury, with the most common crash patterns listed beside the map](docs/images/demo_crash_map.png)](docs/demo/crash_movement_map.html)
+[![The crash movement map on the demo city: intersections coloured by the worst injury, with the most common crash patterns listed beside the map](docs/images/demo_crash_map.png)](https://geoff-davis.github.io/bike-safety-ca/demo/crash_movement_map.html)
 
 A single-file map of the bike injury crashes police recorded (from TIMS and
 the state's crash records) that can be placed on the map. Zoomed out, each
@@ -73,9 +73,9 @@ cyclist going straight north and a car turning right across them.
 
 ![A collision diagram at one demo corner, showing five right-hook crashes drawn as arrows](docs/images/demo_collision_diagram.png)
 
-To try it, download
-[`docs/demo/crash_movement_map.html`](docs/demo/crash_movement_map.html) and
-open it in a browser; it works offline.
+[Open the demo map](https://geoff-davis.github.io/bike-safety-ca/demo/crash_movement_map.html) in a browser. It is one file,
+[`docs/demo/crash_movement_map.html`](docs/demo/crash_movement_map.html) in
+the repository, and works offline once downloaded.
 
 Before comparing years, a reporting check flags police departments whose
 crash counts rose or fell abruptly. A flag is not proof, since real crashes
@@ -85,8 +85,8 @@ a change in safety.
 ## A ranking of where to look next
 
 Bike crashes are rare, so a few years of records miss many of the places
-where the next ones happen: in the twelve cities compared, between a quarter
-and 70% of later bike crashes, depending on the city and window, were at
+where the next ones happen: in the 27 cities compared, 27% to 93% of later
+bike crashes (median 53%), depending on the city and window, were at
 corners with no bike crash on record. The model ranks
 every intersection, and the city's named streets, by the bike crashes police
 are likely to record there, including those corners. It needs no traffic
@@ -122,7 +122,9 @@ windows. Read them as a guide to where the ranking can be trusted, not as a
 measured accuracy. [Where the ranking helps most and
 least](docs/where_the_ranking_helps.md) gives the results city by city, and
 [what the score does and does not tell you](docs/where_the_ranking_helps.md#what-the-rank-score-does-and-does-not-tell-you) explains what an AUC can
-and cannot show here.
+and cannot show here. [How the forecasting model
+works](docs/forecasting_model.md) gives its assumptions, the formula, the
+tests and the crash records behind it.
 
 ## What it does not tell you
 
@@ -193,8 +195,8 @@ limits on using the data near a lawsuit.
 - [Guide](docs/guide.md): every command, from the demo to your own records.
 - [Where the ranking helps most and least](docs/where_the_ranking_helps.md):
   the cross-city tests.
-- [How the ranking works](docs/crash_history_method.md): the argument for
-  the model and the tests of it.
+- [How the forecasting model works](docs/forecasting_model.md): assumptions,
+  the formula, how it was tested, and the data behind it.
 - [How counties are compared](docs/county_rates_method.md): the hospital
   report's method.
 - [Case study: Los Altos](docs/case_study_los_altos.md).
