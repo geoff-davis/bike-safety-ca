@@ -141,7 +141,7 @@ can be run again and checked.
 
 ## Try it without any data
 
-```
+```bash
 uv sync
 make walkthrough
 ```
@@ -201,7 +201,8 @@ limits on using the data near a lawsuit.
 
 ## Development
 
-`make check` runs lint, type checks and tests. `make hooks` installs the git hooks.
+`make check` runs lint, type checks and tests (the slow tests only with
+`make test-all`, which CI runs). `make hooks` installs the git hooks.
 
 ## Licence
 

@@ -289,7 +289,7 @@ function diagram(r){ // one crash: each party's path up to the crash point, its 
   // parties with no direction recorded: a ring beside the crash point
   if(r.plan)r.p.filter(p=>p.b===null).forEach((p,i,a)=>{const t=i*2*Math.PI/Math.max(a.length,1);half=Math.max(half,24);g+=`<circle cx="${(11*Math.cos(t)).toFixed(1)}" cy="${(11*Math.sin(t)).toFixed(1)}" r="4.5" fill="#fff" stroke="${css(COL[p.k]||"--other")}" stroke-width="2.4"/>`;});
   return L_.divIcon({className:"cr",iconSize:[2*half,2*half],iconAnchor:[half-(r.ox||0),half-(r.oy||0)],popupAnchor:[r.ox||0,(r.oy||0)-6], // the pop-up opens at the drawn crash point, not the corner centre
-    
+
     html:`<svg width="${2*half}" height="${2*half}" viewBox="${-half} ${-half} ${2*half} ${2*half}"><circle class="hit" r="15" fill="transparent"/>${g}${ring}${dot}</svg>`});
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

@@ -549,10 +549,7 @@ def synthetic_inputs(city: Any) -> dict[str, Any]:
     crashes = city.crashes.assign(corridor="")
     at = crashes.site
     km = pd.Series(
-        {
-            name: 1.0
-            for name in sorted({corridor(n) for s in city.streets.values() for n in s} - {""})
-        }
+        dict.fromkeys(sorted({corridor(n) for s in city.streets.values() for n in s} - {""}), 1.0)
     )
     corners, _ = pieces(city.sites.index, city.streets, pd.Series(dtype=bool), piece(None))
     return {

@@ -5,7 +5,7 @@ records. The [README](../README.md) says what the parts are for.
 
 ## Try it without any data
 
-```
+```bash
 uv sync
 make walkthrough
 ```
@@ -75,7 +75,7 @@ you give a road-centerline layer.
 
 ## The area and its streets
 
-```
+```bash
 uv run python -m bike_safety_ca.network --config config/los_altos.yaml
 ```
 
@@ -89,7 +89,7 @@ the whole unincorporated county. To use your own outline instead, pass
 
 ## Building the crash tables
 
-```
+```bash
 uv run python -m bike_safety_ca.crashes download --config config/los_altos.yaml
 uv run python -m bike_safety_ca.crashes --config config/los_altos.yaml \
     --centerlines path/to/road_centerlines.parquet
@@ -214,7 +214,7 @@ Things the code assumes, which may not hold for your city:
 
 ## Check for changes in police reporting first
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.reporting --config config/los_altos.yaml
 ```
 
@@ -327,7 +327,7 @@ With the crash tables and the street table built, the hold-out check finds the
 intersections, places each crash at one, and scores every ranking on the
 crashes after its cut-off year:
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml
 ```
 
@@ -339,7 +339,7 @@ table from `data/processed/` and the crash tables from
 `data/processed/crashes/`. For a city built into a folder of its own, name
 both:
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.holdout --config config/davis.yaml \
     --processed data/processed/davis --crashes data/processed/davis/crashes
 ```
@@ -366,7 +366,7 @@ intersection, as are the two halves of a divided road's crossing; a few
 chains of close corners therefore come out wide, and the intersection table's
 `span_m` column says how wide.
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.sensitivity --config config/los_altos.yaml
 ```
 
@@ -387,7 +387,7 @@ from it.
 
 ## The intersection ranking
 
-```
+```bash
 uv run python -m bike_safety_ca.model --config config/los_altos.yaml
 ```
 
@@ -428,7 +428,7 @@ for the city alone. The files give crash counts for single corners. Read
 
 ## Corridors
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.corridors --config config/los_altos.yaml --out output/corridors
 ```
 
@@ -437,6 +437,7 @@ name and street type once spellings are tidied ("FOOTHILL EXPY" and "Foothill
 Expressway" are one; Park Avenue and Park Place are two). With a city limit,
 each corridor is split into its part inside the city
 and its part outside. Each crash counts in one place:
+
 - at a corner, where the hold-out check placed it;
 - otherwise between corners, on the street its report names first.
 
@@ -451,6 +452,7 @@ crashes.
 The check compares three rankings over the same windows: past crashes on the
 corridor, street length alone, and the corridor model. It reports four
 measures:
+
 - the rank score;
 - the rank correlation with later crashes, which still works when every
   corridor had a later crash;
@@ -468,7 +470,7 @@ for pieces shorter than 0.5 km.
 
 ## The same checks over many cities
 
-```
+```bash
 uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out output/cities
 ```
 
@@ -488,7 +490,7 @@ it out with `--skip`. Both take patterns on the config name.
 
 ## Crash summaries and the crash movement map
 
-```
+```bash
 uv run python -m bike_safety_ca.report --config config/los_altos.yaml
 ```
 
@@ -581,10 +583,10 @@ or crash location. Counts under 11 are hidden by the source.
 > "I Agree"; it never clicks it for you, and stops if the agreement closes any
 > other way. The agreement asks, among other things, that you credit
 > CDPH/EpiCenter in anything you make from the counts, tell
-> EpiCenter@cdph.ca.gov of publications, and never try to identify anyone.
+> <EpiCenter@cdph.ca.gov> of publications, and never try to identify anyone.
 > Once you have agreed, leave the window alone until the pull finishes.
 
-```
+```bash
 # the county's tables, through a browser window (Playwright is not a dependency)
 uv run --with playwright python -m bike_safety_ca.hospital.epicenter \
     --county "Santa Clara" --out data/raw/epicenter/santa_clara
@@ -691,4 +693,3 @@ jurisdiction (Vehicle Code § 20014).
 - **No warranty.** The code is offered under the MIT licence, with no warranty
   of any kind. This note summarises published terms as read in November 2026;
   it is not legal advice, and the sources' own terms govern.
-

@@ -1,20 +1,24 @@
 name: CI
 
+# Required checks on main are matched by job name: `quality`, `test (3.12)` and
+# `test (3.14)`. Renaming a job or changing the matrix needs a branch-protection
+# update too.
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.14"]
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
@@ -28,10 +32,14 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Sync locked environment
-        run: uv sync --locked
+        run: |
+          # Retry transient download failures; the last line fails the step
+          # if every attempt failed.
+          for i in 1 2 3; do uv sync --locked && break; echo "retry $i"; sleep 10; done
+          uv sync --locked
 
       - name: Lint
         run: uv run --locked ruff check --output-format=github src tests notebooks
@@ -39,11 +47,40 @@ jobs:
       - name: Check formatting
         run: uv run --locked ruff format --check src tests notebooks
 
+      - name: Check the notebook
+        run: uv run --locked marimo check --strict notebooks/walkthrough.py
+
       - name: Type check
         run: uv run --locked mypy
 
-      - name: Test
-        run: uv run --locked pytest -q --cov
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        timeout-minutes: 5
+        env:
+          GIT_HTTP_LOW_SPEED_LIMIT: "1"
+          GIT_HTTP_LOW_SPEED_TIME: "60"
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Sync locked environment
+        run: |
+          for i in 1 2 3; do uv sync --locked && break; echo "retry $i"; sleep 10; done
+          uv sync --locked
+
+      - name: Test, the slow tests included
+        run: uv run --locked pytest -q --cov -m ''
 
       - name: Hold-out check on the synthetic city
         run: uv run --locked python -m bike_safety_ca.checks.holdout --synthetic

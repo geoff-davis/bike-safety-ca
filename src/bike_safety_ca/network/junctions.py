@@ -334,7 +334,9 @@ def build_junctions(
         # Rank roads, not OSM ways: a street split into several ways at the junction
         # (divided carriageways, a name change, a mid-block split) counts once.
         road = g.name.map(lambda n: street_key(n) if isinstance(n, str) else "")
-        road = road.map(_joined(set(road) - {""})).fillna("")
+        # .get, not .map(dict): with no named way the dict is empty and map gives floats.
+        joined = _joined(set(road) - {""})
+        road = road.map(lambda k: joined.get(k, ""))
         # Unnamed ramp ways (trunk_link and the like) are one road: the on and off halves
         # of an expressway ramp would otherwise count as two arterials crossing.
         road = road.where(road.ne("") | ~g.link, "ramps")
