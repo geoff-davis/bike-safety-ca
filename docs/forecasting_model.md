@@ -1111,13 +1111,15 @@ city; agency codes as on the reports):
 | San Jose | 9725 (highway patrol) | 2023–2025, 2026 to 11 November | 16, 13, 6, 4 | 54 |
 | San Mateo | 4116 (police) | 2015, 2016, 2022 | 6, 13, 78 | 237 |
 | Santa Monica | 1965 (police) | 2020 | 0 | 441 |
-| Los Altos (alone) | 4305 (police) | 2024, 2025, 2026 to 27 October | 0, 0, 0 | 63 |
+| Los Altos (alone) | 4305 (police) | 2024, 2026 to 27 October | 15, 14 | 63 |
 
 South Lake Tahoe police (0902) are marked as a rise in 2022–2025 (70 to 82
-against a typical 22). The Los Altos row is an artefact of the
-`los_altos_city` config, which lacks the `agency_reassignments` setting of
-the case study's config: the department's reports from 2023 are counted
-under the Palo Alto code there. Santa Monica's 2020 is a real gap in the
+against a typical 22). Los Altos police's 2025 (33) is marked a possible
+fall; the case study finds the same fall, almost all of it in "complaint of
+pain" reports. These Los Altos figures need the config's
+`agency_reassignments` rule, which moves the department's reports filed
+under Palo Alto's code from 2023 back to it: without the rule every year
+from 2024 reads as zero. Santa Monica's 2020 is a real gap in the
 records: CCRS holds 8 crashes of any kind under that department's code in
 2020, against 864 in 2019 and 891 in 2021 (from the companion note). None of
 these has been confirmed with a department.
@@ -1154,13 +1156,13 @@ Some of this may be real. Some is not: the jump in 2025 comes mostly from
 San Diego, where the share graded visible rose from 34% to 62%, and San
 Jose, from 31% to 45%, with little change in most other cities. The
 reporting check's table of lasting changes of level (section 8.4) finds the
-agency-level steps. Over 2015 to 2025, 18 of the 28 cities have at least one
-agency with a step, 25 agencies in all (rerun, cross-city command):
+agency-level steps. Over 2015 to 2025, 19 of the 28 cities have at least one
+agency with a step, 26 agencies in all (rerun, cross-city command):
 
 | Measure | Fewer reports | Regraded | More reports |
 |---|---|---|---|
 | All injury crashes | 5 | – | 3 |
-| Complaint of pain | 13 | 4 | 2 |
+| Complaint of pain | 14 | 4 | 2 |
 | Visible injury | 2 | 3 | 3 |
 | Serious injury | 0 | 0 | 6 |
 
@@ -1188,8 +1190,9 @@ another grade. The steps in "complaint of pain" crashes (typical year before
 | Palo Alto police (4312) | 2022 | 222 → 6 | 127 → 17 | fewer reports |
 | San Jose, highway patrol (9725) | 2022 | 27 → 8 | 22 → 7 | fewer reports |
 | Chico police (0402) | 2023 | 107 → 40 | 130 → 121 | fewer reports |
+| Los Altos police (4305) | 2023 | 35 → 1 | 35 → 32 | fewer reports |
 
-Only five of these 17 agencies have a step in their total, so the yearly
+Only five of these 18 agencies have a step in their total, so the yearly
 flags on totals miss most of them. In Menlo Park and Redwood City the other
 severities rise by about a third of the fall, under the half the table calls
 regrading, so those are probably a mix. 2020 is a year when crashes really
@@ -1232,8 +1235,8 @@ Agency-years marked in the 28 cities, over 2015 to the latest record (rerun):
 
 | Measure | Fall | Possible fall | Possible rise | Rise |
 |---|---|---|---|---|
-| Injury crashes | 20 | 15 | 9 | 4 |
-| Cyclist injury crashes | 17 | 13 | 7 | 0 |
+| Injury crashes | 19 | 16 | 9 | 4 |
+| Cyclist injury crashes | 15 | 13 | 7 | 0 |
 
 For cyclist crashes 2020 is marked in nine agency-years (three falls),
 because in most cities the other agencies have too few cyclist crashes to
