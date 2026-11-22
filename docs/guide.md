@@ -379,8 +379,8 @@ serious grade, and scores both on later cyclist crashes (it also says in how
 many windows each came from a fitted model and not the fallback): departments
 differ in how many of those they file (see "Lasting changes of level"
 above), and in the cities tried the ranking was slightly better with them
-kept in. Scores depend on the area: the figures in
-`docs/crash_history_method.md` come from a smaller study area around Los Altos
+kept in. Scores depend on the area: the Los Altos figures in
+`docs/forecasting_model.md` come from a smaller study area around Los Altos
 schools, and the city-list outline gives somewhat lower ones. Street data is
 © OpenStreetMap contributors, ODbL 1.0; credit them in anything you publish
 from it.

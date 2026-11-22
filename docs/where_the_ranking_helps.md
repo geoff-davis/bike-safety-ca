@@ -58,7 +58,7 @@ overlap, so use it only to compare the two rankings).
 | Sacramento | 10,292 | 3 | 0.889 | 0.670 | model | 227 / 169 of 1,441 | 0.834 (3) | 40 |
 | Chico | 2,313 | 3 | 0.885 | 0.638 | model | 96 / 61 of 197 | too few | 11 |
 | San Diego | 19,467 | 3 | 0.880 | 0.653 | model | 264 / 212 of 2,438 | 0.815 (3) | 47 |
-| Cupertino | 990 | 2 | 0.880 | 0.702 | mixed | 67 / 53 of 101 | too few | 4 |
+| Cupertino | 990 | 2 | 0.879 | 0.702 | mixed | 67 / 53 of 101 | too few | 4 |
 | South Lake Tahoe | 820 | 1 | 0.876 | 0.529 | blend | 37 / 9 of 55 | too few | 1 |
 | Ventura | 2,261 | 3 | 0.872 | 0.667 | model | 197 / 163 of 469 | 0.833 (1) | 13 |
 | Encinitas | 1,299 | 3 | 0.872 | 0.659 | mixed | 90 / 69 of 178 | 0.806 (1) | 22 |
@@ -114,8 +114,11 @@ were computed for the figures in the table.
   intersections hold about 35% more later crashes than history alone finds,
   and in San Diego 25% more.
 - **Intersections with no bike crash on record.** Most intersections have
-  none, yet between a quarter and 70% of later bike crashes happen at them,
-  depending on the city and window (twelve cities compared). History cannot order them at all; the model can.
+  none, yet 27% to 93% of later bike crashes (median 53%) happen at them,
+  depending on the city and window (27 cities, 74 windows; the highest
+  shares are in cities with gaps in police reporting). History cannot order
+  them at all; the model can. See "Corners with no bike crash on record" in
+  [the model write-up](forecasting_model.md#62-corners-with-no-bike-crash-on-record).
 - **Cities with little bike history per corner.** Fresno's history alone
   scores 0.553; the model scores 0.863.
 - **Children, in the large cities.** With 40 or more later child crashes a
@@ -173,7 +176,8 @@ were computed for the figures in the table.
   and see the `found in top …` columns of the file it writes.
 - **Much of it is exposure.** In an earlier one-off run on the Los Altos
   study area (its script is not included), street length alone scored 0.849 against the model's 0.856 (see
-  "What each choice contributes" in the method note).
+  "What each choice contributes" in
+  [the model write-up](forecasting_model.md#46-what-each-choice-contributes)).
 - **It ignores the level.** A forecast wrong by a factor of two everywhere
   scores the same.
 - **It is not comparable across cities.** It depends on how varied a city's
@@ -189,6 +193,10 @@ were computed for the figures in the table.
   mean over 2,000 such replicates per window is the score the ranking would
   expect if the model were exactly right about the city. The fitted
   parameters are taken as known.
+
+  The table below is from before the fixes of 15 to 21 November 2026 to
+  crash placement, street names and the merge, and has not been rerun (its
+  rank scores differ from the current table above); see issue #2.
 
   | City | Rank score, three windows | Mean simulated score | Share of simulations below the real score |
   |---|---|---|---|
@@ -272,8 +280,8 @@ pool without San Jose:
 
 Two cautions. Pool with cities that resemble yours: South Lake Tahoe has no
 such neighbour. And a pool mixes police departments, so a change in one
-department's reporting distorts a ranking across the pool (see the method
-note): run the reporting check on the pool, and score or publish inside each
+department's reporting distorts a ranking across the pool (see "Pooling with neighbours" in
+[the model write-up](forecasting_model.md#73-pooling-with-neighbours)): run the reporting check on the pool, and score or publish inside each
 city. A pool cannot yet cross a county line.
 
 **Setting up a pool.** A pooled area is an ordinary config, built with the

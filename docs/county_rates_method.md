@@ -69,7 +69,7 @@ county's own figure is close to 1 for a large county and small for a tiny
 one. Nothing is tuned per county: the pull toward the mean is whatever the
 county's amount of data implies. This is the same gamma–Poisson blend the
 crash-history ranking uses for intersections
-(`docs/crash_history_method.md`).
+(`docs/forecasting_model.md`).
 
 The whole distribution of *θ_c* is kept, not only its mean, which gives a 90%
 range for each county and the chance that its ratio is above a chosen
