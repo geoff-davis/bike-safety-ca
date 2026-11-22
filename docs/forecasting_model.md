@@ -795,12 +795,12 @@ the work.
 A city's attainable rank score depends on how evenly its risk is spread.
 A simulation draws later crashes from the fitted model's own rates and
 scores the model's ranking on them; the mean is the score the ranking would
-expect if the model were exactly right about the city. The method and
-script are in issue #2. Its nine-city table in the companion note is from
-before the fixes of 15 to 21 November 2026 and has not been rerun, so it is
-not repeated here. Its reading, that most of Berkeley's distance from the
-other cities is what the model's own rates predict, with a real score about
-0.02 short of that, should be checked on a rerun.
+expect if the model were exactly right about the city. The check is
+`python -m bike_safety_ca.checks.attainable`. Its nine-city table, rerun on
+the crash tables of 21 November 2026, is in the companion note. Most of
+Berkeley's distance from the other cities is what the model's own rates
+predict (simulated means about 0.08 below Huntington Beach's), with a real
+score about 0.02 short of that on average.
 
 ### 6.5 With and without minor crashes
 
@@ -1398,6 +1398,7 @@ and CCRS (2016 to November 2026).
 |---|---|---|
 | 5.3 | Los Altos study-area rank scores, by window, top 25/50/100 | `python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml --out <file>` |
 | 6.1, 6.5, 7.3, 7.4, 8.3 (level steps) | City table, severity sensitivity, pooled table, child table, level-step counts and table | `python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out <folder>` (about six minutes) |
+| 6.4 (companion table) | Simulated against real rank scores, nine cities | `python -m bike_safety_ca.checks.attainable --config config/<city>.yaml`, per city |
 | 8.3, 8.4 (yearly flags) | Falls and rises, counts of marks | `python -m bike_safety_ca.checks.reporting --config config/<city>.yaml`, per city |
 
 **Rerun with one-off scripts** (not in the repository; each calls the
@@ -1428,7 +1429,6 @@ label where they appear:
 - 4.9: the fitted powers of the earlier formula.
 - 5.3: the road-and-traffic row and the resampling ranges.
 - 6.3: the correlation of 0.84 quoted from the companion note.
-- 6.4: the simulation of attainable scores (issue #2); not reproduced here.
 
 Earlier figures that this note replaces: "a quarter to 70%" of later crashes
 at corners with no bike crash, in twelve cities (now 27% to 93%, median 53%,
