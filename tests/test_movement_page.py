@@ -50,6 +50,7 @@ T_.el=id=>({id,value:"",checked:false,textContent:"",_h:"",_kids:{},_rows:{},lis
 for(const id of ["who","area","y0","y1","com","mv","ws","dk","print","count","panel","pkey","pfilters","map"])T_.ids[id]=T_.el(id);
 T_.ids.who.value="all";T_.ids.area.value="all";
 globalThis.document={documentElement:{},body:T_.el("body"),
+  querySelectorAll(){return [];},addEventListener(){}, // the tooltip script; hover is not run here
   getElementById(id){if(T_.ids[id])return T_.ids[id]; // anything else is inside the panel
     const p=T_.ids.panel;return p._h.includes('id="'+id+'"')?p.querySelector("#"+id):null;}};
 globalThis.getComputedStyle=()=>({getPropertyValue:n=>n}); // a colour is its variable's name
