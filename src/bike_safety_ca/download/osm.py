@@ -83,39 +83,62 @@ def run(query: str) -> dict[str, Any]:
     raise RuntimeError(f"all overpass endpoints failed, nothing was saved: {last}")
 
 
-def download(bounds: Bounds, out: Path, overwrite: bool = False, date: str | None = None) -> Path:
-    """Fetch the streets in ``bounds`` (degrees, padded here) into ``out``."""
+def reuse(out: Path, box: Bounds, date: str | None) -> bool:
+    """Whether ``out`` already holds the streets for ``box`` (padded) at ``date``.
+
+    Refuses a saved file fetched for another box or map date, so one city's
+    streets are never read as another's.
+    """
     dest, note = out / "overpass_streets.json", out / "overpass_streets.metadata.json"
-    box = padded(bounds)
-    if not overwrite and dest.exists():
-        saved = json.loads(note.read_text()) if note.exists() else {}
-        had = (saved.get("bounds_west_south_east_north"), saved.get("map_as_of"))
-        if had[0] is None:
-            log.warning("%s has no record of its area; using it as it is", dest)
-            return dest
-        if (list(had[0]), had[1]) == (list(box), date or "latest"):
-            log.info("exists, skipping %s", dest)
-            return dest
-        raise ValueError(
-            f"{dest} was fetched for another area or map date ({had[0]}, {had[1]}). "
-            "Use another folder for this city, or pass --overwrite to replace it."
-        )
-    query = build_query(box, date)
-    data = run(query)
+    if not dest.exists():
+        return False
+    saved = json.loads(note.read_text()) if note.exists() else {}
+    had = (saved.get("bounds_west_south_east_north"), saved.get("map_as_of"))
+    if had[0] is None:
+        log.warning("%s has no record of its area; using it as it is", dest)
+        return True
+    if (list(had[0]), had[1]) == (list(box), date or "latest"):
+        log.info("exists, skipping %s", dest)
+        return True
+    raise ValueError(
+        f"{dest} was fetched for another area or map date ({had[0]}, {had[1]}). "
+        "Use another folder for this city, or pass --overwrite to replace it."
+    )
+
+
+def save(
+    out: Path,
+    query: str,
+    data: dict[str, Any],
+    box: Bounds,
+    date: str | None,
+    source: str | None = None,
+) -> Path:
+    """Write the streets, the query that asked for them and a note of both."""
+    dest = out / "overpass_streets.json"
     payload = json.dumps(data)
     atomic_write_text(out / "overpass_query.txt", query)
     atomic_write_text(dest, payload)
-    atomic_write_json(
-        note,
-        {
-            "retrieved_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
-            "osm3s": data.get("osm3s"),
-            "map_as_of": date or "latest",
-            "bounds_west_south_east_north": box,
-            "elements": len(data.get("elements", [])),
-            "sha256": hashlib.sha256(payload.encode()).hexdigest(),
-            "license": LICENCE,
-        },
-    )
+    note: dict[str, Any] = {
+        "retrieved_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "osm3s": data.get("osm3s"),
+        "map_as_of": date or "latest",
+        "bounds_west_south_east_north": box,
+        "elements": len(data.get("elements", [])),
+        "sha256": hashlib.sha256(payload.encode()).hexdigest(),
+        "license": LICENCE,
+    }
+    if source:
+        note["source"] = source
+    atomic_write_json(out / "overpass_streets.metadata.json", note)
     log.info("saved %d elements", len(data.get("elements", [])))
     return dest
+
+
+def download(bounds: Bounds, out: Path, overwrite: bool = False, date: str | None = None) -> Path:
+    """Fetch the streets in ``bounds`` (degrees, padded here) into ``out``."""
+    box = padded(bounds)
+    if not overwrite and reuse(out, box, date):
+        return out / "overpass_streets.json"
+    query = build_query(box, date)
+    return save(out, query, run(query), box, date)

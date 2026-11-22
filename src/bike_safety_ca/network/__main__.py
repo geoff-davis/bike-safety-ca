@@ -6,6 +6,9 @@ bounding box, through the Overpass API) and ``build`` (the street table the
 hold-out check reads).  With no step named, all three run; downloads already
 on disk are not fetched again.  ``--area`` uses your own outline, in any
 format GeoPandas reads, instead of the one built from the city list.
+``--extract`` cuts the streets from a regional OpenStreetMap extract (an
+``.osm.pbf`` file, such as Geofabrik's) instead of asking Overpass; it needs
+``uv sync --extra extract``.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ import httpx
 
 from bike_safety_ca import config as settings
 from bike_safety_ca.cli import chosen_steps
-from bike_safety_ca.download import arcgis, census, osm, schools
+from bike_safety_ca.download import arcgis, census, osm, osm_extract, schools
 from bike_safety_ca.network import area, streets
 
 STEPS = ["area", "download", "build"]
@@ -32,10 +35,15 @@ def main() -> None:
     parser.add_argument("--raw", type=Path, default=Path("data/raw"))
     parser.add_argument("--out", type=Path, default=Path("data/processed"))
     parser.add_argument("--overwrite", action="store_true", help="download again")
+    parser.add_argument(
+        "--extract", type=Path, help="cut the streets from this .osm.pbf instead of Overpass"
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     config = settings.load(args.config)
     steps = chosen_steps(parser, args.steps, STEPS)
+    if args.extract and config.osm_date:
+        parser.error("--extract holds the map of its own date; drop osm_date or --extract")
     if "area" in steps:
         sources = census.download(args.raw / "boundaries", overwrite=args.overwrite)
         own_limit = None
@@ -63,12 +71,11 @@ def main() -> None:
     if "download" in steps and config.streets_file is None:
         outline = area.chosen(config, args.out / "boundaries", args.area)["area"]
         assert outline is not None
-        osm.download(
-            streets.area_bounds(outline),
-            args.raw / "osm",
-            overwrite=args.overwrite,
-            date=config.osm_date,
-        )
+        bounds = streets.area_bounds(outline)
+        if args.extract:
+            osm_extract.cut(args.extract, bounds, args.raw / "osm", overwrite=args.overwrite)
+        else:
+            osm.download(bounds, args.raw / "osm", overwrite=args.overwrite, date=config.osm_date)
     if "build" in steps:
         raw_streets = config.streets_file or args.raw / "osm" / "overpass_streets.json"
         written = streets.build(raw_streets, args.out / "network", config.crs)
