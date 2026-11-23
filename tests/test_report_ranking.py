@@ -73,6 +73,9 @@ def test_the_one_pager_lists_the_corners_with_the_credits(tmp_path: Path) -> Non
     assert text.startswith("# Where the crash model ranks highest: Example")
     assert "| 1 | Elm Street / Oak Avenue |" in text and "| 4 | B / C |" in text
     assert "Far Road" not in text and "2015–2024" in text and "TIMS" in text and "CCRS" in text
+    assert "the gaps are corners outside the city" in text  # ranks 1, 3, 4
+    whole = ranking.markdown(top.assign(rank=[1, 2, 3]), "Example", 2015, 2024)
+    assert "gaps" not in whole
 
 
 def test_the_map_carries_the_corners_and_a_switch_only_when_given() -> None:

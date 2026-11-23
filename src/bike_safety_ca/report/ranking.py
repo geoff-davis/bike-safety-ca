@@ -90,10 +90,15 @@ def markdown(table: pd.DataFrame, city: str, first: int, last: int) -> str:
     ]
     for _, row in table.iterrows():
         lines.append(f"| {int(row['rank'])} | {html.escape(str(row.streets))} | {why(row)} |")
+    ranks = table["rank"].astype(int).tolist()
+    # Gaps in the ranks are corners outside the city; without any, say nothing of them.
+    gaps = (
+        "; the gaps are corners outside the city" if ranks != list(range(1, len(ranks) + 1)) else ""
+    )
     lines += [
         "",
-        "*Ranks are among all intersections in the area the crash tables cover; the gaps "
-        "are corners outside the city. The model weighs each corner's bike crashes against "
+        f"*Ranks are among all intersections in the area the crash tables cover{gaps}. "
+        "The model weighs each corner's bike crashes against "
         "its car crashes and the roads that meet, so a corner with few bike crashes can "
         f"rank high when its streets are busy.* {CREDIT}",
     ]
