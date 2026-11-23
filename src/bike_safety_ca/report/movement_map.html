@@ -67,6 +67,7 @@ body.printing .leaflet-control-attribution{display:none}
   #pkey b{display:block;margin-top:3px;break-after:avoid}#pkey svg{vertical-align:middle;margin-right:3px}
   #pkey .sw{display:inline-block;width:14px;height:4px;margin-right:4px;vertical-align:middle}
 }
+body.printing .screen{display:none}@media print{.screen{display:none}}
 </style></head><body>
 /*WARN*/
 <div id="ptitle"><h1 id="ptitleh">Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/.</div></div>
@@ -370,9 +371,10 @@ const rkLayer=L_.layerGroup(),CITY="/*CITY*/";
 // Numbers are the city's own ranks, 1 to n; the area's rank is shown too where it differs.
 const GAPS=RANKED.some((k,i)=>k.r!==i+1),RISKC="#6a3d9a";
 // Risk circles: area follows the bike crashes the model expects at the corner.
-const rr=e=>Math.max(2,3.2*Math.sqrt(e)),CMAX=CIRCLES.c.reduce((m,c)=>Math.max(m,c[2]),0);
+// Scaled to the city's highest expected count, so a small city's top corners show as clearly.
+const rr=e=>Math.max(2,16*Math.sqrt(e/(CMAX||1))),CMAX=CIRCLES.c.reduce((m,c)=>Math.max(m,c[2]),0);
 const dot=v=>`<svg width="${2*rr(v)+2}" height="${2*rr(v)+2}" style="vertical-align:middle"><circle cx="${rr(v)+1}" cy="${rr(v)+1}" r="${rr(v)}" fill="${RISKC}" fill-opacity=".3" stroke="${RISKC}"/></svg>`;
-const circleKey=()=>CIRCLES.c.length?`<div class="note">Circles: the bike crashes the model expects at each corner over ${CIRCLES.y}, shown from half a crash up. ${[1,5,20].filter(v=>v===1||v<=CMAX).map(v=>`${dot(v)} ${v}`).join(" &nbsp;")}</div>`:"";
+const circleKey=()=>CIRCLES.c.length?`<div class="note">Circles: the bike crashes the model expects at each corner over ${CIRCLES.y}, shown from half a crash up. ${[0.5,1,2,5,10,20,50,100].filter(v=>v<=CMAX&&v>=CMAX/10).slice(-3).map(v=>`${dot(v)} ${v}`).join(" &nbsp;")}</div>`:"";
 const RISKKEY=`<div>The table ranks the city's intersections by the bike crashes the crash model expects there; 1 is highest.${GAPS?" It also gives each corner's rank in the wider area the model was fitted on.":""} Ranked corners have a darker outline.</div>`+circleKey();
 // One circle per corner; a ranked corner's popup gives its rank and what the model saw.
 const at=(la,lo)=>la.toFixed(5)+","+lo.toFixed(5),rankAt=new Map(RANKED.map(k=>[at(k.lat,k.lon),k])),circleOf=new Map();
@@ -387,7 +389,7 @@ const risk=()=>byId("view").value==="risk";
 // A row of the ranked list finds its corner on the map.
 byId("panel").addEventListener("click",e=>{const tr=e.target.closest?e.target.closest("tr[data-rk]"):null;if(!tr||!risk())return;const c=circleOf.get(+tr.dataset.rk);if(!c)return;map.setView(c.getLatLng(),Math.max(map.getZoom(),16));c.openPopup();});
 byId("view").addEventListener("change",()=>{if(risk()){layer.remove();rkLayer.addTo(map);}else{rkLayer.remove();layer.addTo(map);}draw();});
-const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note">Click a row to find the corner on the map. Switch back to recorded crashes to see the crashes themselves.</div>${circleKey()}<table><tr><th class="n">Rank</th>${GAPS?`<th class="n">Rank in area</th>`:""}<th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr data-rk="${k.c}" style="cursor:pointer"><td class="n">${k.c}</td>${GAPS?`<td class="n">${k.r}</td>`:""}<td>${esc(k.n)}</td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
+const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note screen">Click a row to find the corner on the map. Switch back to recorded crashes to see the crashes themselves.</div>${circleKey()}<table><tr><th class="n">Rank</th>${GAPS?`<th class="n">Rank in area</th>`:""}<th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr data-rk="${k.c}" style="cursor:pointer"><td class="n">${k.c}</td>${GAPS?`<td class="n">${k.r}</td>`:""}<td>${esc(k.n)}</td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
 const ys=DATA.map(r=>r.y),Y0=Math.min(...ys),Y1=Math.max(...ys),$=id=>document.getElementById(id);
 $("y0").value=Y0;$("y1").value=Y1;["y0","y1"].forEach(i=>{$(i).min=Y0;$(i).max=Y1;});
 function fit(r){ // how the diagram fits the movements (see plan): stored on each crash by diagram.fit, worked out here only if missing

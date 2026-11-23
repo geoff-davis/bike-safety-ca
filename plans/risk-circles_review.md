@@ -82,3 +82,26 @@ Reviewed removal of the numbered divIcon markers, interactive circle popups, fal
 Validation: executed the exact changed JavaScript risk block in Node with DOM/Leaflet stand-ins for no ranking, blend-only ranking, ranked and unranked expected circles, and a ranked corner below the circle threshold. Checks passed for circle/fallback counts, ranked-circle lookup, popup escaping, row navigation with zoom at least 16, opening the corresponding popup after a simulated panel redraw, retaining the delegated listener, and ignoring row clicks outside risk view. Reviewed the updated Python output-shape assertions and shared-coordinate provenance. These isolated checks are not a full browser/geospatial integration run. Full `make check` was not rerun; the handoff reports it passed. No protected files or records were opened.
 
 Ledger: no open findings in risk-circles-2; RC-001 from risk-circles-1 remains closed. Loop risk-circles-2 complete. Implementer releases the reviewer lock. Acceptance does not authorize commit, push or merge.
+
+## Loop risk-circles-3: per-city circle scale, screen-only note
+
+- Loop ID and round: `risk-circles-3`, round 1 of at most 3. Implementer: `bsc-implementer`, pane `wF:p1`. Expires (UTC): 2026-11-23 06:21.
+- Base: `897bb4a` (loop 2's accepted commit). Snapshot: `/tmp/bsc-review/risk-circles3-r1/`; `staged.diff` is against that commit.
+- Purpose, as the user asked after seeing prints:
+  - The printed risk view must not say "Click a row to find the corner on the map": that note gets class `screen`, hidden by `@media print` and `body.printing`.
+  - Circle size is scaled to the city's highest expected count, so a small city's top corners show as clearly as a large city's: `rr(e) = max(2, 16*sqrt(e/CMAX))` (`CMAX||1` guards an empty list).
+  - The key picks up to three reference sizes from 0.5, 1, 2, 5, 10, 20, 50 and 100 that lie within [CMAX/10, CMAX].
+- Accepted trade-off: equal circle sizes no longer mean equal counts across cities; the key states each map's sizes.
+- Checks: `make check` passed. Real Los Altos and San Francisco builds were printed: the note is absent from both PDFs' text, and the keys show 1, 2, 5 and 5, 10, 20.
+- Please check: `rr` is defined before `CMAX` in the same `const` statement, but it is only called later, so there's no TDZ issue; the key list when CMAX < 0.5 (empty `CIRCLES.c`: the key is not drawn); and that `body.printing` is the class the print path sets.
+- Status: complete (round 1 accepted)
+
+## Review, round 1 — risk-circles-3
+
+Verdict: **accepted** (round 1). No blocking correctness findings.
+
+The `rr` arrow function closes over `CMAX` but is invoked only after the declaration has initialized that value; the new ordering does not cause a temporal-dead-zone error. The per-city maximum has radius 16, with the radius-2 minimum retained. Reference sizes follow the specified candidate list, interval filter and final-three selection. The ranked-list instruction has the `screen` class; both native print media and the existing `body.printing` layout hide it.
+
+Validation: executed the exact changed scale/key JavaScript in Node for empty data and maxima 0.5, 0.9, 1, 7, 30, 100 and 1000. All completed without initialization errors; radii stayed finite, each nonempty maximum had radius 16, reference counts remained at most three, and the empty-data key was absent. Checked the instruction markup and CSS selectors against the print functions' actual addition/removal of the `printing` class. Full browser/PDF checks and `make check` were not rerun; the handoff reports both were checked by the implementer. No protected files or records were opened.
+
+Ledger: no open findings in risk-circles-3; RC-001 remains closed. Loop risk-circles-3 complete. Implementer releases the reviewer lock. Acceptance does not authorize commit, push or merge.
