@@ -2,8 +2,8 @@
 
 Steps: ``summary`` (tables of totals, printed and written as CSV) and ``map``
 (the crash movement map).  With no step named, both run.  Everything goes to
-``output/``, which is git-ignored.  The map shows individual police records:
-keep it on your own computer.
+``output/``, which is git-ignored.  The map shows individual crash records:
+share it privately and do not publish it.
 """
 
 from __future__ import annotations
@@ -88,7 +88,9 @@ def main() -> None:
             prepared_for=args.prepared_for,
             offline=args.offline,
         )
-        logging.info("wrote %s (individual police records: do not share or publish)", written)
+        logging.info(
+            "wrote %s (individual crash records: share privately, do not publish)", written
+        )
 
 
 if __name__ == "__main__":

@@ -12,8 +12,8 @@ the crashes in view, their repeated patterns and the streets they are on, and "P
 prints the map at its current zoom with those tables.
 
 It shows individual police records (month, hour, streets, movements, fault and
-the cyclist's age band).  Write it to a git-ignored folder; do not share or
-publish it.
+the cyclist's age band).  Write it to a git-ignored folder, and share it
+privately (with the local authority's staff, say) rather than publish it.
 """
 
 from __future__ import annotations
@@ -69,14 +69,14 @@ PEDESTRIAN_PARTY, DRIVER_PARTY, PARKED_PARTY = "2", "1", "3"
 SNAP_WITHIN_DEG = 50.0
 # (banner, map credit) for real records and for the made-up demo city.
 REAL_NOTICE = (
-    "Individual police records. Keep this file on your own computer; do not share or publish it.",
+    "Shows individual crash records (TIMS, CCRS). Please share it privately and do not publish it.",
     "crash records: Transportation Injury Mapping System (TIMS), Safe Transportation Research"
     " and Education Center, University of California, Berkeley; and California Crash"
     " Reporting System (CCRS), California Highway Patrol, via data.ca.gov",
 )
 # The banner for a copy prepared for a local authority's own staff.
 PREPARED_FOR = (
-    "Prepared for {who}. Confidential: individual police records. Do not publish or pass on."
+    "Prepared for {who}. Shows individual crash records (TIMS, CCRS). Please do not publish it."
 )
 SYNTHETIC_NOTICE = (
     "Synthetic data. Every crash here is made up and placed on real streets; none is a real crash.",

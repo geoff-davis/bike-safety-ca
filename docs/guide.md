@@ -591,8 +591,8 @@ credits and the panel's tables below the map.
 
 To give a copy to the staff of the city that has the records, add
 `--for "City of X traffic engineering staff"`. The banner then says who it was
-prepared for and that it holds confidential police records not to be
-published or passed on. Add `--offline` to build the map library (Leaflet,
+prepared for, that it shows individual crash records, and asks that it not be
+published. Add `--offline` to build the map library (Leaflet,
 BSD licence, in `src/bike_safety_ca/report/vendor/`) into the page, so the
 single file opens and works with no internet connection. The optional
 OpenStreetMap tile background is the exception: it needs a connection and, as
@@ -601,8 +601,9 @@ it and do not expect it in a file opened from disk. "Print this view" in a brows
 or headless Chrome's `--print-to-pdf` with a view in the address's `#lat,lon,zoom`,
 makes the PDFs to go with it.
 
-The map shows individual police records. `output/` is git-ignored; keep the
-file on your own computer and do not share or publish it. The summary tables
+The map shows individual crash records. `output/` is git-ignored; share the
+file privately, with the local authority's staff, rather than publish it (see
+"Crash records" for why). The summary tables
 are totals, but a small city can have cells of one or two crashes, so read
 them before passing them on.
 

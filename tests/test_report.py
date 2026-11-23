@@ -231,7 +231,7 @@ def test_page_is_filled_and_carries_the_warning(crashes: gpd.GeoDataFrame, tmp_p
     out = movement.build(crashes, PARTIES, STREETS, CONFIG, tmp_path / "map.html")
     html = out.read_text()
     assert "/*" not in html.replace("/*!", "")
-    assert "Individual police records. Keep this file on your own computer" in html
+    assert "Shows individual crash records (TIMS, CCRS). Please share it privately" in html
     assert '<option value="la">Los Altos</option>' in html and "Main Street" in html
 
 
@@ -434,7 +434,9 @@ def test_a_copy_for_city_staff_says_so_in_its_banner(
     page = movement.build(
         crashes, PARTIES, STREETS, CONFIG, tmp_path / "map.html", prepared_for=who
     ).read_text()
-    assert "Prepared for City of Example &lt;traffic&gt; staff. Confidential" in page
+    assert (
+        "Prepared for City of Example &lt;traffic&gt; staff. Shows individual crash records" in page
+    )
     assert movement.REAL_NOTICE[0] not in page and "<traffic>" not in page
 
 
