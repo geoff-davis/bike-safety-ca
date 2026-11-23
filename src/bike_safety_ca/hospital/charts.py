@@ -118,3 +118,91 @@ def shares(rows: pd.DataFrame) -> str:
                 f'width="{max(x(high) - x(low), 2):.1f}" height="{bar}" rx="4" fill="{colour}"/>'
             )
     return "".join(parts) + "</svg>"
+
+
+def _step(value: float) -> float:
+    """A round gridline step that puts three to six lines under ``value``."""
+    scale = 10 ** math.floor(math.log10(max(value, 1e-9)))
+    for unit in (1, 2, 2.5, 5, 10):
+        if value / (unit * scale) <= 5:
+            return unit * scale
+    return 10 * scale
+
+
+def _label(value: float, places: int | None = None) -> str:
+    if places is None:
+        places = 0 if value >= 10 else 1
+    return f"{value:,.{places}f}"
+
+
+def by_age(panels: list[tuple[str, pd.DataFrame, int]]) -> str:
+    """Rates by age group as horizontal bars, one panel per outcome, side by side.
+
+    Each panel's rows are indexed by age group with ``status`` ("published",
+    "suppressed" or "not shown"), ``rate_low`` and ``rate_high``.  A published
+    rate is a bar; a suppressed one is a pale bar over the range that 1 to 10
+    cases allow; a group held back is named but not drawn.  Each panel's
+    rates are labelled to its given number of decimal places, as in its table.
+    """
+    ages = list(panels[0][1].index)
+    left, gap, right, top, each, bar = 52, 28, 46, 30, 26, 14
+    height = top + each * len(ages) + 26
+    width = (WIDTH - left - right - gap * (len(panels) - 1)) / len(panels)
+    summary = "; ".join(
+        f"{title}: "
+        + ", ".join(
+            f"{str(age).replace('-', ' to ')} {_label(row.rate_low, places)}"
+            if row.status == "published"
+            else f"{str(age).replace('-', ' to ')} {row.status}"
+            for age, row in rows.iterrows()
+        )
+        for title, rows, places in panels
+    )
+    parts = [
+        f'<svg viewBox="0 0 {WIDTH} {height}" width="{WIDTH}" height="{height}" role="img" '
+        f'{FONT} aria-label="Rates per 100,000 residents a year by age group. {summary}.">'
+    ]
+    for i, age in enumerate(ages):
+        middle = top + each * i + each / 2
+        parts.append(_text(left - 10, middle + 4, str(age).replace("-", "–"), "end", strong=True))
+    for p, (title, rows, places) in enumerate(panels):
+        start = left + p * (width + gap)
+        drawn = rows[rows.status != "not shown"]
+        highest = float(drawn.rate_high.max()) if len(drawn) else 0.0
+        if not highest > 0:  # nothing drawn, or every rate zero: a scale of 0 to 1
+            highest = 1.0
+        step = _step(highest)
+        last = math.ceil(highest / step) * step
+
+        def x(value: float, start: float = start, last: float = last) -> float:
+            return start + width * value / last
+
+        parts.append(_text(start, 14, title, "start", strong=True))
+        ticks = int(round(last / step))
+        for t in range(ticks + 1):
+            value = t * step
+            parts.append(
+                f'<line x1="{x(value):.1f}" x2="{x(value):.1f}" y1="{top - 6}" '
+                f'y2="{height - 24}" stroke="{GRID}"/>'
+                + _text(x(value), height - 8, _label(value) if value else "0")
+            )
+        for i, (_, row) in enumerate(rows.iterrows()):
+            middle = top + each * i + each / 2
+            if row.status == "not shown":
+                parts.append(_text(start + 4, middle + 4, "not shown", "start"))
+                continue
+            low, high = float(row.rate_low), float(row.rate_high)
+            if row.status == "suppressed":
+                parts.append(
+                    f'<rect x="{x(low):.1f}" y="{middle - bar / 2:.1f}" '
+                    f'width="{max(x(high) - x(low), 2):.1f}" height="{bar}" rx="3" '
+                    f'fill="{FIRST}" opacity="0.25"/>'
+                    + _text(x(high) + 4, middle + 4, "suppressed", "start")
+                )
+            else:
+                parts.append(
+                    f'<rect x="{start:.1f}" y="{middle - bar / 2:.1f}" '
+                    f'width="{max(x(low) - start, 1):.1f}" height="{bar}" rx="3" fill="{FIRST}"/>'
+                    + _text(x(low) + 4, middle + 4, _label(low, places), "start")
+                )
+    return "".join(parts) + "</svg>"

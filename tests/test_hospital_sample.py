@@ -18,7 +18,7 @@ def test_the_sample_report_says_it_is_made_up_and_credits_no_one(tmp_path):
     assert report.SHARING not in text
     # The real report code holds back a group beside the hidden under-one cell.
     assert "| 5–9 | not shown | not shown | not shown | not shown |" in text
-    assert set(charts) == {"yearly"}
+    assert set(charts) == {"yearly", "ages"}
     assert (population.COUNTIES, population.NAMES, pdf.STYLE) == before
 
 
