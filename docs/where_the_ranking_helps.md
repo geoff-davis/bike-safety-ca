@@ -106,6 +106,33 @@ were computed for the figures in the table.
 
 ## Where it helps most
 
+The clearest pattern across cities is that the fewer bike crashes a city
+has per intersection, the more the model adds over history alone. Where
+crashes are sparse, most corners have none or one on record, history cannot
+tell them apart, and the model sorts them by their roads and car crashes.
+Where crashes are dense, the busiest corners have built up long records, and
+history already finds them. City size matters less: San Diego and San Jose
+gain a lot, San Francisco little.
+
+| Later bike crashes per 1,000 intersections, per window scored | Cities (9 in each third) | History alone (median) | Model (median) | Gain in rank score (median) | Top 100: more later crashes than history's top 100 (median) |
+|---|---|---|---|---|---|
+| 15 to 46 (sparse) | Fresno, Chico, Irvine, San Diego, Sunnyvale, San Jose, Los Altos, San Mateo, Encinitas | 0.659 | 0.872 | 0.225 | 38% |
+| 47 to 78 | Sacramento, Cupertino, Oakland, Redwood City, Davis, Palo Alto, South Lake Tahoe, Ventura, Mountain View | 0.670 | 0.870 | 0.177 | 25% |
+| 83 to 185 (dense) | Huntington Beach, Menlo Park, Long Beach, Santa Cruz, East Palo Alto, Santa Monica, Santa Barbara, San Francisco, Berkeley | 0.686 | 0.840 | 0.121 | 14% |
+
+Over the 27 cities scored, the rank correlation (Spearman) between crashes
+per intersection and the gain in rank score is −0.74, and −0.72 for the
+top-100 gain. Both come from the results table above: later crashes divided
+by windows scored and by intersections; gain is the rank score minus history
+alone. Part of the gain in the sparse cities is the model ordering the many
+corners with no crash at all, which matters less to someone reading only the
+top of the list, but the top-100 gain falls in the same way. The thirds mix
+cities scored on one, two and three windows, and South Lake Tahoe rests on a
+single window. The pattern suggests where the ranking is worth the most: a
+city with thin crash records gets the most from it, while in a city with
+dense records a list of the corners with the most past crashes is nearly as
+good.
+
 - **Spread-out cities built on arterials.** San Jose, Sacramento, San Diego,
   Irvine, Huntington Beach, Chico and Fresno score highest or gain most over
   history.
