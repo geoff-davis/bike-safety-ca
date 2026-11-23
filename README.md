@@ -116,6 +116,15 @@ highest held about 35% more of the later crashes than the 100 with the most
 past crashes. It does least well in small cities with few crashes, and for
 children outside the large cities.
 
+The model adds most where bike crashes are sparse. In the third of the
+cities with the fewest later bike crashes per intersection (Fresno, Chico,
+Irvine and San Diego among them), it raised the score by a median of 0.23
+over past crashes alone. In the third with the most (San Francisco, Berkeley,
+Santa Monica and Santa Barbara among them), it raised it by 0.12. With few
+crashes per corner, past crashes cannot tell most corners apart; where they
+are dense, the busiest corners already stand out. [Where the ranking helps
+most](docs/where_the_ranking_helps.md#where-it-helps-most) has the table.
+
 These are retrospective tests: the later years were seen while the model was
 being built, and about 100 variants were tried on the same overlapping
 windows. Read them as a guide to where the ranking can be trusted, not as a
