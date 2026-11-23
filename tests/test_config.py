@@ -95,6 +95,19 @@ def test_the_made_up_config_loads(tmp_path: Path) -> None:
         ("summer_break", ["06-08"], "first day then last"),
         ("summer_break", ["June 8", "Aug 14"], "first day then last"),
         ("summer_break", "06-08", "first day then last"),
+        ("prints", {"name": "city"}, "list of framings"),
+        ("prints", [{"name": "City"}], "lower-case"),
+        ("prints", [{"name": "../city"}], "lower-case"),  # never a path out of the folder
+        ("prints", [{"name": "a"}, {"name": "a"}], "named twice"),
+        ("prints", [{"name": "a", "where": "x"}], "unknown key where"),
+        ("prints", [{"name": "a", "at": "A / B"}], "a zoom goes with"),
+        ("prints", [{"name": "a", "zoom": 14}], "a zoom goes with"),
+        ("prints", [{"name": "a", "at": "A / B", "centre": [34, -118], "zoom": 14}], "not both"),
+        ("prints", [{"name": "a", "centre": [-118, 34], "zoom": 14}], "latitude, longitude"),
+        ("prints", [{"name": "a", "centre": [34, -118], "zoom": 25}], "from 1 to 20"),
+        ("prints", [{"name": "a", "view": "map"}], "crashes or risk"),
+        ("prints", [{"name": "predicted_risk"}], "made by --pdf"),  # would overwrite it
+        ("prints", [{"name": "top_corners"}], "made by --pdf"),
     ],
 )
 def test_a_value_that_would_change_results_is_refused(
@@ -122,6 +135,21 @@ def test_the_optional_values_load_in_their_expected_forms(tmp_path: Path) -> Non
     assert loaded.area_buffer_m == 0 and loaded.synthetic is True
     assert loaded.agency_reassignments[0].from_year == 2023
     assert loaded.summer_break == ((2, 29), (8, 14))
+
+
+def test_map_framings_load_in_their_expected_forms(tmp_path: Path) -> None:
+    framings = [
+        {"name": "city"},
+        {"name": "corner-1", "at": "A / B", "zoom": 18},
+        {"name": "downtown", "centre": [34, -118.5], "zoom": 14, "view": "risk"},
+    ]
+    path = tmp_path / "alder.yaml"
+    path.write_text(yaml.safe_dump(SETTINGS | POINTS | {"prints": framings}))
+    assert config.load(path).prints == (
+        config.Print("city"),
+        config.Print("corner-1", at="A / B", zoom=18.0),
+        config.Print("downtown", centre=(34.0, -118.5), zoom=14.0, view="risk"),
+    )
 
 
 def test_a_first_year_after_the_training_years_is_refused(tmp_path: Path) -> None:

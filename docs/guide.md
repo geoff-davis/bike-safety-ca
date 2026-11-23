@@ -599,6 +599,24 @@ command also writes `top_corners.md`, a one-page list of them. With `--pdf` it
 prints `top_corners.pdf` and `predicted_risk.pdf`, the risk view with its list
 (this needs Google Chrome or Chromium). Opening the map with `?view=risk` after
 its file name starts it on predicted risk, framed on those corners.
+
+To print the same views every time, list them under `prints:` in the city's
+config; `report map --pdf` prints each as `<name>.pdf`, with or without a
+ranking:
+
+```yaml
+prints:
+  - name: city                     # the map's opening view
+  - {name: corner-1, at: North San Antonio Road / San Antonio Road / West El Camino Real, zoom: 18}
+  - {name: downtown, centre: [37.776, -122.418], zoom: 14}
+  - {name: risk-north, centre: [37.40, -122.11], zoom: 15, view: risk}
+```
+
+`at` is an intersection with at least one crash, named exactly as the map
+names it (click its circle to see the name); the command stops, before
+printing anything, if no intersection or more than one has that name. A
+`centre` is latitude then longitude. `view: risk` prints the predicted-risk
+view at that framing.
 Add `--offline` to build the map library (Leaflet,
 BSD licence, in `src/bike_safety_ca/report/vendor/`) into the page, so the
 single file opens and works with no internet connection. The optional

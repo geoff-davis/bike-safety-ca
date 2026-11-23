@@ -350,6 +350,7 @@ function sitePopup(s,rs){
 }
 const L_=window.L;
 const hv=location.hash.slice(1).split(",").map(Number),map=L_.map("map").setView(hv.length===3&&hv.every(isFinite)?[hv[0],hv[1]]:/*CENTRE*/,hv.length===3&&hv.every(isFinite)?hv[2]:14);
+const HASHED=hv.length===3&&hv.every(isFinite); // the address gave a framing: keep it
 map.on("moveend",()=>{const c=map.getCenter();history.replaceState(null,"","#"+c.lat.toFixed(5)+","+c.lng.toFixed(5)+","+map.getZoom());});
 const STREETS=/*STREETS*/,LABELS=/*LABELS*/;
 const SW={P:[.8,"#b9cfa6"],S:[1,"#ffffff"],L:[2.6,"#ffffff"],T:[3.6,"#fff7da"],M:[5,"#fde9a8"]},cv=L_.svg({padding:.4});
@@ -516,7 +517,7 @@ let saved=null;
 function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=risk()?RISKKEY:lg.getContainer().querySelector(".kb").innerHTML;
   $("ptitleh").textContent=(risk()?"Predicted risk: the model's top corners, ":"Cyclist crashes, ")+CITY;
   inPrint=true;document.body.classList.add("printing");map.invalidateSize({animate:false});
-  if(fitRisk&&risk())fitRanked();else map.setView(saved[0],saved[1],{animate:false});draw();}
+  if(refit())fitRanked();else map.setView(saved[0],saved[1],{animate:false});draw();}
 function fromPrint(){if(!saved)return;inPrint=false;document.body.classList.remove("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});saved=null;draw();}
 $("print").addEventListener("click",()=>{toPrint();setTimeout(()=>window.print(),400);}); // time for the map to redraw at page size
 addEventListener("beforeprint",toPrint);addEventListener("afterprint",fromPrint);
@@ -560,7 +561,9 @@ lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
 // ?view=risk opens the page on predicted risk, as for printing that view.
 const fitRanked=()=>{const snap=map.options.zoomSnap;map.options.zoomSnap=.25;map.fitBounds(RANKED.map(k=>[k.lat,k.lon]),{padding:[24,24],animate:false});map.options.zoomSnap=snap;}; // quarter steps: whole ones leave the corners crowded
 const fitRisk=RANKED.length>0&&new URLSearchParams(location.search).get("view")==="risk"; // printed: framed on the ranked corners
-if(fitRisk){$("view").value="risk";layer.remove();rkLayer.addTo(map);fitRanked();}
+// Framed on the ranked corners unless the address gave a framing (#lat,lon,zoom), as a configured print does.
+const refit=()=>fitRisk&&!HASHED&&risk();
+if(fitRisk){$("view").value="risk";layer.remove();rkLayer.addTo(map);if(refit())fitRanked();}
 lg.addTo(map);map.on("zoomend",legend);legend();draw();
 
 // A term's meaning on hover or keyboard focus, as in walkbike-routes' reports.

@@ -72,3 +72,13 @@ area_points:
 area_buffer_m: 3218.688
 # OpenStreetMap as it stood when the original streets were downloaded.
 osm_date: "2026-08-22T23:47:01Z"
+
+# Framings of the crash map printed by `report map --pdf`, each as <name>.pdf.
+# `at` is an intersection as the map names it; `centre` is [latitude, longitude].
+prints:
+  - name: city  # the map's opening view
+  - {name: corner-1, at: North San Antonio Road / San Antonio Road / West El Camino Real, zoom: 18}
+  - {name: corner-2, at: Foothill Expressway / West Edith Avenue, zoom: 18}
+  - {name: corner-3, at: Foothill Expressway / Grant Road / Homestead Road, zoom: 18}
+  - {name: corner-4, at: 1st Street / Foothill Expressway / Main Street, zoom: 18}
+  - {name: corner-5, at: Casita Way / Jardin Drive, zoom: 18}
