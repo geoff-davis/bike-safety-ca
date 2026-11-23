@@ -95,7 +95,8 @@ def test_a_report_for_a_made_up_county(tmp_path, monkeypatch):
     assert "EpiCenter@cdph.ca.gov" in text and "Santa Clara" not in text
     assert "| 2016 | 100 |" in text and "| 2024 | 140 |" in text
     assert "Emergency department visits by Alder County residents | **275**" in text
-    assert set(drawn) == {"yearly"} and "<!-- chart: yearly -->" in text
+    assert set(drawn) == {"yearly", "ages"} and "<!-- chart: yearly -->" in text
+    assert "<!-- chart: ages -->" in text
 
 
 def test_the_report_refuses_another_county_or_years(tmp_path, monkeypatch):
@@ -396,10 +397,11 @@ def test_every_table_carries_the_credit(tmp_path, monkeypatch):
     _residents(tmp_path / "pep", monkeypatch)
     county, _ = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
     statewide, _ = ebike.markdown(tmp_path / "alder", tmp_path / "pep")
-    for text, tables_printed, credits in ((county, 3, 3), (statewide, 2, 3)):
+    # The age chart and the e-bike chart each carry one of their own.
+    for text, tables_printed, credits in ((county, 3, 4), (statewide, 2, 3)):
         assert sum(part.startswith("|") for part in text.split("\n\n")) == tables_printed
         assert _uncredited(text) == []
-        assert text.count(report.CREDIT) == credits  # the e-bike chart has one of its own
+        assert text.count(report.CREDIT) == credits
     # The check itself: a table that loses its credit is reported.
     lost = county.replace(f"it is a range. {report.CREDIT}", "it is a range.")
     assert _uncredited(lost) == ["| | |"]
@@ -465,3 +467,55 @@ def test_the_highest_ebike_rate_is_scoped_to_the_ages_shown(tmp_path, monkeypatc
     # Ages under 10 and over 84 are left out because they are hidden, not because they are lower.
     point = next(line for line in text.splitlines() if "e-bike injury rates" in line)
     assert point.startswith("- **Among the age groups shown (ages 10 to 84), ages ")
+
+
+def test_the_age_chart_draws_what_the_table_prints_and_no_more(tmp_path, monkeypatch):
+    _county_tables(tmp_path / "alder")
+    _residents(tmp_path / "pep", monkeypatch)
+    text, drawn = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
+    chart = drawn["ages"]
+    # 5-9 is held back in the table, so the chart names it without a rate.
+    assert "| 5–9 | not shown | not shown |" in text
+    assert chart.count("5 to 9 not shown") == 2
+    # Every rate the table prints is the rate the chart draws, to the same places.
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        is_age = "–" in cells[0] or cells[0].endswith("+")
+        if len(cells) == 5 and is_age and cells[2] != "not shown":
+            age = cells[0].replace("–", " to ")
+            assert f"{age} {cells[2]}" in chart and f"{age} {cells[4]}" in chart
+
+
+def test_a_held_back_rate_never_reaches_the_chart():
+    table = pd.DataFrame(
+        {
+            "low": [12.0, 30.0, 25.0] + [40.0] * 6,
+            "high": [21.0, 30.0, 25.0] + [40.0] * 6,
+            "hidden": [True] + [False] * 8,
+            "rate_low": [3.0, 7.123, 6.0] + [9.0] * 6,
+            "rate_high": [5.0, 7.123, 6.0] + [9.0] * 6,
+        },
+        index=report.ORDER,
+    )
+    rows = report.plotted(table)
+    assert rows.loc["5-9"].status == "not shown" and rows.loc["5-9"].isna().sum() == 2
+    from bike_safety_ca.hospital import charts
+
+    svg = charts.by_age([("Visits", rows, 1)])
+    assert "7.1" not in svg and "5 to 9 not shown" in svg
+
+
+def test_a_panel_of_zero_rates_still_draws():
+    from bike_safety_ca.hospital import charts
+
+    ages = ["10-14", "15-19", "20-24"]
+    zero = pd.DataFrame(
+        {"status": "published", "rate_low": 0.0, "rate_high": 0.0}, index=pd.Index(ages)
+    )
+    held = zero.copy()
+    held.loc["10-14", "status"] = "not shown"
+    held.loc["10-14", ["rate_low", "rate_high"]] = float("nan")
+    svg = charts.by_age([("Visits", zero, 0), ("Admissions", held, 1)])
+    assert "nan" not in svg.lower() and "inf" not in svg.lower()
+    assert "10 to 14 not shown" in svg and "15 to 19 0.0" in svg and "10 to 14 0" in svg
+    assert svg.count(">1.0<") == 2  # each panel's scale runs from 0 to 1

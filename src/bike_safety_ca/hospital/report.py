@@ -315,10 +315,31 @@ def _higher(table: pd.DataFrame, top: float, what: str, places: int) -> list[str
     ]
 
 
-def charts(yearly: pd.DataFrame) -> dict[str, str]:
+def plotted(table: pd.DataFrame) -> pd.DataFrame:
+    """The age groups the table prints, each with how it may be drawn (see ``shown``)."""
+    held = withheld(table)
+    status = [
+        "not shown" if hold else "suppressed" if hidden else "published"
+        for hold, hidden in zip(held, table.hidden)
+    ]
+    rows = table[["rate_low", "rate_high"]].assign(status=status).loc[AGES_SHOWN]
+    # A held-back group's rate is never handed to the chart, not even to be left undrawn.
+    rows.loc[rows.status == "not shown", ["rate_low", "rate_high"]] = float("nan")
+    return rows
+
+
+def charts(yearly: pd.DataFrame, visits: pd.DataFrame, admissions: pd.DataFrame) -> dict[str, str]:
     from bike_safety_ca.hospital import charts as draw
 
-    return {"yearly": draw.yearly(yearly, "Emergency department visits per 100,000 residents")}
+    return {
+        "yearly": draw.yearly(yearly, "Emergency department visits per 100,000 residents"),
+        "ages": draw.by_age(
+            [
+                ("ED visits per 100,000 a year", plotted(visits), 0),
+                ("Hospital admissions per 100,000 a year", plotted(admissions), 1),
+            ]
+        ),
+    }
 
 
 def markdown(
@@ -371,6 +392,10 @@ def markdown(
     lines += [
         "",
         f"## By age group, {years[0]}–{years[1]} together",
+        "",
+        "<!-- chart: ages -->",
+        "",
+        f"*Rates per 100,000 residents a year; the table gives the counts.* {CREDIT}",
         "",
         "| Age | ED visits | Visits per 100,000 a year | Hospital admissions | "
         "Admissions per 100,000 a year |",
@@ -473,7 +498,7 @@ def markdown(
         *HIDDEN_COUNTS,
         "",
     ]
-    return "\n".join(lines), charts(yearly)
+    return "\n".join(lines), charts(yearly, visits, admissions)
 
 
 def main(argv: list[str] | None = None) -> None:
