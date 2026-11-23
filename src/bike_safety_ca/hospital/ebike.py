@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from bike_safety_ca import links
 from bike_safety_ca.hospital import population, rates
 from bike_safety_ca.hospital import tables as er
 from bike_safety_ca.hospital.report import (
@@ -310,6 +311,8 @@ def markdown(folder: Path, residents: Path) -> tuple[str, dict[str, str]]:
         "**Hidden counts.**",
         "",
         *HIDDEN_COUNTS,
+        "",
+        links.MADE_WITH,
         "",
     ]
     return "\n".join(lines), charts(rows)

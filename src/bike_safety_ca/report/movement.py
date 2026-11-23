@@ -33,7 +33,7 @@ from shapely.geometry import Point, box
 from shapely.geometry.base import BaseGeometry
 from shapely.strtree import STRtree
 
-from bike_safety_ca import ADULT, CHILD
+from bike_safety_ca import ADULT, CHILD, links
 from bike_safety_ca.config import Config
 from bike_safety_ca.crashes.groups import BICYCLE as BICYCLE_PARTY
 from bike_safety_ca.crashes.groups import MAX_AGE
@@ -593,6 +593,8 @@ def page(
     fills = {
         "/*WARN*/": f'<div class="warn">{html.escape(warn)}</div>' if warn else "",
         "/*CREDIT*/": html.escape(credit),
+        "/*REPO*/": links.REPO,
+        "/*MODEL_DOC*/": links.MODEL_DOC,
         "/*SITES*/": compact(sites or []),
         "/*RANKED*/": compact(ranked or []),
         "/*CIRCLES*/": compact(circles or {"y": "", "c": []}),
