@@ -152,6 +152,20 @@ def test_an_agreement_closed_without_i_agree_stops_the_pull():
         epicenter.await_agreement(FakePage(agreed=None), timeout_ms=1)
 
 
+def test_the_pull_waits_for_the_agreement_to_show_before_waiting_for_it_to_close():
+    # It fades in: waiting for "hidden" before it is visible would end at once.
+    page = FakePage(agreed=None)
+    with pytest.raises(RuntimeError):
+        epicenter.await_agreement(page, timeout_ms=1)
+    waits = [c for c in page.calls if c[0] in ("wait", "function")]
+    assert waits == [
+        ("function", epicenter._SHOWN_OR_AGREED),
+        ("function", epicenter._VISIBLE_OR_AGREED),  # visible or already agreed, in one wait
+        ("wait", "#shiny-modal", "hidden"),
+    ]
+    assert "__bscAgreed === true" in epicenter._VISIBLE_OR_AGREED
+
+
 def test_an_agreement_left_open_stops_the_pull():
     with pytest.raises(TimeoutError):
         epicenter.await_agreement(FakePage(agreed=True, closes=False), timeout_ms=1)
