@@ -95,7 +95,7 @@ def test_the_holdout_and_the_map_run_on_the_demo(built: dict[str, Path], tmp_pat
     page = movement.build(
         crashes, parties, gpd.read_parquet(built["streets"]), SETTINGS, tmp_path / "map.html"
     ).read_text()
-    assert movement.SYNTHETIC_NOTICE[0] in page and movement.REAL_NOTICE[0] not in page
+    assert movement.SYNTHETIC_NOTICE[0] in page and movement.REAL_CREDIT not in page
 
 
 def test_the_truth_lines_up_with_the_intersections(built: dict[str, Path]) -> None:
