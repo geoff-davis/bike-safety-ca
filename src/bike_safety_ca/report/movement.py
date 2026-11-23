@@ -570,6 +570,7 @@ def page(
     centre: tuple[float, float],
     sites: list[dict[str, Any]] | None = None,
     offline: bool = False,
+    ranked: list[dict[str, Any]] | None = None,
 ) -> str:
     """Fill the page template.
 
@@ -592,6 +593,7 @@ def page(
         "/*WARN*/": f'<div class="warn">{html.escape(warn)}</div>' if warn else "",
         "/*CREDIT*/": html.escape(credit),
         "/*SITES*/": compact(sites or []),
+        "/*RANKED*/": compact(ranked or []),
         "/*SEVERITY*/": compact(codes.SEVERITY),
         "/*LIGHT*/": compact(codes.LIGHTING),
         "/*DARK*/": compact(list(codes.DARK)),
@@ -637,6 +639,7 @@ def build(
     centre_on: gpd.GeoSeries | None = None,
     area: BaseGeometry | None = None,
     offline: bool = False,
+    ranked: list[dict[str, Any]] | None = None,
 ) -> Path:
     """Write the map of ``crashes`` (as loaded by ``report.crashes.load``) to ``out``.
 
@@ -665,6 +668,7 @@ def build(
         (middle.centroid.y, middle.centroid.x),
         sites,
         offline=offline,
+        ranked=ranked,
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
