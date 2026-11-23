@@ -22,7 +22,7 @@ from bike_safety_ca.io import read_shapes
 from bike_safety_ca.network import area as outlines
 from bike_safety_ca.network import streets as street_table
 from bike_safety_ca.report import crashes as crash_table
-from bike_safety_ca.report import movement, summary
+from bike_safety_ca.report import movement, ranking, summary
 
 STEPS = ["summary", "map"]
 
@@ -35,6 +35,14 @@ def main() -> None:
     parser.add_argument("--area", type=Path, help="your own outline of the area")
     parser.add_argument("--processed", type=Path, default=Path("data/processed"))
     parser.add_argument("--out", type=Path, default=Path("output"))
+    parser.add_argument(
+        "--ranking",
+        type=Path,
+        help="the model's intersection_ranking.csv: adds a switch to its top corners on the"
+        " map and writes top_corners.md beside it",
+    )
+    parser.add_argument("--top", type=int, default=20, help="how many top corners (default 20)")
+    parser.add_argument("--pdf", action="store_true", help="also print top_corners.pdf")
     parser.add_argument(
         "--offline",
         action="store_true",
@@ -66,6 +74,7 @@ def main() -> None:
                 print(f"\n{scope}: {name.replace('_', ' ')}\n{table.to_string()}")
             for written in summary.write(found, args.out / "summary", scope):
                 logging.info("wrote %s", written)
+    top = ranking.top(args.ranking, args.top) if args.ranking else None
     if "map" in steps:
         ways = gpd.read_parquet(street_table.path(args.processed / "network", config.crs))
         limit = chosen["city_limit"]
@@ -79,8 +88,13 @@ def main() -> None:
             centre,
             area=outline,
             offline=args.offline,
+            ranked=ranking.markers(top) if top is not None else None,
         )
         logging.info("wrote %s", written)
+    if top is not None:
+        years = (int(crashes.year.min()), int(crashes.year.max()))
+        for written in ranking.write(top, config.city, years, args.out, args.pdf):
+            logging.info("wrote %s", written)
 
 
 if __name__ == "__main__":

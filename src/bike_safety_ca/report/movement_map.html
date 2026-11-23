@@ -49,6 +49,7 @@ body.printing main{display:block}
 body.printing #map{width:10.2in;height:5.5in;flex:none;border:1px solid #999}
 body.printing .leaflet-control-attribution{display:none}
 [data-tip]{border-bottom:1px dotted var(--muted);cursor:help}
+.rk{background:var(--fg);color:var(--bg);border:2px solid var(--bg);border-radius:11px;font:700 11px/18px system-ui,sans-serif;text-align:center;box-shadow:0 0 0 1px var(--fg)}
 #tip{position:fixed;z-index:2000;max-width:20rem;background:var(--fg);color:var(--bg);padding:.4rem .6rem;border-radius:4px;font-size:13px;line-height:1.35;pointer-events:none}
 @media print{
   #tip{display:none!important}[data-tip]{border:0}
@@ -69,7 +70,7 @@ body.printing .leaflet-control-attribution{display:none}
 }
 </style></head><body>
 /*WARN*/
-<div id="ptitle"><h1>Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/.</div></div>
+<div id="ptitle"><h1 id="ptitleh">Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/.</div></div>
 <header>
 <h1>Crash movement map</h1>
 <label>Cyclists <select id="who"><option value="all">all ages</option><option value="child">/*CHILD*/</option><option value="adult">adult</option></select></label>
@@ -79,13 +80,15 @@ body.printing .leaflet-control-attribution{display:none}
 <label><span data-term="other">Other party</span> <select id="mv"><option value="">any movement</option><option value="turn">turning</option><option value="straight">going straight</option><option value="still">stopped or parked</option><option value="solo">no other party</option></select></label>
 <label><span data-term="wrong">Wrong side</span> <select id="ws"><option value="">any</option><option value="coded">riding, coded for the cyclist</option><option value="inf">riding, suggested by movements only</option><option value="either">riding, coded or suggested</option><option value="unclear">cited, party unclear</option></select></label>
 <label><input type="checkbox" id="dk"> <span data-term="dark">after dark</span> only</label>
+<label id="rkw" hidden>Show <select id="view"><option value="crashes">recorded crashes</option><option value="risk">predicted risk</option></select></label>
 <button id="print" type="button">Print this view</button>
 <span id="count"></span>
 </header>
 <main><div id="map"></div><div id="pkey"></div><aside id="panel"></aside></main>
 <div id="tip" role="tooltip" hidden></div>
 <script>
-const DATA=/*DATA*/;const MOVE=/*MOVE*/;const SITES=/*SITES*/;const SEV=/*SEVERITY*/;const LIGHT=/*LIGHT*/;const DARK=/*DARK*/;
+let inPrint=false; // while the page is laid out for printing: no "zoom in" on paper
+const DATA=/*DATA*/;const RANKED=/*RANKED*/;const MOVE=/*MOVE*/;const SITES=/*SITES*/;const SEV=/*SEVERITY*/;const LIGHT=/*LIGHT*/;const DARK=/*DARK*/;
 const SITE={};for(const s of SITES)SITE[s.i]=s;
 const COL={"bicycle":"--bicycle","car or truck":"--car","motorcycle":"--moto","pedestrian":"--ped","bus or other":"--other"};
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -299,6 +302,7 @@ function diagram(r){ // one crash: each party's path up to the crash point, its 
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // What the map's terms mean, shown on hover or focus by the script at the end of the page.
 const TIPS={
+ ranked:"The intersections in the city where the crash model expects the most police-recorded bike crashes, from each corner's bike and car crashes and the roads that meet there. The number is the rank; 1 is highest. A place worth a closer look, not a finding.",
  commute:"Weekdays outside the summer break, with the crash in the hours starting 7 or 8 am or 2, 3 or 4 pm (7:00 to 8:59 am, 2:00 to 4:59 pm). A rough flag: other school holidays are not known.",
  other:"The other vehicle or person on the crash report, and what it was doing just before the crash.",
  wrong:"Wrong-side riding is riding against the flow of traffic. Coded: the report has the cyclist travelling the wrong way, or at fault with the cause wrong side of road. Suggested by movements: the reported directions and movements meet only if the cyclist was on the wrong side, which the report does not say. Cited, party unclear: the cause is wrong side of road, but the cyclist is not the party recorded at fault.",
@@ -362,6 +366,16 @@ function base(){const z=map.getZoom(),f=Math.max(.35,Math.min(6,Math.pow(2,z-16)
 map.on("zoomend moveend",base);map.on("baselayerchange",base);base();
 map.createPane("crashes").style.zIndex=450;
 const dots=L_.svg({pane:"crashes",padding:.3}),layer=L_.layerGroup().addTo(map);
+// The model's top-ranked corners, a layer the reader switches on.
+const rkLayer=L_.layerGroup(),CITY="/*CITY*/";
+const RISKKEY=`<div>Numbers are the crash model's ranks among all intersections in the area; 1 is highest. Gaps are corners outside the city. The table lists what the model saw at each corner.</div>`;
+const byId=id=>document.getElementById(id); // $ is defined further down
+if(RANKED.length)byId("rkw").hidden=false;
+for(const k of RANKED)L_.marker([k.lat,k.lon],{keyboard:false,zIndexOffset:1000,icon:L_.divIcon({className:"rk",iconSize:[14+7*String(k.r).length,22],iconAnchor:[7+3.5*String(k.r).length,11],html:String(k.r)})}).bindPopup(`<b>Rank ${k.r}: ${esc(k.n)}</b><br>${esc(k.w)}`).addTo(rkLayer);
+// Recorded crashes or predicted risk: one layer on the map at a time.
+const risk=()=>byId("view").value==="risk";
+byId("view").addEventListener("change",()=>{if(risk()){layer.remove();rkLayer.addTo(map);}else{rkLayer.remove();layer.addTo(map);}draw();});
+const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note">Numbered on the map. Switch back to recorded crashes to see the crashes themselves.</div><table><tr><th class="n">Rank</th><th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr><td class="n">${k.r}</td><td>${esc(k.n)}</td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
 const ys=DATA.map(r=>r.y),Y0=Math.min(...ys),Y1=Math.max(...ys),$=id=>document.getElementById(id);
 $("y0").value=Y0;$("y1").value=Y1;["y0","y1"].forEach(i=>{$(i).min=Y0;$(i).max=Y1;});
 function fit(r){ // how the diagram fits the movements (see plan): stored on each crash by diagram.fit, worked out here only if missing
@@ -458,10 +472,10 @@ function panel(lv,rows,all=rows){
     h+=`<h2>Streets in view</h2><div class="note">Streets with 3 or more crashes in view. A crash at an intersection counts for both streets. Under each street: its most common pattern and cause, where one repeats.</div><table class="st"><tr><th class="n">Crashes</th><th>Street</th><th class="n">/*CHILD*/</th><th class="n">${tip("Fatal or serious",TIPS.serious)}</th><th class="n">${tip("Wrong-side riding",TIPS.wrong)}</th><th class="n">${tip("Cited, party unclear",TIPS.wrong)}</th></tr>${streets.map(([c,n])=>{const t=street(rows.filter(r=>(r.cs||[]).includes(c)));
       return `<tr class="top"><td class="n">${n}</td><td>${esc(c)}</td><td class="n">${t.child}</td><td class="n">${t.serious}</td><td class="n">${t.wrong}</td><td class="n">${t.unclear}</td></tr><tr class="sub"><td></td><td colspan="5">${esc(t.common||"nothing repeats")}</td></tr>`;}).join("")}</table>${busy.length>12?`<div class="note">and ${busy.length-12} more street${busy.length===13?"":"s"} with 3 or more crashes.</div>`:""}<div class="note">Wrong-side riding: coded for the cyclist, or suggested by the movements. Cited, party unclear: the cause is wrong side of road, but no cyclist is recorded as at fault. A crash is in one column at most.</div>`;}
   if(lv===0){const top=Object.entries(sites).sort((a,b)=>b[1].length-a[1].length).slice(0,40);
-    h+=`<h2>Intersections, most crashes first</h2><table><tr><th class="n">Crashes</th><th>Intersection</th><th>Worst</th><th class="n">Dark</th></tr>${top.map(([i,rs])=>`<tr><td class="n">${rs.length}</td><td>${esc(SITE[i].n||"unnamed")}</td><td><span class="sevdot" style="background:${sevc(worst(rs))}"></span>${esc(SEV[worst(rs)]||"not recorded")}</td><td class="n">${rs.filter(dark).length}</td></tr>`).join("")}</table>${ns>40?`<div class="note">and ${ns-40} more; zoom in to list them.</div>`:""}`;}
-  else{const list=rows.slice().sort((a,b)=>String(a.si!==null&&SITE[a.si]?SITE[a.si].n:"~"+a.st).localeCompare(String(b.si!==null&&SITE[b.si]?SITE[b.si].n:"~"+b.st))||b.y-a.y),cap=400;
-    h+=`<h2>Crashes in view</h2><table><tr><th>When</th><th>Where</th><th>${tip("Severity, light",TIPS.light)}</th><th>${tip("Pattern",TIPS.pattern)}</th></tr>${list.slice(0,cap).map(r=>`<tr><td>${esc(r.ym)}, ${hour(r)}</td><td>${esc(r.si!==null&&SITE[r.si]?SITE[r.si].n:(r.st||"not named"))}</td><td><span class="sevdot" style="background:${sevc(r.sv)}"></span>${r.sv?tip(esc(SEV[r.sv]),SEVTIP[r.sv]):"not stated"}${r.lt?", "+esc(LIGHT[r.lt]):""}</td><td>${esc(r.pk||r.coll)}</td></tr>`).join("")}</table>${list.length>cap?`<div class="note">and ${list.length-cap} more; zoom in to list them.</div>`:""}`;}
-  $("panel").innerHTML=h;
+    h+=`<h2>Intersections, most crashes first</h2><table><tr><th class="n">Crashes</th><th>Intersection</th><th>Worst</th><th class="n">Dark</th></tr>${top.map(([i,rs])=>`<tr><td class="n">${rs.length}</td><td>${esc(SITE[i].n||"unnamed")}</td><td><span class="sevdot" style="background:${sevc(worst(rs))}"></span>${esc(SEV[worst(rs)]||"not recorded")}</td><td class="n">${rs.filter(dark).length}</td></tr>`).join("")}</table>${ns>top.length?`<div class="note">and ${ns-top.length} more${inPrint?" intersections, none with more crashes than the last one listed.":"; zoom in to list them."}</div>`:""}`;}
+  else{const list=rows.slice().sort((a,b)=>String(a.si!==null&&SITE[a.si]?SITE[a.si].n:"~"+a.st).localeCompare(String(b.si!==null&&SITE[b.si]?SITE[b.si].n:"~"+b.st))||b.y-a.y),cap=inPrint?50:400; // on paper, the first 50: a full list runs to pages
+    h+=`<h2>Crashes in view</h2><table><tr><th>When</th><th>Where</th><th>${tip("Severity, light",TIPS.light)}</th><th>${tip("Pattern",TIPS.pattern)}</th></tr>${list.slice(0,cap).map(r=>`<tr><td>${esc(r.ym)}, ${hour(r)}</td><td>${esc(r.si!==null&&SITE[r.si]?SITE[r.si].n:(r.st||"not named"))}</td><td><span class="sevdot" style="background:${sevc(r.sv)}"></span>${r.sv?tip(esc(SEV[r.sv]),SEVTIP[r.sv]):"not stated"}${r.lt?", "+esc(LIGHT[r.lt]):""}</td><td>${esc(r.pk||r.coll)}</td></tr>`).join("")}</table>${list.length>cap?`<div class="note">and ${list.length-cap} more${inPrint?" crashes in view, not listed.":"; zoom in to list them."}</div>`:""}`;}
+  $("panel").innerHTML=risk()?rankTable():h;
   for(const tr of $("panel").querySelectorAll(".pat"))tr.addEventListener("click",()=>{hi=hi===tr.dataset.k?"":tr.dataset.k;draw();});
   const un=$("unpick");if(un)un.addEventListener("click",()=>{hi="";draw();});
 }
@@ -472,9 +486,11 @@ function filters(){const t=[`${$("y0").value}–${$("y1").value}`,$("who").selec
   if(hi)t.push("pattern: "+hi);
   return t.join(" · ")+` · ${LEVEL[level()]} view, zoom ${map.getZoom()} · background: ${map.hasLayer(osm)?"OpenStreetMap tiles":"built-in streets"} · printed ${new Date().toLocaleDateString()}`;}
 let saved=null;
-function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=lg.getContainer().querySelector(".kb").innerHTML;
-  document.body.classList.add("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});draw();}
-function fromPrint(){if(!saved)return;document.body.classList.remove("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});saved=null;draw();}
+function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=risk()?RISKKEY:lg.getContainer().querySelector(".kb").innerHTML;
+  $("ptitleh").textContent=(risk()?"Predicted risk: the model's top corners, ":"Cyclist crashes, ")+CITY;
+  inPrint=true;document.body.classList.add("printing");map.invalidateSize({animate:false});
+  if(fitRisk&&risk())fitRanked();else map.setView(saved[0],saved[1],{animate:false});draw();}
+function fromPrint(){if(!saved)return;inPrint=false;document.body.classList.remove("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});saved=null;draw();}
 $("print").addEventListener("click",()=>{toPrint();setTimeout(()=>window.print(),400);}); // time for the map to redraw at page size
 addEventListener("beforeprint",toPrint);addEventListener("afterprint",fromPrint);
 const lg=L_.control({position:"bottomright"});let legendLevel=-1;
@@ -505,6 +521,10 @@ lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
   // Open on a tall screen; on a small one the key would cover the map, so it starts closed.
   d.innerHTML=`<details${innerHeight>=800?" open":""}><summary>Key</summary><div class="kb"></div></details><div class="k1"></div>`;
   L_.DomEvent.disableClickPropagation(d);L_.DomEvent.disableScrollPropagation(d);return d;};
+// ?view=risk opens the page on predicted risk, as for printing that view.
+const fitRanked=()=>{const snap=map.options.zoomSnap;map.options.zoomSnap=.25;map.fitBounds(RANKED.map(k=>[k.lat,k.lon]),{padding:[24,24],animate:false});map.options.zoomSnap=snap;}; // quarter steps: whole ones leave the corners crowded
+const fitRisk=RANKED.length>0&&new URLSearchParams(location.search).get("view")==="risk"; // printed: framed on the ranked corners
+if(fitRisk){$("view").value="risk";layer.remove();rkLayer.addTo(map);fitRanked();}
 lg.addTo(map);map.on("zoomend",legend);legend();draw();
 
 // A term's meaning on hover or keyboard focus, as in walkbike-routes' reports.

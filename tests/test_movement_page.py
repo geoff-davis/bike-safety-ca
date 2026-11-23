@@ -47,7 +47,7 @@ T_.el=id=>({id,value:"",checked:false,textContent:"",_h:"",_kids:{},_rows:{},lis
       while((m=re.exec(this._h))){const e=T_.el(sel);e.dataset.k=m[1].replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");out.push(e);}
       this._rows[sel]=out;}
     return this._rows[sel];}});
-for(const id of ["who","area","y0","y1","com","mv","ws","dk","print","count","panel","pkey","pfilters","map"])T_.ids[id]=T_.el(id);
+for(const id of ["who","area","y0","y1","com","mv","ws","dk","view","rkw","print","count","panel","pkey","pfilters","map"])T_.ids[id]=T_.el(id);
 T_.ids.who.value="all";T_.ids.area.value="all";
 globalThis.document={documentElement:{},body:T_.el("body"),
   querySelectorAll(){return [];},addEventListener(){}, // the tooltip script; hover is not run here

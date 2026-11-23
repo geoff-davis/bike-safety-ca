@@ -589,6 +589,13 @@ most. "Print this view" prints what is on
 screen on a landscape page, with the filters, the key, a scale bar, the data
 credits and the panel's tables below the map.
 
+With `--ranking output/ranking/intersection_ranking.csv` (from the
+intersection ranking, below), the map gains a "Show" switch between recorded
+crashes and predicted risk: the model's top corners in the city (`--top`,
+20 by default), numbered by rank, with a list of what the model saw at each.
+The command also writes `top_corners.md`, a one-page list of them, and
+`top_corners.pdf` with `--pdf`. Opening the map with `?view=risk` after its
+file name starts it on predicted risk, framed on those corners, for printing.
 Add `--offline` to build the map library (Leaflet,
 BSD licence, in `src/bike_safety_ca/report/vendor/`) into the page, so the
 single file opens and works with no internet connection. The optional
