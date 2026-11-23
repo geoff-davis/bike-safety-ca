@@ -57,8 +57,11 @@ def test_each_corner_says_what_the_model_saw(tmp_path: Path) -> None:
         ranking.why(top.iloc[1]) == "Collectors meet. 2 bike crashes and 1 car-only crash recorded."
     )
     marks = ranking.markers(top)
+    assert [m["c"] for m in marks] == [1, 2, 3]  # the city's own ranks
+    assert [m["r"] for m in marks] == [1, 3, 4]  # the area's
     assert marks[0] == {
         "r": 1,
+        "c": 1,
         "n": "Elm Street / Oak Avenue",
         "lat": 34.05,
         "lon": -118.05,
@@ -71,11 +74,13 @@ def test_the_one_pager_lists_the_corners_with_the_credits(tmp_path: Path) -> Non
     (written,) = ranking.write(top, "Example", (2015, 2024), tmp_path / "out", pdf=False)
     text = written.read_text()
     assert text.startswith("# Where the crash model ranks highest: Example")
-    assert "| 1 | Elm Street / Oak Avenue |" in text and "| 4 | B / C |" in text
+    # Numbered 1 to 3 in the city, with the area's ranks 1, 3 and 4 beside them.
+    assert "| 1 | 1 | Elm Street / Oak Avenue |" in text and "| 3 | 4 | B / C |" in text
+    assert "| Rank | Rank in area |" in text
     assert "Far Road" not in text and "2015–2024" in text and "TIMS" in text and "CCRS" in text
-    assert "the gaps are corners outside the city" in text  # ranks 1, 3, 4
-    whole = ranking.markdown(top.assign(rank=[1, 2, 3]), "Example", 2015, 2024)
-    assert "gaps" not in whole
+    assert "rank in area" in text
+    whole = ranking.markdown(top.assign(rank=[1, 2, 3]), "Example", (2015, 2024))
+    assert "in area" not in whole and "| 2 | Ash Lane |" in whole
 
 
 def test_the_map_carries_the_corners_and_a_switch_only_when_given() -> None:
@@ -90,3 +95,11 @@ def test_the_map_carries_the_corners_and_a_switch_only_when_given() -> None:
     assert "const RANKED=[];" in plain
     assert '"r":1' in ranked and "</script> B" not in ranked  # script-safe
     assert '<label id="rkw" hidden>' in ranked  # shown by the page's script when there are corners
+
+
+def test_risk_circles_are_the_citys_corners_expecting_half_a_crash_or_more(tmp_path: Path) -> None:
+    path = _ranking(tmp_path / "r.csv")
+    found = ranking.circles(path, (2015, 2024))
+    # Rank 2 is outside the city, rank 3 has no expected count, rank 4 expects 1.0.
+    assert found == {"y": "2015–2024", "c": [[34.05, -118.05, 4.25], [34.03, -118.03, 1.0]]}
+    assert ranking.circles(path, (2015, 2024), floor=2)["c"] == [[34.05, -118.05, 4.25]]

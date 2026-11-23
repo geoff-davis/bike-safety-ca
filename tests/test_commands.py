@@ -1240,6 +1240,42 @@ def test_the_report_command_runs_one_step_on_the_callers_own_area(
     assert years.loc["All years"].sum() == 1
 
 
+def test_the_report_command_draws_the_streets_alone_with_no_crashes(
+    town: Town, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # No crash in the area: the map is the streets alone, with or without a ranking.
+    load = report_command.crash_table.load
+    monkeypatch.setattr(report_command.crash_table, "load", lambda *a: load(*a).iloc[:0])
+    ranked = tmp_path / "ranking.csv"
+    pd.DataFrame(
+        {
+            "rank": [1],
+            "streets": ["A / B"],
+            "major": ["Arterial"],
+            "minor": ["Local"],
+            "in_city": [True],
+            "expected_bike_crashes": [2.0],
+            "observed_bike_crashes": [0],
+            "car_crashes": [1],
+            "method": ["street-length model"],
+            "longitude": [-118.0],
+            "latitude": [34.0],
+        }
+    ).to_csv(ranked, index=False)
+    arguments = [
+        "--config",
+        town.settings,
+        "--crashes",
+        town.crashes,
+        "--processed",
+        town.processed,
+    ]
+    for extra, out in (([], tmp_path / "plain"), (["--ranking", ranked], tmp_path / "ranked")):
+        _run(monkeypatch, report_command.main, "map", *arguments, *extra, "--out", out)
+        assert _map_rows((out / "crash_movement_map.html").read_text()) == []
+    assert "| 1 | A / B |" in (tmp_path / "ranked" / "top_corners.md").read_text()
+
+
 def test_the_report_command_rejects_a_step_it_does_not_have(
     town: Town,
     monkeypatch: pytest.MonkeyPatch,
