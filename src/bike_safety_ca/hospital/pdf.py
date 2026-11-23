@@ -109,25 +109,41 @@ def page(text: str, charts: dict[str, str]) -> str:
 
 
 def write(name: str, text: str, charts: dict[str, str], out: Path) -> Path:
-    browser = next((found for b in BROWSERS if (found := shutil.which(b))), None)
-    if browser is None:
-        raise RuntimeError("printing a PDF needs Google Chrome or Chromium")
     out.mkdir(parents=True, exist_ok=True)
     target = out / f"{name}.pdf"
     with tempfile.TemporaryDirectory() as folder:
         source = Path(folder) / f"{name}.html"
         source.write_text(page(text, charts))
+        print_url(source.as_uri(), target)
+    return target
+
+
+def print_url(url: str, target: Path, wait_ms: int = 0) -> Path:
+    """Print a page to ``target`` with headless Chrome.
+
+    ``wait_ms`` gives a page that draws itself with scripts, such as the crash map, time to
+    finish first.  Each print gets a fresh browser profile: one Chrome locks a profile, so a
+    shared one fails when another Chrome is running.
+    """
+    browser = next((found for b in BROWSERS if (found := shutil.which(b))), None)
+    if browser is None:
+        raise RuntimeError("printing a PDF needs Google Chrome or Chromium")
+    with tempfile.TemporaryDirectory() as profile:
         subprocess.run(
             [
                 browser,
                 "--headless=new",
                 "--disable-gpu",
+                "--no-first-run",
+                f"--user-data-dir={profile}",
                 "--no-pdf-header-footer",
+                *([f"--virtual-time-budget={wait_ms}"] if wait_ms else []),
                 f"--print-to-pdf={target}",
-                source.as_uri(),
+                url,
             ],
             check=True,
             capture_output=True,
-            timeout=120,
+            stdin=subprocess.DEVNULL,
+            timeout=300,
         )
     return target
