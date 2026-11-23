@@ -42,7 +42,12 @@ def main() -> None:
         " map and writes top_corners.md beside it",
     )
     parser.add_argument("--top", type=int, default=20, help="how many top corners (default 20)")
-    parser.add_argument("--pdf", action="store_true", help="also print top_corners.pdf")
+    parser.add_argument(
+        "--pdf",
+        action="store_true",
+        help="with --ranking, also print top_corners.pdf, and predicted_risk.pdf (the map's"
+        " risk view with its list of corners) when the map is made",
+    )
     parser.add_argument(
         "--offline",
         action="store_true",
@@ -94,6 +99,15 @@ def main() -> None:
             circles=ranking.circles(args.ranking, years) if args.ranking else None,
         )
         logging.info("wrote %s", written)
+        if top is not None and args.pdf:
+            if top.empty:  # the page has no risk view to print
+                logging.warning("no ranked corner in the city: predicted_risk.pdf not printed")
+            else:
+                from bike_safety_ca.hospital import pdf as printer
+
+                risk = written.parent / "predicted_risk.pdf"
+                printer.print_url(written.resolve().as_uri() + "?view=risk", risk, wait_ms=15000)
+                logging.info("wrote %s", risk)
     if top is not None:
         for written in ranking.write(top, config.city, years, args.out, args.pdf):
             logging.info("wrote %s", written)

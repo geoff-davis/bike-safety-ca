@@ -1276,6 +1276,90 @@ def test_the_report_command_draws_the_streets_alone_with_no_crashes(
     assert "| 1 | A / B |" in (tmp_path / "ranked" / "top_corners.md").read_text()
 
 
+def test_the_report_command_prints_the_risk_view_and_the_corners(
+    town: Town, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Chrome is stood in for: each print is recorded and leaves an empty file.
+    from bike_safety_ca.hospital import pdf
+
+    printed: list[list[str]] = []
+
+    def chrome(command: list[str], **_: object) -> None:
+        printed.append(command)
+        target = next(a for a in command if a.startswith("--print-to-pdf="))
+        Path(target.split("=", 1)[1]).write_bytes(b"%PDF")
+
+    monkeypatch.setattr(pdf.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(pdf.subprocess, "run", chrome)
+    ranked = tmp_path / "ranking.csv"
+    pd.DataFrame(
+        {
+            "rank": [1],
+            "streets": ["A / B"],
+            "major": ["Arterial"],
+            "minor": ["Local"],
+            "in_city": [True],
+            "expected_bike_crashes": [2.0],
+            "observed_bike_crashes": [0],
+            "car_crashes": [1],
+            "method": ["street-length model"],
+            "longitude": [-118.0],
+            "latitude": [34.0],
+        }
+    ).to_csv(ranked, index=False)
+    out = tmp_path / "out"
+    arguments = [
+        "--config",
+        town.settings,
+        "--crashes",
+        town.crashes,
+        "--processed",
+        town.processed,
+    ]
+    _run(
+        monkeypatch,
+        report_command.main,
+        "map",
+        *arguments,
+        "--ranking",
+        ranked,
+        "--pdf",
+        "--out",
+        out,
+    )
+
+    assert (out / "predicted_risk.pdf").exists() and (out / "top_corners.pdf").exists()
+    risk = next(c for c in printed if c[-1].endswith("crash_movement_map.html?view=risk"))
+    assert "--virtual-time-budget=15000" in risk  # the map draws itself before printing
+    profiles = [a for c in printed for a in c if a.startswith("--user-data-dir=")]
+    assert len(set(profiles)) == len(printed) == 2  # a fresh profile for each print
+
+    # With no ranked corner in the city the page has no risk view, so none is printed.
+    printed.clear()
+    (out / "predicted_risk.pdf").unlink()
+    _run(
+        monkeypatch,
+        report_command.main,
+        "map",
+        *arguments,
+        "--ranking",
+        ranked,
+        "--pdf",
+        "--top",
+        "0",
+        "--out",
+        out,
+    )
+    assert not (out / "predicted_risk.pdf").exists()
+    assert not any(c[-1].endswith("?view=risk") for c in printed)
+
+    # Without --pdf, or without a ranking, nothing is printed.
+    printed.clear()
+    _run(monkeypatch, report_command.main, "map", *arguments, "--ranking", ranked, "--out", out)
+    _run(monkeypatch, report_command.main, "map", *arguments, "--pdf", "--out", out)
+    assert printed == []
+
+
 def test_the_report_command_rejects_a_step_it_does_not_have(
     town: Town,
     monkeypatch: pytest.MonkeyPatch,
