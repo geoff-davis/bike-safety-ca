@@ -18,3 +18,7 @@ ccrs_cities:
   - Mountain View
 latitude: [36.0, 38.5]
 longitude: [-123.0, -120.5]
+
+# Framings of the crash map printed by `report map --pdf`, each as <name>.pdf.
+prints:
+  - {name: city, centre: [37.40019, -122.08718], zoom: 13}

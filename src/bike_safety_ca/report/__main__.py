@@ -9,6 +9,7 @@ with the TIMS and CCRS credits.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from pathlib import Path
 
@@ -25,6 +26,48 @@ from bike_safety_ca.report import crashes as crash_table
 from bike_safety_ca.report import movement, ranking, summary
 
 STEPS = ["summary", "map"]
+
+
+def framing_url(framing: settings.Print, page: Path) -> str:
+    """The map page's address that opens on ``framing``.
+
+    An ``at`` is looked up among the intersections the page draws, and must name exactly one.
+    """
+    url = page.resolve().as_uri() + ("?view=risk" if framing.view == "risk" else "")
+    centre = framing.centre
+    if framing.at is not None:
+        text = page.read_text()
+        drawn, _ = json.JSONDecoder().raw_decode(text, text.index("const SITES=") + 12)
+        found = [(s["lat"], s["lon"]) for s in drawn if s.get("n") == framing.at]
+        if len(found) != 1:
+            raise ValueError(
+                f"prints: {framing.name}: {len(found) or 'no'} intersections on the map are "
+                f"named {framing.at!r}; use the name exactly as the map shows it, or a centre"
+            )
+        centre = found[0]
+    if centre is None:
+        return url  # the map's opening view
+    return f"{url}#{centre[0]:.5f},{centre[1]:.5f},{framing.zoom:g}"
+
+
+def print_framings(
+    framings: tuple[settings.Print, ...], page: Path, out: Path, ranked: bool
+) -> list[Path]:
+    """Print each framing of the map page to ``<name>.pdf`` in ``out``.
+
+    ``ranked`` says whether the page has ranked corners, which a risk framing needs: without
+    them the page has no risk view.  Every framing is checked before anything is printed.
+    """
+    from bike_safety_ca.hospital import pdf as printer
+
+    for framing in framings:
+        if framing.view == "risk" and not ranked:
+            raise ValueError(
+                f"prints: {framing.name}: a risk framing needs ranked corners (--ranking with"
+                " corners in the city), and this map has no ranked corners"
+            )
+    urls = [(framing.name, framing_url(framing, page)) for framing in framings]
+    return [printer.print_url(url, out / f"{name}.pdf", wait_ms=15000) for name, url in urls]
 
 
 def main() -> None:
@@ -45,8 +88,9 @@ def main() -> None:
     parser.add_argument(
         "--pdf",
         action="store_true",
-        help="with --ranking, also print top_corners.pdf, and predicted_risk.pdf (the map's"
-        " risk view with its list of corners) when the map is made",
+        help="print the config's map framings (prints:) when the map is made; with --ranking,"
+        " also top_corners.pdf, and predicted_risk.pdf (the map's risk view with its list of"
+        " corners)",
     )
     parser.add_argument(
         "--offline",
@@ -108,6 +152,10 @@ def main() -> None:
                 risk = written.parent / "predicted_risk.pdf"
                 printer.print_url(written.resolve().as_uri() + "?view=risk", risk, wait_ms=15000)
                 logging.info("wrote %s", risk)
+        if args.pdf and config.prints:
+            ranked = top is not None and not top.empty
+            for target in print_framings(config.prints, written, args.out, ranked):
+                logging.info("wrote %s", target)
     if top is not None:
         for written in ranking.write(top, config.city, years, args.out, args.pdf):
             logging.info("wrote %s", written)

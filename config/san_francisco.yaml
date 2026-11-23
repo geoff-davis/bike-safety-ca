@@ -20,3 +20,8 @@ ccrs_cities:
 # but have no streets.
 latitude: [37.6, 37.95]
 longitude: [-122.6, -122.3]
+
+# Framings of the crash map printed by `report map --pdf`, each as <name>.pdf.
+prints:
+  - {name: city, centre: [37.7556, -122.445], zoom: 12}
+  - {name: downtown, centre: [37.776, -122.418], zoom: 14}

@@ -1334,6 +1334,56 @@ def test_the_report_command_prints_the_risk_view_and_the_corners(
     profiles = [a for c in printed for a in c if a.startswith("--user-data-dir=")]
     assert len(set(profiles)) == len(printed) == 2  # a fresh profile for each print
 
+    # The config's framings print too: an intersection by name, a centre, the opening view.
+    printed.clear()
+    site = _map_rows((out / "crash_movement_map.html").read_text())[0]["st"]
+    framings = [
+        {"name": "whole"},
+        {"name": "corner", "at": site, "zoom": 18},
+        {"name": "spot", "centre": [34.05, -118.05], "zoom": 15, "view": "risk"},
+    ]
+    framed = _settings(tmp_path / "framed", prints=framings)
+    again = ["--config", framed, *arguments[2:], "--ranking", ranked, "--pdf", "--out", out]
+    _run(monkeypatch, report_command.main, "map", *again)
+    maps = [c[-1] for c in printed if "crash_movement_map.html" in c[-1]]
+    urls = {u.split("crash_movement_map.html")[1] for u in maps}
+    assert "" in urls and "?view=risk#34.05000,-118.05000,15" in urls
+    assert any(u.startswith("#") and u.endswith(",18") for u in urls)
+    assert all((out / f"{n}.pdf").exists() for n in ("whole", "corner", "spot"))
+
+    # A name that is not on the map stops the command before anything is printed.
+    printed.clear()
+    lost = _settings(tmp_path / "lost", prints=[{"name": "x", "at": "Nowhere / Lane", "zoom": 18}])
+    with pytest.raises(ValueError, match="no intersections on the map are named"):
+        _run(
+            monkeypatch,
+            report_command.main,
+            "map",
+            "--config",
+            lost,
+            *arguments[2:],
+            "--pdf",
+            "--out",
+            out,
+        )
+    assert printed == []
+
+    # A risk framing needs ranked corners: without them it stops before printing anything.
+    printed.clear()
+    with pytest.raises(ValueError, match="no ranked corners"):
+        _run(
+            monkeypatch,
+            report_command.main,
+            "map",
+            "--config",
+            framed,
+            *arguments[2:],
+            "--pdf",
+            "--out",
+            out,
+        )
+    assert printed == []
+
     # With no ranked corner in the city the page has no risk view, so none is printed.
     printed.clear()
     (out / "predicted_risk.pdf").unlink()

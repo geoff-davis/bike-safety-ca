@@ -36,6 +36,22 @@ class Reassignment:
 
 
 @dataclass(frozen=True)
+class Print:
+    """One framing of the crash map that ``report map --pdf`` prints, as ``<name>.pdf``.
+
+    ``at`` names an intersection as the map names it; ``centre`` is (latitude, longitude).
+    Either needs a ``zoom``; with neither, the map's opening view is printed.  ``view`` is
+    ``crashes`` (recorded crashes) or ``risk`` (predicted risk).
+    """
+
+    name: str
+    at: str | None = None
+    centre: tuple[float, float] | None = None
+    zoom: float | None = None
+    view: str = "crashes"
+
+
+@dataclass(frozen=True)
 class Config:
     city: str
     county: str
@@ -75,6 +91,66 @@ class Config:
     # True when the crash tables are made up (see ``bike_safety_ca.demo``):
     # every chart and map is then labelled as synthetic.
     synthetic: bool = False
+    # Optional framings of the crash map to print with ``report map --pdf``.
+    prints: tuple[Print, ...] = ()
+
+
+# PDFs ``report map --pdf`` writes itself, which a framing must not overwrite.
+MADE_BY_PDF = frozenset({"predicted_risk", "top_corners"})
+
+
+def _prints(raw: object, path: str | Path) -> tuple[Print, ...]:
+    """Check the ``prints`` entries and turn them into ``Print``s."""
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError(f"{path}: prints: must be a list of framings")
+    found: list[Print] = []
+    for entry in raw:
+        _only(entry, {item.name for item in fields(Print)}, "prints", path)
+        name = entry.get("name")
+        if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", name):
+            raise ValueError(
+                f"{path}: prints: name must be lower-case letters, digits, - or _, not {name!r}"
+            )
+        if name in MADE_BY_PDF:
+            raise ValueError(f"{path}: prints: {name} is made by --pdf itself; choose another name")
+        if name in {p.name for p in found}:
+            raise ValueError(f"{path}: prints: {name} is named twice")
+        at, centre, zoom = entry.get("at"), entry.get("centre"), entry.get("zoom")
+        view = entry.get("view", "crashes")
+        if at is not None and centre is not None:
+            raise ValueError(f"{path}: prints: {name}: give at or centre, not both")
+        if at is not None and not (isinstance(at, str) and at.strip()):
+            raise ValueError(f"{path}: prints: {name}: at must be an intersection's name")
+        if centre is not None and not (
+            isinstance(centre, list)
+            and len(centre) == 2
+            and all(_number(v) for v in centre)
+            and -90 <= centre[0] <= 90
+            and -180 <= centre[1] <= 180
+        ):
+            raise ValueError(
+                f"{path}: prints: {name}: centre must be [latitude, longitude], not {centre!r}"
+            )
+        if (at is None and centre is None) != (zoom is None):
+            raise ValueError(
+                f"{path}: prints: {name}: a zoom goes with at or centre, and only then"
+            )
+        if zoom is not None and not (_number(zoom) and 1 <= zoom <= 20):
+            raise ValueError(f"{path}: prints: {name}: zoom must be from 1 to 20, not {zoom!r}")
+        if view not in ("crashes", "risk"):
+            raise ValueError(f"{path}: prints: {name}: view must be crashes or risk, not {view!r}")
+        found.append(
+            Print(
+                name=name,
+                at=at,
+                centre=None if centre is None else (float(centre[0]), float(centre[1])),
+                zoom=None if zoom is None else float(zoom),
+                view=view,
+            )
+        )
+    return tuple(found)
 
 
 def _whole(value: object, low: int, high: int) -> bool:
@@ -227,6 +303,7 @@ def load(path: str | Path) -> Config:
     """
     raw = _check(yaml.safe_load(Path(path).read_text()), path)
     raw["holdout_windows"] = tuple((a, b, c) for a, b, c in raw["holdout_windows"])
+    raw["prints"] = _prints(raw.get("prints"), path)
     raw["ccrs_cities"] = tuple(raw["ccrs_cities"])
     for key in ("latitude", "longitude"):
         low, high = raw[key]

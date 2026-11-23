@@ -406,3 +406,37 @@ def test_what_a_streets_crashes_have_in_common_has_a_row_of_its_own() -> None:
     )
     assert f'<tr class="sub"><td></td><td colspan="5">{HOOK} (3; 3 sideswipe)' in page
     assert "<th>In common</th>" not in page
+
+
+@pytest.mark.parametrize("hashed", [True, False], ids=["framed", "opening"])
+def test_the_risk_view_keeps_a_framing_given_in_the_address(hashed: bool) -> None:
+    # ?view=risk alone frames the ranked corners; with #lat,lon,zoom it keeps that framing,
+    # when the page opens and when it is laid out for printing (``refit``).
+    marks = [{"r": 1, "c": 1, "n": "A / B", "lat": 34.05, "lon": -118.05, "w": "why"}]
+    page = movement.page(
+        [], {key: [] for key in "MTLSP"}, [], CONFIG, (34.05, -118.05), [], ranked=marks
+    )
+    script = page[page.rindex("<script>") + len("<script>") : page.rindex("</script>")]
+    where = 'location.hash="#34.06,-118.04,17";' if hashed else ""
+    setup = (
+        f'{where}location.search="?view=risk";T_.map.options={{zoomSnap:1}};'
+        "T_.map.fits=0;T_.map.fitBounds=function(){this.fits++;this._z=11;return this;};"
+        "T_.map.invalidateSize=function(){return this;};const g_=window.L.layerGroup;"
+        "window.L.layerGroup=()=>Object.assign(g_(),{remove(){return this;}});"
+    )
+    scenario = (
+        "const opened=T_.map.fits;"
+        "console.log(JSON.stringify({opened,printed:refit(),zoom:T_.map.getZoom()}))"
+    )
+    out = subprocess.run(
+        [NODE or "node", "-e", "\n".join([BROWSER, setup, script, scenario])],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert out.returncode == 0, out.stderr[-2000:]
+    seen = json.loads(out.stdout)
+    if hashed:
+        assert seen == {"opened": 0, "printed": False, "zoom": 17}
+    else:
+        assert seen == {"opened": 1, "printed": True, "zoom": 11}
