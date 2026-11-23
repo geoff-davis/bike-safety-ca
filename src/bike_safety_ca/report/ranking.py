@@ -43,7 +43,7 @@ def _in_city(table: pd.DataFrame) -> pd.DataFrame:
 
 def circles(path: Path, years: tuple[int, int] | None, floor: float = FLOOR) -> dict[str, Any]:
     """The city's intersections where the model expects at least ``floor`` bike crashes,
-    as [lat, lon, expected] for the risk circles; none when the blend was used."""
+    as [lat, lon, expected, streets] for the risk circles; none when the blend was used."""
     table = _in_city(pd.read_csv(path))
     expected = pd.to_numeric(table.expected_bike_crashes, errors="coerce")
     keep = expected >= floor
@@ -51,11 +51,12 @@ def circles(path: Path, years: tuple[int, int] | None, floor: float = FLOOR) -> 
         table.latitude[keep].astype(float).tolist(),
         table.longitude[keep].astype(float).tolist(),
         expected[keep].astype(float).tolist(),
+        table.streets[keep].astype(str).tolist(),
         strict=True,
     )
     return {
         "y": _period(years),
-        "c": [[round(la, 6), round(lo, 6), round(e, 2)] for la, lo, e in rows],
+        "c": [[round(la, 6), round(lo, 6), round(e, 2), n] for la, lo, e, n in rows],
     }
 
 

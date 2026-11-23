@@ -101,5 +101,10 @@ def test_risk_circles_are_the_citys_corners_expecting_half_a_crash_or_more(tmp_p
     path = _ranking(tmp_path / "r.csv")
     found = ranking.circles(path, (2015, 2024))
     # Rank 2 is outside the city, rank 3 has no expected count, rank 4 expects 1.0.
-    assert found == {"y": "2015–2024", "c": [[34.05, -118.05, 4.25], [34.03, -118.03, 1.0]]}
-    assert ranking.circles(path, (2015, 2024), floor=2)["c"] == [[34.05, -118.05, 4.25]]
+    assert found == {
+        "y": "2015–2024",
+        "c": [[34.05, -118.05, 4.25, "Elm Street / Oak Avenue"], [34.03, -118.03, 1.0, "B / C"]],
+    }
+    assert ranking.circles(path, (2015, 2024), floor=2)["c"] == [
+        [34.05, -118.05, 4.25, "Elm Street / Oak Avenue"]
+    ]

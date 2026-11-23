@@ -57,3 +57,28 @@ Also reviewed the circle-column conversion: latitude, longitude and expected cou
 Validation: executed the exact extracted CLI `main()` with controlled I/O stand-ins for four scenarios (empty/populated crashes, each with/without ranking); all reached the map builder, and ranking calls received the expected None or year tuple. The empty stand-in rejects any attempt to compute its minimum/maximum, confirming the guard is effective. Executed the exact `circles()` and `_period()` functions with column stand-ins covering missing expected values, below-floor values, the inclusive 0.5 threshold and all-empty blend estimates; alignment and output passed. These are isolated control-flow checks, not full pandas/geospatial integration tests. Full `make check` was not rerun; the handoff reports 631 passing tests. No protected files or records were opened.
 
 Final ledger: RC-001 closed; no open findings. Loop risk-circles-1 complete. Implementer releases the reviewer lock. Acceptance does not authorize commit, push or merge.
+
+## Loop risk-circles-2: circles only, clickable
+
+- Loop ID and round: `risk-circles-2`, round 1 of at most 3. Implementer: `bsc-implementer`, pane `wF:p1`. Expires (UTC): 2026-11-23 06:04.
+- Base: `238ba2f` (loop 1's accepted commit). Snapshot: `/tmp/bsc-review/risk-circles2-r1/`; `staged.diff` is against that commit.
+- Purpose, as the user asked: remove the numbered black ovals so the risk view shows only the expected-crash circles; clicking a ranked-list row opens that corner's popup on the map; clicking a circle shows its rank when it has one.
+- Changes:
+  - `ranking.circles` rows gain the street names: `[lat, lon, expected, streets]`.
+  - Template: the circles are interactive. A circle at a ranked corner (matched on lat/lon to 5 decimals; both come from the same CSV, rounded to 6) gets a thicker outline and the rank popup (city rank, area rank when `GAPS`, and `why`). Other circles say "about X bike crashes over Y".
+  - A ranked corner with no circle (blend, or expected below the floor) gets an unfilled outline circle so it can still be found.
+  - The `rk` divIcon markers and `.rk` CSS are removed. A delegated click on `#panel tr[data-rk]` sets the view (zoom at least 16) and opens the circle's popup; it does nothing outside risk view.
+  - The print key and panel note are reworded.
+- Checks: `make check` passed. Headless Chrome on a real build (counts only): no ovals, 1,850 interactive paths, and clicking row 1 opened the rank 1 popup, with no script errors.
+- Please check: the lat/lon key matching, the panel listener when the panel is rebuilt by `draw()` (delegated, so it should be fine), and the blend case with an empty `CIRCLES.c`.
+- Status: complete (round 1 accepted)
+
+## Review, round 1 — risk-circles-2
+
+Verdict: **accepted** (round 1). No blocking correctness findings.
+
+Reviewed removal of the numbered divIcon markers, interactive circle popups, fallback outlines, and delegated ranked-row clicks. Ranked and circle coordinates are both emitted from the same CSV with six-decimal rounding and use the same JavaScript lookup-key function. The street-name column uses the same mask/order as the other strictly zipped circle columns. Popup names and explanations are escaped. The listener is attached to the persistent panel element, so replacing its contents during redraw does not remove it; it resolves the circle before changing the map view and opening the popup. Empty circle data still yields fallback outlines for ranked corners.
+
+Validation: executed the exact changed JavaScript risk block in Node with DOM/Leaflet stand-ins for no ranking, blend-only ranking, ranked and unranked expected circles, and a ranked corner below the circle threshold. Checks passed for circle/fallback counts, ranked-circle lookup, popup escaping, row navigation with zoom at least 16, opening the corresponding popup after a simulated panel redraw, retaining the delegated listener, and ignoring row clicks outside risk view. Reviewed the updated Python output-shape assertions and shared-coordinate provenance. These isolated checks are not a full browser/geospatial integration run. Full `make check` was not rerun; the handoff reports it passed. No protected files or records were opened.
+
+Ledger: no open findings in risk-circles-2; RC-001 from risk-circles-1 remains closed. Loop risk-circles-2 complete. Implementer releases the reviewer lock. Acceptance does not authorize commit, push or merge.
