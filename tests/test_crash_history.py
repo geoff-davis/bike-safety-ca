@@ -256,3 +256,51 @@ def test_the_scores_do_not_depend_on_the_order_street_names_are_read_in() -> Non
     backwards = scores({site: roads[::-1] for site, roads in names.items()})
     rotated = scores({site: roads[1:] + roads[:1] for site, roads in names.items()})
     assert forwards == backwards == rotated
+
+
+def _one_street() -> tuple[pd.Series, pd.Series, dict]:
+    """120 corners on one street: the first optimiser start fails here, the second converges."""
+    rng = np.random.default_rng(7)
+    bike, car = pd.Series(rng.poisson(1, 120)), pd.Series(rng.poisson(3, 120))
+    return bike, car, {site: {"S"} for site in bike.index}
+
+
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.SingularMatrixWarning")
+def test_a_failed_start_does_not_discard_one_that_converged() -> None:
+    bike, car, streets = _one_street()
+    fit = fit_street_model(bike, car, streets, spread_power=0.5 + (3 - np.sqrt(5.0)))
+    assert np.isfinite(fit["sites"].eb).all()
+    assert fit["log_likelihood"] == pytest.approx(-148.877, abs=0.01)
+
+
+@pytest.mark.parametrize(
+    ("attempts", "kept"),
+    [
+        ([(False, np.nan), (True, 9.0)], 9.0),  # a failed start with no value
+        ([(False, 3.0), (True, 9.0)], 9.0),  # a failed start that stopped lower
+        ([(True, 9.0), (True, 4.0)], 4.0),  # both converged: the lower one
+        ([(True, np.inf), (True, 9.0)], 9.0),
+        ([(False, 3.0), (False, np.nan)], None),  # neither usable: the fit fails
+    ],
+)
+def test_the_fit_is_chosen_among_the_starts_that_converged(
+    monkeypatch: pytest.MonkeyPatch, attempts: list[tuple[bool, float]], kept: float | None
+) -> None:
+    from types import SimpleNamespace
+
+    from bike_safety_ca.model import crash_history
+
+    queue = iter(attempts)
+
+    def stub(loss: object, start: np.ndarray, **_: object) -> SimpleNamespace:
+        success, value = next(queue)
+        return SimpleNamespace(success=success, fun=value, x=np.zeros(len(start)))
+
+    monkeypatch.setattr(crash_history, "minimize", stub)
+    count, design = np.ones(4), np.ones((4, 1))
+    if kept is None:
+        with pytest.raises(RuntimeError, match="did not converge"):
+            crash_history._fit_spread(count, design, 1.5)
+    else:
+        assert crash_history._fit_spread(count, design, 1.5)[2] == -kept

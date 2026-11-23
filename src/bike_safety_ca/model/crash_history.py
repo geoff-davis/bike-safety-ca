@@ -124,9 +124,14 @@ def _fit_spread(
         minimize(loss, np.r_[start, np.log(alpha)], method="L-BFGS-B", options={"maxiter": 2000})
         for alpha in (0.5, 2.0)
     ]
-    best = min(fits, key=lambda fit: fit.fun)
-    if not best.success:
+    # Only a start that converged to finite values can be the fit: a failed start may
+    # stop at a lower value, or at none (NaN, which ``min`` would keep if it came first).
+    usable = [
+        fit for fit in fits if fit.success and np.isfinite(fit.fun) and np.isfinite(fit.x).all()
+    ]
+    if not usable:
         raise RuntimeError("street crash model did not converge")
+    best = min(usable, key=lambda fit: fit.fun)
     return best.x[:-1], float(np.exp(best.x[-1])), -float(best.fun)
 
 
