@@ -571,6 +571,7 @@ def page(
     sites: list[dict[str, Any]] | None = None,
     offline: bool = False,
     ranked: list[dict[str, Any]] | None = None,
+    circles: dict[str, Any] | None = None,
 ) -> str:
     """Fill the page template.
 
@@ -594,6 +595,7 @@ def page(
         "/*CREDIT*/": html.escape(credit),
         "/*SITES*/": compact(sites or []),
         "/*RANKED*/": compact(ranked or []),
+        "/*CIRCLES*/": compact(circles or {"y": "", "c": []}),
         "/*SEVERITY*/": compact(codes.SEVERITY),
         "/*LIGHT*/": compact(codes.LIGHTING),
         "/*DARK*/": compact(list(codes.DARK)),
@@ -640,6 +642,7 @@ def build(
     area: BaseGeometry | None = None,
     offline: bool = False,
     ranked: list[dict[str, Any]] | None = None,
+    circles: dict[str, Any] | None = None,
 ) -> Path:
     """Write the map of ``crashes`` (as loaded by ``report.crashes.load``) to ``out``.
 
@@ -669,6 +672,7 @@ def build(
         sites,
         offline=offline,
         ranked=ranked,
+        circles=circles,
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)

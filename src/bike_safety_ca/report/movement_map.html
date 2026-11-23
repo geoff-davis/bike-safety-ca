@@ -49,7 +49,6 @@ body.printing main{display:block}
 body.printing #map{width:10.2in;height:5.5in;flex:none;border:1px solid #999}
 body.printing .leaflet-control-attribution{display:none}
 [data-tip]{border-bottom:1px dotted var(--muted);cursor:help}
-.rk{background:var(--fg);color:var(--bg);border:2px solid var(--bg);border-radius:11px;font:700 11px/18px system-ui,sans-serif;text-align:center;box-shadow:0 0 0 1px var(--fg)}
 #tip{position:fixed;z-index:2000;max-width:20rem;background:var(--fg);color:var(--bg);padding:.4rem .6rem;border-radius:4px;font-size:13px;line-height:1.35;pointer-events:none}
 @media print{
   #tip{display:none!important}[data-tip]{border:0}
@@ -68,6 +67,7 @@ body.printing .leaflet-control-attribution{display:none}
   #pkey b{display:block;margin-top:3px;break-after:avoid}#pkey svg{vertical-align:middle;margin-right:3px}
   #pkey .sw{display:inline-block;width:14px;height:4px;margin-right:4px;vertical-align:middle}
 }
+body.printing .screen{display:none}@media print{.screen{display:none}}
 </style></head><body>
 /*WARN*/
 <div id="ptitle"><h1 id="ptitleh">Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/.</div></div>
@@ -88,7 +88,7 @@ body.printing .leaflet-control-attribution{display:none}
 <div id="tip" role="tooltip" hidden></div>
 <script>
 let inPrint=false; // while the page is laid out for printing: no "zoom in" on paper
-const DATA=/*DATA*/;const RANKED=/*RANKED*/;const MOVE=/*MOVE*/;const SITES=/*SITES*/;const SEV=/*SEVERITY*/;const LIGHT=/*LIGHT*/;const DARK=/*DARK*/;
+const DATA=/*DATA*/;const RANKED=/*RANKED*/;const CIRCLES=/*CIRCLES*/;const MOVE=/*MOVE*/;const SITES=/*SITES*/;const SEV=/*SEVERITY*/;const LIGHT=/*LIGHT*/;const DARK=/*DARK*/;
 const SITE={};for(const s of SITES)SITE[s.i]=s;
 const COL={"bicycle":"--bicycle","car or truck":"--car","motorcycle":"--moto","pedestrian":"--ped","bus or other":"--other"};
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -368,14 +368,28 @@ map.createPane("crashes").style.zIndex=450;
 const dots=L_.svg({pane:"crashes",padding:.3}),layer=L_.layerGroup().addTo(map);
 // The model's top-ranked corners, a layer the reader switches on.
 const rkLayer=L_.layerGroup(),CITY="/*CITY*/";
-const RISKKEY=`<div>Numbers are the crash model's ranks among all intersections in the area; 1 is highest.${RANKED.some((k,i)=>k.r!==i+1)?" Gaps are corners outside the city.":""} The table lists what the model saw at each corner.</div>`;
+// Numbers are the city's own ranks, 1 to n; the area's rank is shown too where it differs.
+const GAPS=RANKED.some((k,i)=>k.r!==i+1),RISKC="#6a3d9a";
+// Risk circles: area follows the bike crashes the model expects at the corner.
+// Scaled to the city's highest expected count, so a small city's top corners show as clearly.
+const rr=e=>Math.max(2,16*Math.sqrt(e/(CMAX||1))),CMAX=CIRCLES.c.reduce((m,c)=>Math.max(m,c[2]),0);
+const dot=v=>`<svg width="${2*rr(v)+2}" height="${2*rr(v)+2}" style="vertical-align:middle"><circle cx="${rr(v)+1}" cy="${rr(v)+1}" r="${rr(v)}" fill="${RISKC}" fill-opacity=".3" stroke="${RISKC}"/></svg>`;
+const circleKey=()=>CIRCLES.c.length?`<div class="note">Circles: the bike crashes the model expects at each corner over ${CIRCLES.y}, shown from half a crash up. ${[0.5,1,2,5,10,20,50,100].filter(v=>v<=CMAX&&v>=CMAX/10).slice(-3).map(v=>`${dot(v)} ${v}`).join(" &nbsp;")}</div>`:"";
+const RISKKEY=`<div>The table ranks the city's intersections by the bike crashes the crash model expects there; 1 is highest.${GAPS?" It also gives each corner's rank in the wider area the model was fitted on.":""} Ranked corners have a darker outline.</div>`+circleKey();
+// One circle per corner; a ranked corner's popup gives its rank and what the model saw.
+const at=(la,lo)=>la.toFixed(5)+","+lo.toFixed(5),rankAt=new Map(RANKED.map(k=>[at(k.lat,k.lon),k])),circleOf=new Map();
+const riskPop=(n,e,k)=>`<b>${k?`Rank ${k.c}${GAPS?` (${k.r} in the area)`:""}: `:""}${esc(n)}</b><br>${k?esc(k.w):`The model expects about ${e.toFixed(1)} bike crashes here over ${esc(CIRCLES.y)}.`}`;
+for(const [la,lo,e,n] of CIRCLES.c){const k=rankAt.get(at(la,lo)),c=L_.circleMarker([la,lo],{radius:rr(e),color:RISKC,weight:k?2.5:1,fillColor:RISKC,fillOpacity:.3}).bindPopup(riskPop(n,e,k)).addTo(rkLayer);if(k)circleOf.set(k.c,c);}
+// A ranked corner with no circle (the blend gives no expected count) still gets an outline.
+for(const k of RANKED)if(!circleOf.has(k.c))circleOf.set(k.c,L_.circleMarker([k.lat,k.lon],{radius:6,color:RISKC,weight:2.5,fill:false}).bindPopup(riskPop(k.n,0,k)).addTo(rkLayer));
 const byId=id=>document.getElementById(id); // $ is defined further down
 if(RANKED.length)byId("rkw").hidden=false;
-for(const k of RANKED)L_.marker([k.lat,k.lon],{keyboard:false,zIndexOffset:1000,icon:L_.divIcon({className:"rk",iconSize:[14+7*String(k.r).length,22],iconAnchor:[7+3.5*String(k.r).length,11],html:String(k.r)})}).bindPopup(`<b>Rank ${k.r}: ${esc(k.n)}</b><br>${esc(k.w)}`).addTo(rkLayer);
 // Recorded crashes or predicted risk: one layer on the map at a time.
 const risk=()=>byId("view").value==="risk";
+// A row of the ranked list finds its corner on the map.
+byId("panel").addEventListener("click",e=>{const tr=e.target.closest?e.target.closest("tr[data-rk]"):null;if(!tr||!risk())return;const c=circleOf.get(+tr.dataset.rk);if(!c)return;map.setView(c.getLatLng(),Math.max(map.getZoom(),16));c.openPopup();});
 byId("view").addEventListener("change",()=>{if(risk()){layer.remove();rkLayer.addTo(map);}else{rkLayer.remove();layer.addTo(map);}draw();});
-const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note">Numbered on the map. Switch back to recorded crashes to see the crashes themselves.</div><table><tr><th class="n">Rank</th><th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr><td class="n">${k.r}</td><td>${esc(k.n)}</td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
+const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note screen">Click a row to find the corner on the map. Switch back to recorded crashes to see the crashes themselves.</div>${circleKey()}<table><tr><th class="n">Rank</th>${GAPS?`<th class="n">Rank in area</th>`:""}<th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr data-rk="${k.c}" style="cursor:pointer"><td class="n">${k.c}</td>${GAPS?`<td class="n">${k.r}</td>`:""}<td>${esc(k.n)}</td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
 const ys=DATA.map(r=>r.y),Y0=Math.min(...ys),Y1=Math.max(...ys),$=id=>document.getElementById(id);
 $("y0").value=Y0;$("y1").value=Y1;["y0","y1"].forEach(i=>{$(i).min=Y0;$(i).max=Y1;});
 function fit(r){ // how the diagram fits the movements (see plan): stored on each crash by diagram.fit, worked out here only if missing
