@@ -368,7 +368,7 @@ map.createPane("crashes").style.zIndex=450;
 const dots=L_.svg({pane:"crashes",padding:.3}),layer=L_.layerGroup().addTo(map);
 // The model's top-ranked corners, a layer the reader switches on.
 const rkLayer=L_.layerGroup(),CITY="/*CITY*/";
-const RISKKEY=`<div>Numbers are the crash model's ranks among all intersections in the area; 1 is highest. Gaps are corners outside the city. The table lists what the model saw at each corner.</div>`;
+const RISKKEY=`<div>Numbers are the crash model's ranks among all intersections in the area; 1 is highest.${RANKED.some((k,i)=>k.r!==i+1)?" Gaps are corners outside the city.":""} The table lists what the model saw at each corner.</div>`;
 const byId=id=>document.getElementById(id); // $ is defined further down
 if(RANKED.length)byId("rkw").hidden=false;
 for(const k of RANKED)L_.marker([k.lat,k.lon],{keyboard:false,zIndexOffset:1000,icon:L_.divIcon({className:"rk",iconSize:[14+7*String(k.r).length,22],iconAnchor:[7+3.5*String(k.r).length,11],html:String(k.r)})}).bindPopup(`<b>Rank ${k.r}: ${esc(k.n)}</b><br>${esc(k.w)}`).addTo(rkLayer);
