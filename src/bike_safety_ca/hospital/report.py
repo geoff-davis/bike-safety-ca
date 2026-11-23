@@ -25,6 +25,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from bike_safety_ca import links
 from bike_safety_ca.hospital import epicenter, population, rates
 from bike_safety_ca.hospital import tables as er
 
@@ -491,11 +492,13 @@ def markdown(
         "with few, and the data from all the counties decide how fast it grows. A small "
         "county's figure is therefore pulled toward the average by as much as its small "
         "numbers warrant, and no more. The full method, with the statistical model, is in "
-        "docs/county_rates_method.md of bike-safety-ca.",
+        f"[How counties are compared]({links.doc('county_rates_method.md')}).",
         "",
         "**Hidden counts.**",
         "",
         *HIDDEN_COUNTS,
+        "",
+        links.MADE_WITH,
         "",
     ]
     return "\n".join(lines), charts(yearly, visits, admissions)

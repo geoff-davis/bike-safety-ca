@@ -16,6 +16,8 @@ from typing import Any
 
 import pandas as pd
 
+from bike_safety_ca import links
+
 # Corners expecting fewer bike crashes than this, over the years used, get no circle:
 # most of a city's intersections, and too small to see.
 FLOOR = 0.5
@@ -144,6 +146,11 @@ def markdown(table: pd.DataFrame, city: str, years: tuple[int, int] | None) -> s
         f"{note}The model weighs each corner's bike crashes against "
         "its car crashes and the roads that meet, so a corner with few bike crashes can "
         f"rank high when its streets are busy.* {CREDIT}",
+        "",
+        "*How the model works, and how well it ranked corners in 28 California cities: "
+        f"[{links.MODEL_DOC.removeprefix('https://')}]({links.MODEL_DOC}).*",
+        "",
+        links.MADE_WITH,
     ]
     return "\n".join(lines)
 

@@ -71,7 +71,7 @@ body.printing .screen{display:none}@media print{.screen{display:none}}
 a.go{color:#1a5fb4;text-decoration:underline;cursor:pointer}body.printing a.go{color:inherit;text-decoration:none}@media print{a.go{color:inherit;text-decoration:none}}
 </style></head><body>
 /*WARN*/
-<div id="ptitle"><h1 id="ptitleh">Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/.</div></div>
+<div id="ptitle"><h1 id="ptitleh">Cyclist crashes, /*CITY*/</h1><div id="pfilters"></div><div class="note">Data: Streets &copy; OpenStreetMap contributors (ODbL). /*CREDIT*/. Made with bike-safety-ca: <a href="/*REPO*/">github.com/geoff-davis/bike-safety-ca</a>.</div></div>
 <header>
 <h1>Crash movement map</h1>
 <label>Cyclists <select id="who"><option value="all">all ages</option><option value="child">/*CHILD*/</option><option value="adult">adult</option></select></label>
@@ -355,7 +355,7 @@ const STREETS=/*STREETS*/,LABELS=/*LABELS*/;
 const SW={P:[.8,"#b9cfa6"],S:[1,"#ffffff"],L:[2.6,"#ffffff"],T:[3.6,"#fff7da"],M:[5,"#fde9a8"]},cv=L_.svg({padding:.4});
 const lines=Object.keys(SW).map(k=>[k,L_.polyline(STREETS[k],{renderer:cv,color:SW[k][1],interactive:false,lineCap:"round",dashArray:k==="P"?"3 4":null})]);
 const labs=L_.layerGroup(),builtin=L_.layerGroup([...lines.map(x=>x[1]),labs]).addTo(map);
-map.attributionControl.addAttribution("Streets &copy; OpenStreetMap contributors | /*CREDIT*/");
+map.attributionControl.addAttribution('Streets &copy; OpenStreetMap contributors | /*CREDIT*/ | made with <a href="/*REPO*/" target="_blank" rel="noopener">bike-safety-ca</a>');
 const osm=L_.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:""});
 L_.control.layers({"Built-in streets":builtin,"OpenStreetMap tiles (need a web server)":osm},null,{position:"topright",collapsed:false}).addTo(map);
 L_.control.scale({position:"bottomleft"}).addTo(map);
@@ -382,7 +382,7 @@ const dot=v=>`<svg width="${2*rr(v)+2}" height="${2*rr(v)+2}" style="vertical-al
 // Reference sizes for the keys: half a crash (yellow), then up to three within the city's range.
 const riskSizes=()=>[...new Set([.5,...[1,2,5,10,20,50,100].filter(v=>v<=CMAX&&v>=CMAX/10).slice(-3)])];
 const circleKey=()=>CIRCLES.c.length?`<div class="note">Circles: the bike crashes the model expects at each corner over ${CIRCLES.y}, shown from half a crash up; bigger and redder is more. ${riskSizes().map(v=>`${dot(v)} ${v}`).join(" &nbsp;")}</div>`:"";
-const RISKKEY=`<div>The table ranks the city's intersections by the bike crashes the crash model expects there; 1 is highest.${GAPS?" It also gives each corner's rank in the wider area the model was fitted on.":""} Ranked corners have a dark outline.</div>`+circleKey();
+const RISKKEY=`<div>The table ranks the city's intersections by the bike crashes the crash model expects there; 1 is highest.${GAPS?" It also gives each corner's rank in the wider area the model was fitted on.":""} Ranked corners have a dark outline. How the model works: github.com/geoff-davis/bike-safety-ca/blob/main/docs/forecasting_model.md</div>`+circleKey();
 // One circle per corner; a ranked corner's popup gives its rank and what the model saw.
 const at=(la,lo)=>la.toFixed(5)+","+lo.toFixed(5),rankAt=new Map(RANKED.map(k=>[at(k.lat,k.lon),k])),circleOf=new Map();
 const riskPop=(n,e,k)=>`<b>${k?`Rank ${k.c}${GAPS?` (${k.r} in the area)`:""}: `:""}${esc(n)}</b><br>${k?esc(k.w):`The model expects about ${e.toFixed(1)} bike crashes here over ${esc(CIRCLES.y)}.`}`;
@@ -401,7 +401,7 @@ byId("panel").addEventListener("click",e=>{const tr=e.target.closest?e.target.cl
   const i=tr.dataset.si,s=SITE[i],rs=listed[i];if(!s||!rs)return;L_.popup({maxWidth:380,autoPan:false}).setLatLng([s.lat,s.lon]).setContent(sitePopup(s,rs)).openOn(map);});
 byId("panel").addEventListener("click",e=>{const tr=e.target.closest?e.target.closest("tr[data-rk]"):null;if(!tr||!risk())return;e.preventDefault();const c=circleOf.get(+tr.dataset.rk);if(!c)return;map.setView(c.getLatLng(),Math.max(map.getZoom(),16));c.openPopup();});
 byId("view").addEventListener("change",()=>{if(risk()){layer.remove();rkLayer.addTo(map);}else{rkLayer.remove();layer.addTo(map);}legend();draw();});
-const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note screen">Click a row to find the corner on the map. Switch back to recorded crashes to see the crashes themselves.</div>${circleKey()}<table><tr><th class="n">Rank</th>${GAPS?`<th class="n">Rank in area</th>`:""}<th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr data-rk="${k.c}" style="cursor:pointer"><td class="n">${k.c}</td>${GAPS?`<td class="n">${k.r}</td>`:""}<td><a href="#" class="go">${esc(k.n)}</a></td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
+const rankTable=()=>`<h2>${tip(`Predicted risk: the model's top ${RANKED.length} corners`,TIPS.ranked)}</h2><div class="note screen">Click a row to find the corner on the map. Switch back to recorded crashes to see the crashes themselves. <a href="/*MODEL_DOC*/" target="_blank" rel="noopener">How the model works</a>.</div>${circleKey()}<table><tr><th class="n">Rank</th>${GAPS?`<th class="n">Rank in area</th>`:""}<th>Intersection</th><th>What the model saw</th></tr>${RANKED.map(k=>`<tr data-rk="${k.c}" style="cursor:pointer"><td class="n">${k.c}</td>${GAPS?`<td class="n">${k.r}</td>`:""}<td><a href="#" class="go">${esc(k.n)}</a></td><td>${esc(k.w)}</td></tr>`).join("")}</table>`;
 const ys=DATA.map(r=>r.y),Y0=Math.min(...ys),Y1=Math.max(...ys),$=id=>document.getElementById(id);
 $("y0").value=Y0;$("y1").value=Y1;["y0","y1"].forEach(i=>{$(i).min=Y0;$(i).max=Y1;});
 function fit(r){ // how the diagram fits the movements (see plan): stored on each crash by diagram.fit, worked out here only if missing
@@ -551,7 +551,8 @@ function riskLegend(){
   return `<b>Bike crashes the model expects</b>`+(CIRCLES.c.length?riskSizes().map(v=>`<div>${dot(v)}${v} over ${esc(CIRCLES.y)}</div>`).join("")+
     `<div style='color:#5d646c'>Bigger and redder is more. Corners expecting less than half a crash are not drawn.</div>`:"")+
     (RANKED.length?`<div>${ring}one of the city's top ${RANKED.length}, listed in the panel</div>`:"")+
-    `<div style='color:#5d646c'>Click a circle for the corner's streets and expected crashes. Switch "Show" back to recorded crashes for the crash key.</div>`;}
+    `<div style='color:#5d646c'>Click a circle for the corner's streets and expected crashes. Switch "Show" back to recorded crashes for the crash key.</div>`+
+    `<div><a href="/*MODEL_DOC*/" target="_blank" rel="noopener">How the model works</a></div>`;}
 lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
   // Open on a tall screen; on a small one the key would cover the map, so it starts closed.
   d.innerHTML=`<details${innerHeight>=800?" open":""}><summary>Key</summary><div class="kb"></div></details><div class="k1"></div>`;

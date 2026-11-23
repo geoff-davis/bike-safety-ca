@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from bike_safety_ca import links
 from bike_safety_ca.report import movement, ranking
 
 
@@ -79,6 +80,8 @@ def test_the_one_pager_lists_the_corners_with_the_credits(tmp_path: Path) -> Non
     assert "| Rank | Rank in area |" in text
     assert "Far Road" not in text and "2015–2024" in text and "TIMS" in text and "CCRS" in text
     assert "rank in area" in text
+    # The reader can find how the model works, and the project that made the page.
+    assert f"]({links.MODEL_DOC})" in text and f"]({links.REPO})" in text
     whole = ranking.markdown(top.assign(rank=[1, 2, 3]), "Example", (2015, 2024))
     assert "in area" not in whole and "| 2 | Ash Lane |" in whole
 
@@ -95,6 +98,10 @@ def test_the_map_carries_the_corners_and_a_switch_only_when_given() -> None:
     assert "const RANKED=[];" in plain
     assert '"r":1' in ranked and "</script> B" not in ranked  # script-safe
     assert '<label id="rkw" hidden>' in ranked  # shown by the page's script when there are corners
+    # Every map credits the project; the risk view links how the model works.
+    for page in (plain, ranked):
+        assert f'href="{links.REPO}"' in page and f'href="{links.MODEL_DOC}"' in page
+        assert "/*REPO*/" not in page and "/*MODEL_DOC*/" not in page
 
 
 def test_risk_circles_are_the_citys_corners_expecting_half_a_crash_or_more(tmp_path: Path) -> None:

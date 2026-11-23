@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
+from bike_safety_ca import links
 from bike_safety_ca.hospital import ebike, epicenter, population, report, tables
 
 GROUPS = ["<1", "1-4", "5-9", "10-14", "15-19", "20-24", "25-44", "45-64", "65-84", "85+"]
@@ -93,6 +94,7 @@ def test_a_report_for_a_made_up_county(tmp_path, monkeypatch):
     text, drawn = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
     assert text.startswith("# Bicycle injuries treated in hospital: Alder County")
     assert "EpiCenter@cdph.ca.gov" in text and "Santa Clara" not in text
+    assert f"]({links.REPO})" in text and f"]({links.doc('county_rates_method.md')})" in text
     assert "| 2016 | 100 |" in text and "| 2024 | 140 |" in text
     assert "Emergency department visits by Alder County residents | **275**" in text
     assert set(drawn) == {"yearly", "ages"} and "<!-- chart: yearly -->" in text
@@ -148,6 +150,7 @@ def test_the_ebike_report_reads_only_the_statewide_tables(tmp_path, monkeypatch)
     text, drawn = ebike.markdown(tmp_path / "birch", tmp_path / "pep")
     assert text.startswith("# Electric bicycle injuries treated in hospital: California")
     assert "EpiCenter@cdph.ca.gov" in text and set(drawn) == {"shares"}
+    assert f"]({links.REPO})" in text
     low, high = ebike.admission_ratio(tmp_path / "birch")
     assert 0 < low <= high and f"**{low:.2f} to {high:.2f}**" in text
     # With one hidden e-bike cell in an age group, its range would give that cell away.
