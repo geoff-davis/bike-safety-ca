@@ -256,6 +256,12 @@ _AGREED = "() => window.__bscAgreed === true"
 _SHOWN_OR_AGREED = (
     "() => window.__bscAgreed === true || document.querySelector('#shiny-modal button') !== null"
 )
+# Visible as Playwright counts it: a box on the page, and not visibility: hidden.
+_VISIBLE_OR_AGREED = """() => {
+  if (window.__bscAgreed === true) return true;
+  const m = document.querySelector('#shiny-modal');
+  return m !== null && m.getClientRects().length > 0 && getComputedStyle(m).visibility !== 'hidden';
+}"""
 _READ = """(ids) => {
   const t = $('#' + ids.table + ' table.dataTable').DataTable();
   return {columns: t.columns().header().toArray().map(h => h.innerText),
@@ -362,6 +368,9 @@ def await_agreement(page: Any, timeout_ms: int = AGREEMENT_MS) -> None:
     Stops unless the agreement closed after the person clicked "I Agree".
     """
     page.wait_for_function(_SHOWN_OR_AGREED, timeout=90_000)
+    # The agreement fades in: until it is visible, "hidden" would be true at once.
+    # One wait for either, so a click during the fade-in is not missed.
+    page.wait_for_function(_VISIBLE_OR_AGREED, timeout=90_000)
     log.info('Read the EpiCenter user agreement in the browser window and click "I Agree".')
     page.wait_for_selector("#shiny-modal", state="hidden", timeout=timeout_ms)
     if page.evaluate(_AGREED) is not True:
