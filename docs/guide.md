@@ -589,10 +589,7 @@ most. "Print this view" prints what is on
 screen on a landscape page, with the filters, the key, a scale bar, the data
 credits and the panel's tables below the map.
 
-To give a copy to the staff of the city that has the records, add
-`--for "City of X traffic engineering staff"`. The banner then says who it was
-prepared for, that it shows individual crash records, and asks that it not be
-published. Add `--offline` to build the map library (Leaflet,
+Add `--offline` to build the map library (Leaflet,
 BSD licence, in `src/bike_safety_ca/report/vendor/`) into the page, so the
 single file opens and works with no internet connection. The optional
 OpenStreetMap tile background is the exception: it needs a connection and, as
@@ -601,11 +598,9 @@ it and do not expect it in a file opened from disk. "Print this view" in a brows
 or headless Chrome's `--print-to-pdf` with a view in the address's `#lat,lon,zoom`,
 makes the PDFs to go with it.
 
-The map shows individual crash records. `output/` is git-ignored; share the
-file privately, with the local authority's staff, rather than publish it (see
-"Crash records" for why). The summary tables
-are totals, but a small city can have cells of one or two crashes, so read
-them before passing them on.
+The map shows individual crash records and carries the TIMS and CCRS
+credits; it, its PDFs and the summary tables may be shared or published (see
+"Crash records").
 
 ## Bicycle injuries treated in hospital
 
@@ -668,10 +663,10 @@ Online. Residents: U.S. Census Bureau, Population Estimates Program.*
 
 ## Crash records
 
-This repository holds no crash, party or victim records, and its tests use
-made-up data. Everything built from real records is written under `data/` or
-`output/`, which git ignores. These are individual police records: keep them
-on your own computer and do not publish them.
+This repository holds no crash, party or victim record tables, and its tests
+use made-up data. Everything built from real records is written under `data/`
+or `output/`, which git ignores. Get records from the sources rather than
+from a copy, so they are current.
 
 The two sources and their terms, as published in November 2026:
 
@@ -690,29 +685,27 @@ The two sources and their terms, as published in November 2026:
   California Highway Patrol, via data.ca.gov* says where the figures came
   from.
 
-Neither source's terms restricts publishing tables built from these
-records, such as counts, rank scores and the figures in `docs/`; publish
-them with both credits. The limits on how the data may be used, listed
-below, still apply. Check them first for cells small enough to point to
-one crash, such as a count of one at a named intersection in a named year.
+Neither source's terms restricts publishing what is built from these
+records: tables of totals, rank scores, the figures in `docs/`, and maps of
+single crashes such as the crash map and its PDFs (TIMS maps single crashes
+on its own site, and CCRS publishes record-level rows openly). Publish them
+with both credits. The limits on how the data may be used, listed below,
+still apply.
 
-Keeping the records themselves private is this repository's own rule, not
-a condition of either source: CCRS publishes record-level rows openly. The
-rule is there because each row describes a real person's crash, with date,
-place, age and injury, and the original crash reports behind the rows are
-for the confidential use of the CHP and the local authority that has
-jurisdiction (Vehicle Code § 20014).
+The original crash reports behind the rows are for the confidential use of
+the CHP and the local authority that has jurisdiction (Vehicle Code §
+20014); that covers the reports, not the published TIMS and CCRS rows. A map
+of single crashes still shows real people's crashes, with month, place, age
+band and injury, so think about the people in it before publishing a map of
+a quiet street with a fatal or serious crash.
 
 ### Before you use this on real records
 
 - **No data comes with the code.** You get crash records from TIMS or CCRS
   yourself, and their terms apply to you, not this repository's licence.
-- **Keep record-level output private.** The crash map, and anything else
-  that draws single crashes, shows one row per real crash. Publishing it is
-  not barred by the CCRS terms, but this repository asks you not to, for the
-  reasons above. It is meant for the staff of the local authority that has
-  jurisdiction, such as a city's traffic engineers, and should be shared with
-  them privately.
+- **Record tables stay out of this repository.** The crash map, and
+  anything else that draws single crashes, may be published with both
+  credits; the record tables themselves are not committed here.
 - **Not an official record.** TIMS and CCRS data are provided as is. Records
   are corrected and added after the fact, coordinates can be wrong, and
   police reporting changes over time (see the reporting check). Nothing here

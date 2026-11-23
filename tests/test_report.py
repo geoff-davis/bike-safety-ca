@@ -227,11 +227,12 @@ def test_crash_rows_and_wrong_side_pattern(crashes: gpd.GeoDataFrame) -> None:
     assert first["fit"] == diagram.fit(first["p"], first.get("w") or [], True, False)
 
 
-def test_page_is_filled_and_carries_the_warning(crashes: gpd.GeoDataFrame, tmp_path: Path) -> None:
+def test_page_is_filled_and_carries_the_credits(crashes: gpd.GeoDataFrame, tmp_path: Path) -> None:
     out = movement.build(crashes, PARTIES, STREETS, CONFIG, tmp_path / "map.html")
     html = out.read_text()
     assert "/*" not in html.replace("/*!", "")
-    assert "Shows individual crash records (TIMS, CCRS). Please share it privately" in html
+    assert '<div class="warn">' not in html  # real records get no banner
+    assert movement.REAL_CREDIT in html
     assert '<option value="la">Los Altos</option>' in html and "Main Street" in html
 
 
@@ -425,19 +426,6 @@ def test_crashes_are_placed_at_their_intersection_and_mid_block_ones_are_not(
 def test_rows_without_severity_or_light_leave_them_blank(crashes: gpd.GeoDataFrame) -> None:
     rows = movement.crash_rows(crashes, PARTIES, STREETS, CONFIG.child_max_age)
     assert all(r["sv"] == "" and r["lt"] == "" and r["si"] is None for r in rows)
-
-
-def test_a_copy_for_city_staff_says_so_in_its_banner(
-    crashes: gpd.GeoDataFrame, tmp_path: Path
-) -> None:
-    who = "City of Example <traffic> staff"
-    page = movement.build(
-        crashes, PARTIES, STREETS, CONFIG, tmp_path / "map.html", prepared_for=who
-    ).read_text()
-    assert (
-        "Prepared for City of Example &lt;traffic&gt; staff. Shows individual crash records" in page
-    )
-    assert movement.REAL_NOTICE[0] not in page and "<traffic>" not in page
 
 
 def test_the_pattern_is_relative_and_the_approach_is_kept_apart() -> None:

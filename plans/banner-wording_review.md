@@ -131,3 +131,121 @@
 | ID | Severity | Blocking | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | BW-001 | P2 | Resolved | fixed | Both real-data notebook notices aligned; exact-expression probes pass and obsolete blanket no-sharing wording is absent from the reviewed source/docs. |
+
+## Loop 2: publishing policy
+
+- Loop ID and round: `banner-wording-2`, round 1 of at most 3. Base: `59c43e5` (round-2-accepted commit 59c43e5). Snapshot: `/tmp/bsc-review/banner-wording-2-r1/`. Expires (UTC): 2026-11-23 01:56.
+- Implementer: `bsc-implementer`, pane `wF:p1`. Reviewer: `bsc-reviewer`.
+- Purpose: the user decided, after reading both sources' terms, that the "keep record-level output private" rule goes. The decisions:
+  1. maps and reports of single crashes may be published with the TIMS and CCRS credits; record tables stay out of the repository, and tests stay on made-up data;
+  2. the map's banner goes for real records, along with `--for`;
+  3. (a session rule for the implementer, not in the diff);
+  4. the reviewer's own limits in `AGENTS.md` ("What the reviewer may see") are unchanged.
+- Code:
+  - `movement.page` and `build` lose `prepared_for`, and `PREPARED_FOR` is gone;
+  - `REAL_NOTICE` becomes `REAL_CREDIT`;
+  - the template's `/*WARN*/` is now filled with the whole `<div class="warn">`, or with nothing for real records; the demo keeps its synthetic banner, and the demo page is byte-identical apart from a trailing newline that predates this change;
+  - `--for` is removed from `report`; the log line is just "wrote …".
+- Text: `AGENTS.md` Data, the README's "Crash records" section (renamed from "Keeping records private", with its link fixed), the guide's "Crash records" section and map paragraphs, the walkthrough notebook's real-data notices, and the report docstrings.
+- Tests: the `--for` test is removed, and the three banner checks now assert that there is no banner on real records and that the credit is there. `make check` passed (620 tests).
+- Please check:
+  - that no other place still tells users to keep record-level output private, or mentions `--for`;
+  - that the guide's terms summary is unchanged in substance;
+  - that removing `prepared_for` leaves no caller behind.
+
+## Review — banner-wording-2, round 1 — bsc-reviewer
+
+- Reviewed `/tmp/bsc-review/banner-wording-2-r1/staged.diff`, banner
+  construction, template, CLI removal and callers, notebook notices,
+  README/guide policy wording and the AGENTS change.
+- Verified lock ownership (`bsc-implementer banner-wording`), `HERDR_ENV=1`,
+  and requesting Claude identity, repository and pane `wF:p1` through Herdr.
+- Code checks: no remaining `prepared_for`, `PREPARED_FOR`, `REAL_NOTICE`,
+  `--for` or old README anchor references found in the searched live source,
+  tests, notebook, README and guide. The internal build-to-page call now
+  passes `offline` by keyword, avoiding positional confusion after the
+  parameter removal. Credits remain in the map attribution and print title.
+- Independent rendering probe: executed the exact snapshot `page` function
+  extracted through AST, with template-resource and config stand-ins, empty
+  made-up rows and the snapshot's actual code dictionaries. Real output
+  has credits and no warning div; synthetic output has its warning and
+  synthetic credits. City-name HTML escaping still works.
+- Policy checks: the source-specific TIMS/CCRS terms bullets and existing
+  litigation/use-limit discussion remain substantively unchanged in the
+  diff. The new publication permission reflects the user decision described
+  in this handoff; source terms and legal interpretation were not independently
+  revalidated. The AGENTS reviewer-access rules are unchanged.
+- Searched for prior publication restrictions. One obsolete notebook
+  instruction remains (BW-002); evaluated its exact closing Markdown
+  expression with made-up config/path values to confirm it is displayed.
+- Evidence reused: implementer's reported 620-test `make check`. No full
+  suite or browser/print rendering run; no protected records or paths opened.
+- Verdict: **changes required, banner-wording-2 round 1**, for BW-002.
+  No other correctness findings. A verdict authorizes no commit, push or merge.
+
+### BW-002 — P2, blocking, confirmed: closing notebook instructions retain the withdrawn policy
+
+- Location: snapshot `notebooks/walkthrough.py:537–539`.
+- Section 9 still displays: “Keep the tables, the ranking's crash counts for
+  single corners and the movement map on your own computer, and publish
+  totals.” This paragraph is unconditional, so a user following the notebook
+  for a real city reads it after the newly updated permission to publish
+  maps and reports with credits.
+- Concrete probe: evaluating the exact closing Markdown AST expression with
+  made-up `config_path` and `_folder` values reproduces that paragraph.
+  It still expressly includes the movement map and per-corner ranking
+  output among the things to keep on the user's computer.
+- Impact: contradicts the new publication policy and fails the handoff's
+  requested check for remaining instructions to keep record-level output
+  private. Keeping source record tables out of the repository is a separate
+  rule and need not be removed.
+- Required correction: update this closing paragraph to distinguish source
+  record tables from publishable credited maps/reports, consistent with the
+  README and guide. No need to restore a real-data banner or `--for`.
+- Status: open. BW-001 from the earlier loop remains fixed; this finding
+  concerns the new policy's broader scope.
+
+## Finding ledger — banner-wording-2, round 1
+
+| ID | Severity | Blocking | Location | Status | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| BW-002 | P2 | Yes | `notebooks/walkthrough.py:537` | open | Exact closing Markdown still directs keeping maps and per-corner outputs on the user's computer while publishing totals. |
+
+### Loop 2, handoff round 2
+
+- Snapshot: `/tmp/bsc-review/banner-wording-2-r2/`. Loop `banner-wording-2`, round 2 of 3. Expires (UTC): 2026-11-23 01:59.
+- BW-002 fixed: the closing paragraph of `notebooks/walkthrough.py` now says "Police crash records describe real people. The record tables stay out of version control; get them from TIMS and CCRS. The ranking, the movement map and its PDFs can be shared or published with the TIMS and CCRS credits."
+- A repo-wide search for "own computer", "totals only", "publish totals", "privately" and "keep … private" in `.py` and `.md` files (outside `plans/` and `docs/demo/`) finds no other publication restriction. What remains describes what a command prints, which is not policy.
+- `make check` passed.
+
+## Review — banner-wording-2, round 2 — bsc-reviewer
+
+- Reviewed `/tmp/bsc-review/banner-wording-2-r2/staged.diff` and the revised
+  closing notebook paragraph. Reused this loop's round-1 code, rendering,
+  credit, caller and policy-consistency review.
+- Verified lock ownership (`bsc-implementer banner-wording`), `HERDR_ENV=1`,
+  and requesting Claude identity, repository and pane `wF:p1` through Herdr.
+- BW-002: fixed. The closing paragraph distinguishes record tables kept out
+  of version control from the ranking, movement map and PDFs that may be
+  shared or published with TIMS and CCRS credits.
+- Independent check: evaluated the exact closing Markdown AST expression
+  with made-up config/path values. Confirmed credited-publication wording,
+  table/version-control distinction and absence of the old own-computer
+  instruction. Notebook and other changed Python files parse.
+- Searched current README, AGENTS, docs, notebook, source and tests for the
+  obsolete publication/privacy phrases, removed `prepared_for`/`--for`
+  references and old README anchor; no matches (rg exit 1). Historical
+  review records were outside this live-text search.
+- Evidence reused: implementer's reported round-2 `make check` success.
+  No full suite, browser/print run, protected-data access or independent
+  source-terms/legal verification; round 1's limits continue to apply.
+- Findings: no new correctness findings.
+- Verdict: **accepted, banner-wording-2 round 2**. BW-002 is fixed in the
+  staged snapshot. This completes the review loop; acceptance authorizes no
+  commit, push or merge.
+
+## Finding ledger — banner-wording-2, round 2
+
+| ID | Severity | Blocking | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| BW-002 | P2 | Resolved | fixed | Exact closing notebook text permits credited publication of ranking/maps/PDFs and separately excludes record tables from version control. |

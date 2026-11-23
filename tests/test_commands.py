@@ -1211,7 +1211,7 @@ def test_the_report_command_writes_the_summaries_and_the_map(
     assert "area: crashes by year" in printed and "alder: cyclists by age" in printed
 
     page = (out / "crash_movement_map.html").read_text()
-    assert movement.REAL_NOTICE[0] in page and movement.SYNTHETIC_NOTICE[0] not in page
+    assert movement.SYNTHETIC_NOTICE[0] not in page and '<div class="warn">' not in page
     data = _map_rows(page)
     assert sorted(str(row["st"]) for row in data) == [
         "Badger Street / Lychee Avenue",

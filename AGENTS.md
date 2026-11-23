@@ -136,8 +136,11 @@ tell the user on acceptance, the third round, expiry or a stall.
 
 ## Data
 
-No crash records, City of Los Altos map files or state school lists are
-committed here. The only map data in the repository is the demo city's, in
+No crash record tables (TIMS or CCRS downloads, or the tables built from
+them), City of Los Altos map files or state school lists are committed here;
+records come from the sources. Maps and reports drawn from real records, such
+as the crash map and its PDFs, may be published with the TIMS and CCRS
+credits. The only map data in the repository is the demo city's, in
 `demo/claremont/`, from OpenStreetMap and the Census Bureau with their
 licences. Tests use made-up data. See "Crash records" in `docs/guide.md`.
 

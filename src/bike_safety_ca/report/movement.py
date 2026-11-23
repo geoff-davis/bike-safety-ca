@@ -12,8 +12,7 @@ the crashes in view, their repeated patterns and the streets they are on, and "P
 prints the map at its current zoom with those tables.
 
 It shows individual police records (month, hour, streets, movements, fault and
-the cyclist's age band).  Write it to a git-ignored folder, and share it
-privately (with the local authority's staff, say) rather than publish it.
+the cyclist's age band) and carries the TIMS and CCRS credits.
 """
 
 from __future__ import annotations
@@ -67,17 +66,13 @@ SCRIPT_SAFE = {
 }
 PEDESTRIAN_PARTY, DRIVER_PARTY, PARKED_PARTY = "2", "1", "3"
 SNAP_WITHIN_DEG = 50.0
-# (banner, map credit) for real records and for the made-up demo city.
-REAL_NOTICE = (
-    "Shows individual crash records (TIMS, CCRS). Please share it privately and do not publish it.",
+# The map credit for real records; they carry no banner.
+REAL_CREDIT = (
     "crash records: Transportation Injury Mapping System (TIMS), Safe Transportation Research"
     " and Education Center, University of California, Berkeley; and California Crash"
-    " Reporting System (CCRS), California Highway Patrol, via data.ca.gov",
+    " Reporting System (CCRS), California Highway Patrol, via data.ca.gov"
 )
-# The banner for a copy prepared for a local authority's own staff.
-PREPARED_FOR = (
-    "Prepared for {who}. Shows individual crash records (TIMS, CCRS). Please do not publish it."
-)
+# (banner, map credit) for the made-up demo city.
 SYNTHETIC_NOTICE = (
     "Synthetic data. Every crash here is made up and placed on real streets; none is a real crash.",
     "crashes: made up by bike_safety_ca.demo, not real records",
@@ -574,15 +569,13 @@ def page(
     config: Config,
     centre: tuple[float, float],
     sites: list[dict[str, Any]] | None = None,
-    prepared_for: str | None = None,
     offline: bool = False,
 ) -> str:
     """Fill the page template.
 
-    ``prepared_for`` names the local authority staff a copy is for; it
-    replaces the "keep on your own computer" banner.  ``offline`` builds the
-    map library into the page instead of loading it from the internet.  The demo city keeps
-    its own banner.
+    ``offline`` builds the map library into the page instead of loading it
+    from the internet.  Only the demo city has a banner, saying its crashes
+    are made up.
     """
 
     def compact(value: Any) -> str:
@@ -594,13 +587,9 @@ def page(
         return text
 
     template = resources.files("bike_safety_ca.report").joinpath("movement_map.html").read_text()
-    warn, credit = REAL_NOTICE
-    if prepared_for:
-        warn = PREPARED_FOR.format(who=prepared_for.strip())
-    if config.synthetic:
-        warn, credit = SYNTHETIC_NOTICE
+    warn, credit = SYNTHETIC_NOTICE if config.synthetic else ("", REAL_CREDIT)
     fills = {
-        "/*WARN*/": html.escape(warn),
+        "/*WARN*/": f'<div class="warn">{html.escape(warn)}</div>' if warn else "",
         "/*CREDIT*/": html.escape(credit),
         "/*SITES*/": compact(sites or []),
         "/*SEVERITY*/": compact(codes.SEVERITY),
@@ -647,7 +636,6 @@ def build(
     out: Path,
     centre_on: gpd.GeoSeries | None = None,
     area: BaseGeometry | None = None,
-    prepared_for: str | None = None,
     offline: bool = False,
 ) -> Path:
     """Write the map of ``crashes`` (as loaded by ``report.crashes.load``) to ``out``.
@@ -676,8 +664,7 @@ def build(
         config,
         (middle.centroid.y, middle.centroid.x),
         sites,
-        prepared_for,
-        offline,
+        offline=offline,
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)

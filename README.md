@@ -26,9 +26,9 @@ Los Altos case study is written up in full; the others are recorded as
 cross-city tests.
 
 The pictures below come from made-up data (a demo city on real Claremont
-streets, and an invented county), so they can be shown freely. A map made
-from your own records shows real people's crashes and stays private (see
-[Keeping records private](#keeping-records-private)).
+streets, and an invented county). A map made from real records shows real
+people's crashes; it can be published with the TIMS and CCRS credits (see
+[Crash records](#crash-records)).
 
 ## A county hospital report
 
@@ -171,13 +171,12 @@ OpenStreetMap, city limits and residents from the Census Bureau.
 writes. The hospital report needs only the county's name; see its section in
 the guide.
 
-## Keeping records private
+## Crash records
 
-No crash, party or victim record is kept in this repository, and its tests
-use made-up data. What you build from real records stays on your computer,
-under `data/` and `output/`. Tables of totals can be published with the
-sources' credits. The crash map draws one real person's crash at a time:
-share it privately with the city's traffic staff and do not publish it.
+No crash, party or victim record table is kept in this repository, and its
+tests use made-up data. What you build from real records is written under
+`data/` and `output/`, which git ignores. Tables of totals, the crash map and
+its PDFs can be published with the TIMS and CCRS credits.
 
 The hospital downloader opens the state's EpiCenter site in a browser window
 and waits for you to read its user agreement and click "I Agree" yourself; it

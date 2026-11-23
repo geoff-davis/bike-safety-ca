@@ -2,8 +2,8 @@
 
 Steps: ``summary`` (tables of totals, printed and written as CSV) and ``map``
 (the crash movement map).  With no step named, both run.  Everything goes to
-``output/``, which is git-ignored.  The map shows individual crash records:
-share it privately and do not publish it.
+``output/``, which is git-ignored.  The map shows individual crash records,
+with the TIMS and CCRS credits.
 """
 
 from __future__ import annotations
@@ -35,13 +35,6 @@ def main() -> None:
     parser.add_argument("--area", type=Path, help="your own outline of the area")
     parser.add_argument("--processed", type=Path, default=Path("data/processed"))
     parser.add_argument("--out", type=Path, default=Path("output"))
-    parser.add_argument(
-        "--for",
-        dest="prepared_for",
-        metavar="WHO",
-        help='the local authority staff a copy of the map is for, e.g. "City of Los Altos'
-        ' traffic engineering"; printed in its banner',
-    )
     parser.add_argument(
         "--offline",
         action="store_true",
@@ -85,12 +78,9 @@ def main() -> None:
             args.out / "crash_movement_map.html",
             centre,
             area=outline,
-            prepared_for=args.prepared_for,
             offline=args.offline,
         )
-        logging.info(
-            "wrote %s (individual crash records: share privately, do not publish)", written
-        )
+        logging.info("wrote %s", written)
 
 
 if __name__ == "__main__":

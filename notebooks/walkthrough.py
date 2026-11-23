@@ -145,9 +145,8 @@ def _(ROOT, config_path, mo, processed_path, settings):
         notice = mo.callout(
             mo.md(
                 f"**Real crash records for {config.city}.** The tables and the map below "
-                "include individual crashes. Share them privately, with the local "
-                "authority's staff, rather than publish them; tables of totals can be "
-                "published with the sources' credits."
+                "include individual crashes. They can be shared or published with the "
+                "TIMS and CCRS credits."
             ),
             kind="warn",
         )
@@ -482,7 +481,7 @@ def _(ROOT, config, crashes, gpd, limit, mo, movement, out_root, parties, show_m
     _privacy = (
         "The demo map shows made-up crashes, so it is safe to pass around."
         if config.synthetic
-        else "**The map shows individual crash records. Share it privately; please do not publish it.**"
+        else "The map shows individual crash records, with the TIMS and CCRS credits."
     )
     mo.vstack(
         [
@@ -535,9 +534,9 @@ def _(ROOT, config_path, data_root, mo):
         --processed {_folder} --crashes {_folder}/crashes
     ```
 
-    Police crash records describe real people. Keep the tables, the ranking's
-    crash counts for single corners and the movement map on your own computer,
-    and publish totals.
+    Police crash records describe real people. The record tables stay out of
+    version control; get them from TIMS and CCRS. The ranking, the movement map
+    and its PDFs can be shared or published with the TIMS and CCRS credits.
     """)
     return
 
