@@ -60,7 +60,12 @@ REFERENCE = FITTED_POWER
 
 TOPS = (25, 50, 100)
 TOP_SHARE = 0.05  # of the area's intersections, rounded up
-MEASURES = ("rank score", "rank score, no past bike crash", "top 50 share", "top 5% share")
+MEASURES = (
+    "rank score",
+    "rank score, no past bike crash",
+    *(f"top {k} share" for k in TOPS),
+    "top 5% share",
+)
 DRAWS, SEED = 10_000, 20261123
 
 
@@ -143,7 +148,10 @@ def score_windows(
                             ),
                             **{f"found in top {k}": found[k] for k in TOPS},
                             "found in top 5%": in_cut,
-                            "top 50 share": 100 * found[50] / total if total else float("nan"),
+                            **{
+                                f"top {k} share": 100 * found[k] / total if total else float("nan")
+                                for k in TOPS
+                            },
                             "top 5% share": 100 * in_cut / total if total else float("nan"),
                             "top 50 shared with reference": float("nan")
                             if reference is None

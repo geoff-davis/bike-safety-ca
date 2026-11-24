@@ -107,6 +107,15 @@ def test_later_crashes_do_not_reach_the_fit(city: tuple[pd.DataFrame, pd.Index, 
     assert not before["rank score"].equals(after["rank score"])
 
 
+def test_each_top_list_has_its_share_of_the_later_crashes(scored: pd.DataFrame) -> None:
+    rows = scored[scored["later crashes"].gt(0)]
+    assert len(rows) > 0
+    for size in ("25", "50", "100", "5%"):
+        share = 100 * rows[f"found in top {size}"] / rows["later crashes"]
+        assert np.allclose(rows[f"top {size} share"].astype(float), share.astype(float))
+    assert {f"top {size} share" for size in ("25", "50", "100", "5%")} <= set(candidates.MEASURES)
+
+
 def test_scores_are_not_rounded(scored: pd.DataFrame) -> None:
     score = scored["rank score"].dropna()
     assert (score.round(3) != score).mean() > 0.9
@@ -140,7 +149,8 @@ def _table() -> pd.DataFrame:
                         "city": name, "trained through": year, "fitted on": EVERYONE,
                         "scored on": EVERYONE, "version": version, "enough later": True,
                         "method": "street-length model", "rank score": score,
-                        "rank score, no past bike crash": score, "top 50 share": 100 * score,
+                        "rank score, no past bike crash": score, "top 25 share": 50 * score,
+                        "top 50 share": 100 * score, "top 100 share": 100 * score,
                         "top 5% share": float("nan"),
                     }
                 )  # fmt: skip
