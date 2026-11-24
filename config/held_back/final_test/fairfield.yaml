@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (final test set): Fairfield alone, Census
+# place 23182.  Not for development: see config/held_back/README.md.
+city: Fairfield
+county: Solano
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 10N, metres.
+crs: EPSG:26910
+ccrs_county_code: 48
+ccrs_cities:
+  - Fairfield
+latitude: [37.96, 38.51]
+longitude: [-122.37, -121.69]

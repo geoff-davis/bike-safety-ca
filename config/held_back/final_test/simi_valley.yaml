@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (final test set): Simi Valley alone, Census
+# place 72016.  Not for development: see config/held_back/README.md.
+city: Simi Valley
+county: Ventura
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+ccrs_county_code: 56
+ccrs_cities:
+  - Simi Valley
+latitude: [34.01, 34.52]
+longitude: [-119.03, -118.43]

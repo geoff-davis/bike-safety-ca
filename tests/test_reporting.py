@@ -363,3 +363,52 @@ def test_a_crash_with_no_severity_is_counted_as_not_recorded() -> None:
     table = reporting.by_severity(crashes)
     assert table[reporting.NO_SEVERITY].sum() == 3
     assert table.sum().sum() == len(crashes)
+
+
+def _by_grade(counts: dict[int, dict[str, int]]) -> pd.DataFrame:
+    """Made-up injury crashes: for each year, how many at each severity code."""
+    rows = [
+        {"year": year, "COLLISION_SEVERITY": code}
+        for year, by_code in counts.items()
+        for code, number in by_code.items()
+        for _ in range(number)
+    ]
+    return pd.DataFrame(rows)
+
+
+def test_a_fall_or_rise_in_minor_injury_crashes_is_flagged_and_a_steady_count_is_not() -> None:
+    early = {year: {"4": 60, "3": 40, "2": 8, "1": 2} for year in range(2016, 2020)}
+    busy_2020 = {2020: {"4": 500}}  # in neither period
+
+    def later(pain: int, visible: int) -> pd.DataFrame:
+        late = {year: {"4": pain, "3": visible, "2": 8, "1": 2} for year in range(2021, 2025)}
+        return _by_grade(early | busy_2020 | late)
+
+    fall = reporting.minor_injury_change(later(9, 30))
+    assert fall["minor per year before"] == 100 and fall["minor per year after"] == 39
+    assert fall["ratio"] == pytest.approx(0.39) and fall["verdict"] == reporting.CHANGED
+    assert reporting.minor_injury_change(later(100, 60))["verdict"] == reporting.CHANGED
+    for pain, ratio in ((10, 0.5), (110, 1.5), (45, 0.85)):  # the lines themselves are steady
+        steady = reporting.minor_injury_change(later(pain, 40))
+        assert steady["ratio"] == pytest.approx(ratio) and steady["verdict"] == reporting.STEADY
+        assert steady["reason"] == ""
+    # the serious grades do not enter: ten times as many change nothing
+    late = {year: {"4": 45, "3": 40, "2": 80, "1": 20} for year in range(2021, 2025)}
+    assert reporting.minor_injury_change(_by_grade(early | late))["ratio"] == pytest.approx(0.85)
+
+
+def test_a_minor_injury_ratio_that_cannot_be_measured_is_not_assessable() -> None:
+    year = {"4": 6, "3": 4, "2": 1}
+    whole = dict.fromkeys([*range(2016, 2020), *range(2021, 2025)], year)
+    assert reporting.minor_injury_change(_by_grade(whole))["verdict"] == reporting.STEADY
+    gap = reporting.minor_injury_change(_by_grade({y: c for y, c in whole.items() if y != 2023}))
+    assert gap["verdict"] == reporting.NOT_ASSESSABLE and "2023" in gap["reason"]
+    assert np.isnan(gap["ratio"])
+    ungraded = reporting.minor_injury_change(
+        _by_grade(whole | {y: {"4": 6, "3": 4, "": 5} for y in range(2021, 2025)})
+    )
+    assert ungraded["verdict"] == reporting.NOT_ASSESSABLE
+    assert ungraded["ungraded share after"] == pytest.approx(1 / 3)
+    serious_only = whole | {y: {"2": 3} for y in range(2016, 2020)}
+    none = reporting.minor_injury_change(_by_grade(serious_only))
+    assert none["verdict"] == reporting.NOT_ASSESSABLE and "no minor-injury" in none["reason"]

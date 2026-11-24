@@ -243,6 +243,7 @@ def _table() -> pd.DataFrame:
                         "rank score, no past bike crash": score, "top 25 share": 50 * score,
                         "top 50 share": 100 * score, "top 100 share": 100 * score,
                         "top 5% share": float("nan"),
+                        candidates.CAPTURE: float("nan"),
                     }
                 )  # fmt: skip
     return pd.DataFrame(rows)
@@ -298,3 +299,15 @@ def test_nothing_to_compare_gives_an_empty_summary_with_its_columns() -> None:
     summary = summarise(table, draws=10)
     assert summary.empty and list(summary.columns) == candidates.SUMMARY
     assert candidates.shown(summary) == "no window has a fitted reference and enough later crashes"
+
+
+def test_top_places_rounds_five_percent_up_in_whole_numbers() -> None:
+    assert [candidates.top_places(n) for n in (0, 1, 20, 21, 140, 200, 201)] == [
+        0,
+        1,
+        1,
+        2,
+        7,
+        10,
+        11,
+    ]

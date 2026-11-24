@@ -420,3 +420,29 @@ def top_share(score: pd.Series, later: pd.Series, k: int) -> float:
     above, tied = ordered[ordered > cut].index, ordered[ordered == cut].index
     later = later.reindex(score.index)
     return float(later[above].sum() + later[tied].sum() * (k - len(above)) / len(tied))
+
+
+def top_capture(score: pd.Series, later: pd.Series, ceiling: int) -> float:
+    """The share of later crashes at the top of the list, averaged over budgets 1 to ``ceiling``.
+
+    The mean over ``k = 1 .. ceiling`` of ``top_share(score, later, k)`` as a
+    share of all later crashes: what a list captures when the number of sites
+    that can be treated is equally likely to be anything up to ``ceiling``.
+    The site in place ``r`` so counts ``(ceiling - r + 1) / ceiling`` times.
+    Tied sites share their places, as in ``top_share``, so each stands for
+    the mean of its tied block.  A list in random order scores
+    ``(ceiling + 1) / (2 * sites)``.  ``ceiling`` is cut to the number of
+    sites.  Not a number when there is no later crash or no place to fill.
+    """
+    later = later.reindex(score.index).fillna(0).astype(float)
+    total = float(later.sum())
+    ceiling = min(ceiling, len(score))
+    if ceiling < 1 or not total > 0:
+        return float("nan")
+    order = score.sort_values(ascending=False, kind="stable").index
+    # every site of a tied block is expected to have the block's mean
+    expected = (
+        later.groupby(score, dropna=False).transform("mean").reindex(order).to_numpy()[:ceiling]
+    )
+    weight = np.arange(ceiling, 0, -1) / ceiling
+    return float(weight @ expected / total)

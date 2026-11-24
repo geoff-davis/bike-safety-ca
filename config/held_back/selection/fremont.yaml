@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (selection set): Fremont alone, Census
+# place 26000.  Not for development: see config/held_back/README.md.
+city: Fremont
+county: Alameda
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 10N, metres.
+crs: EPSG:26910
+ccrs_county_code: 1
+ccrs_cities:
+  - Fremont
+latitude: [37.25, 37.81]
+longitude: [-122.33, -121.67]
