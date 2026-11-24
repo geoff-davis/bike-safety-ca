@@ -110,6 +110,89 @@ def test_later_crashes_do_not_reach_the_fit(city: tuple[pd.DataFrame, pd.Index, 
     assert not before["rank score"].equals(after["rank score"])
 
 
+def test_textbook_models_are_scored_with_forecasts_when_classes_are_given(
+    city: tuple[pd.DataFrame, pd.Index, dict],
+) -> None:
+    hits, sites, streets = city
+    classes = pd.DataFrame(
+        {"major": np.where(sites % 3 == 0, "Arterial", "Local"), "minor": "Local"}, index=sites
+    )
+    table = score_windows(
+        hits, sites, streets, WINDOWS[:1], versions={POWER_ONE: 1.0}, classes=classes,
+        first_year=2015, reference=POWER_ONE,
+    )  # fmt: skip
+    assert {candidates.STANDARD, candidates.STREET_EFFECTS} <= set(table.version)
+    own = table[table["fitted on"].eq(table["scored on"]) & table.method.ne(HISTORY)]
+    fitted = own[own.version.isin([POWER_ONE, candidates.STANDARD, candidates.STREET_EFFECTS])]
+    fitted = fitted[fitted["alpha"].notna()]
+    assert len(fitted) > 0
+    # five fitting years (2015 to 2019), two later years: the forecast is 2/5 of the estimate
+    bands = [f"expected in {band}" for band in candidates.BANDS]
+    assert fitted[bands].sum(axis=1).tolist() == pytest.approx(
+        fitted["expected later crashes"].tolist()
+    )
+    seen = [f"later crashes in {band}" for band in candidates.BANDS]
+    assert fitted[seen].sum(axis=1).tolist() == fitted["later crashes"].tolist()
+    assert fitted["deviance per intersection"].gt(0).all()
+    # a ranking scored on other crashes than it was fitted to has no forecast of them
+    other = table[table["fitted on"].ne(table["scored on"])]
+    assert other["expected later crashes"].isna().all()
+
+
+@pytest.mark.parametrize("reference", [candidates.STANDARD, candidates.STREET_EFFECTS])
+def test_a_textbook_model_can_be_the_reference(
+    city: tuple[pd.DataFrame, pd.Index, dict], reference: str
+) -> None:
+    hits, sites, streets = city
+    classes = pd.DataFrame({"major": "Local", "minor": "Local"}, index=sites)
+    table = score_windows(
+        hits, sites, streets, WINDOWS[:1], versions={POWER_ONE: 1.0}, classes=classes,
+        first_year=2015, reference=reference,
+    )  # fmt: skip
+    table.insert(0, "city", "a")
+    table["enough later"] = True
+    everyone = table[table["fitted on"].eq(EVERYONE) & table["scored on"].eq(EVERYONE)]
+    assert everyone[everyone.version.eq(reference)].method.isin(candidates.FITTED_METHODS).all()
+    differences = candidates.paired(everyone, POWER_ONE, reference)
+    assert len(differences) == 1
+    assert everyone[everyone.version.eq(reference)]["top 50 shared with reference"].eq(50).all()
+    # a reference that fell back is still left out
+    fallen = everyone.assign(method=HISTORY)
+    assert candidates.paired(fallen, POWER_ONE, reference).empty
+
+
+def test_no_forecast_without_a_fitting_period_or_a_later_one(
+    city: tuple[pd.DataFrame, pd.Index, dict],
+) -> None:
+    hits, sites, streets = city
+    classes = pd.DataFrame({"major": "Local", "minor": "Local"}, index=sites)
+    # records end in 2024, so a period from 2030 to the end of the records has no years
+    late = score_windows(
+        hits, sites, streets, [(2022, 2030, None)], versions={POWER_ONE: 1.0}, classes=classes,
+        first_year=2015,
+    )  # fmt: skip
+    assert late["expected later crashes"].isna().all()
+    assert late["deviance per intersection"].isna().all()
+    # fitting through the year before the records begin: nothing to fit, nothing divided
+    early = score_windows(
+        hits, sites, streets, [(2014, 2015, 2016)], versions={POWER_ONE: 1.0}, classes=classes,
+        first_year=2015,
+    )  # fmt: skip
+    textbook = early[early.version.isin([candidates.STANDARD, candidates.STREET_EFFECTS])]
+    assert textbook["fallback reason"].eq("no fitting years").all()
+    assert early["expected later crashes"].isna().all()
+
+
+def test_count_check_matches_the_deviance_by_hand() -> None:
+    forecast = pd.Series([2.0, 0.5, 1.0])
+    later = pd.Series([3, 0, 1])
+    found = candidates._count_check(forecast, later)
+    by_hand = 2 * ((3 * np.log(3 / 2.0) - 1.0) + 0.5 + 0.0) / 3
+    assert found["deviance per intersection"] == pytest.approx(by_hand)
+    assert found["expected in top 25"] == pytest.approx(3.5)
+    assert found["later crashes in top 25"] == 4
+
+
 def test_each_top_list_has_its_share_of_the_later_crashes(scored: pd.DataFrame) -> None:
     rows = scored[scored["later crashes"].gt(0)]
     assert len(rows) > 0
