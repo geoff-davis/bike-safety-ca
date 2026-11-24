@@ -37,8 +37,9 @@ whole cities, seed 20261123):
 | Fitted to children, scored on children | 18 (7) | +0.0003 (−0.0002 to +0.0009) | −0.41 (−1.64 to +0.61) | −0.17 (−0.73 to +0.34) | +0.24 (−0.37 to +0.83) | −0.19 (−0.56 to +0.14) |
 
 Leaving any one city out, the all-cyclist rank-score change stays between
-−0.0004 and −0.0001. Means over cities, weighting each city once, agree in
-sign and size with the means over windows except where the range spans zero.
+−0.0004 and −0.0001. Means over cities, weighting each city once, are in
+`summary.csv`; they differ in sign from the means over windows in one cell
+only, the top 100 scored on children (+0.10 against −0.18).
 
 ## What it costs
 

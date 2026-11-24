@@ -156,9 +156,11 @@ def fit_street_model(
     with its street's car average (``car_pull`` imaginary intersections) by
     ``gamma_blend``.  Counts are negative binomial with variance
     ``expected + alpha * expected ** spread_power``; the power is fitted when
-    not given (2 is the textbook case; a smaller power lets a corner's own
-    record count for more where little is expected).  Each intersection's own
-    bike count is then blended in with ``gamma_blend``.
+    not given.  At 2, the textbook case, the weight on a corner's own count,
+    ``alpha * expected / (1 + alpha * expected)``, rises with what is expected
+    there; at 1, which the rankings use, it is ``alpha / (1 + alpha)`` at every
+    corner.  Each intersection's own bike count is then blended in with
+    ``gamma_blend``.
 
     ``extra`` adds columns to the fit as they are (not logged), one row per
     intersection, for trying another term such as a 0/1 flag: its fitted
