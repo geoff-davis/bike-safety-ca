@@ -52,32 +52,32 @@ overlap, so use it only to compare the two rankings).
 
 | City | Intersections | Windows scored | Rank score | Past bike crashes | Fit | Top 100: model / history, of all later crashes | Rank score, 18 or under (windows scored) | Fewest later child crashes in a window |
 |---|---|---|---|---|---|---|---|---|
-| Irvine | 4,983 | 3 | 0.904 | 0.679 | model | 167 / 131 of 491 | 0.895 (3) | 54 |
-| Huntington Beach | 3,571 | 3 | 0.895 | 0.682 | model | 356 / 286 of 893 | 0.880 (3) | 53 |
-| San Jose | 14,136 | 3 | 0.893 | 0.678 | model | 333 / 242 of 1,828 | 0.835 (3) | 79 |
-| Sacramento | 10,292 | 3 | 0.889 | 0.670 | model | 227 / 169 of 1,441 | 0.834 (3) | 40 |
-| Chico | 2,313 | 3 | 0.885 | 0.638 | model | 96 / 61 of 197 | too few | 11 |
-| San Diego | 19,467 | 3 | 0.880 | 0.653 | model | 264 / 212 of 2,438 | 0.815 (3) | 47 |
-| Cupertino | 990 | 2 | 0.879 | 0.702 | mixed | 67 / 53 of 101 | too few | 4 |
+| Irvine | 4,983 | 3 | 0.904 | 0.679 | model | 165 / 131 of 491 | 0.895 (3) | 54 |
+| Huntington Beach | 3,571 | 3 | 0.895 | 0.682 | model | 355 / 286 of 893 | 0.880 (3) | 53 |
+| San Jose | 14,136 | 3 | 0.893 | 0.678 | model | 351 / 242 of 1,828 | 0.834 (3) | 79 |
+| Sacramento | 10,292 | 3 | 0.889 | 0.670 | model | 222 / 169 of 1,441 | 0.835 (3) | 40 |
+| Chico | 2,313 | 3 | 0.885 | 0.638 | model | 95 / 61 of 197 | too few | 11 |
+| Cupertino | 990 | 2 | 0.881 | 0.702 | mixed | 68 / 53 of 101 | too few | 4 |
+| San Diego | 19,467 | 3 | 0.880 | 0.653 | model | 250 / 212 of 2,438 | 0.816 (3) | 47 |
 | South Lake Tahoe | 820 | 1 | 0.876 | 0.529 | blend | 37 / 9 of 55 | too few | 1 |
-| Ventura | 2,261 | 3 | 0.872 | 0.667 | model | 197 / 163 of 469 | 0.833 (1) | 13 |
+| Ventura | 2,261 | 3 | 0.873 | 0.667 | model | 192 / 163 of 469 | 0.833 (1) | 13 |
 | Encinitas | 1,299 | 3 | 0.872 | 0.659 | mixed | 90 / 69 of 178 | 0.806 (1) | 22 |
-| Davis | 1,114 | 3 | 0.870 | 0.757 | model | 128 / 115 of 217 | too few | 9 |
-| Palo Alto | 1,288 | 2 | 0.869 | 0.737 | model | 78 / 68 of 169 | 0.814 (1) | 9 |
-| Sunnyvale | 1,989 | 3 | 0.865 | 0.666 | model | 104 / 74 of 256 | too few | 10 |
-| Long Beach | 5,151 | 3 | 0.864 | 0.702 | model | 348 / 315 of 1,543 | 0.778 (3) | 47 |
-| Fresno | 11,648 | 3 | 0.863 | 0.553 | mixed | 73 / 52 of 533 | 0.791 (1) | 12 |
-| Santa Barbara | 1,594 | 3 | 0.862 | 0.703 | model | 254 / 216 of 628 | 0.814 (2) | 14 |
-| Oakland | 5,667 | 3 | 0.861 | 0.688 | model | 205 / 165 of 1,022 | 0.758 (2) | 17 |
-| San Francisco | 7,094 | 3 | 0.855 | 0.744 | model | 752 / 694 of 3,636 | 0.750 (2) | 25 |
-| Santa Cruz | 1,108 | 3 | 0.840 | 0.719 | model | 195 / 174 of 384 | 0.794 (1) | 9 |
-| Redwood City | 1,397 | 3 | 0.834 | 0.630 | model | 110 / 88 of 272 | 0.783 (1) | 16 |
+| Davis | 1,114 | 3 | 0.872 | 0.757 | model | 126 / 115 of 217 | too few | 9 |
+| Palo Alto | 1,288 | 2 | 0.867 | 0.737 | model | 75 / 68 of 169 | 0.814 (1) | 9 |
+| Sunnyvale | 1,989 | 3 | 0.865 | 0.666 | model | 108 / 74 of 256 | too few | 10 |
+| Long Beach | 5,151 | 3 | 0.863 | 0.702 | model | 331 / 315 of 1,543 | 0.777 (3) | 47 |
+| Fresno | 11,648 | 3 | 0.863 | 0.553 | mixed | 75 / 52 of 533 | 0.791 (1) | 12 |
+| Santa Barbara | 1,594 | 3 | 0.863 | 0.703 | model | 250 / 216 of 628 | 0.814 (2) | 14 |
+| Oakland | 5,667 | 3 | 0.861 | 0.688 | model | 214 / 165 of 1,022 | 0.758 (2) | 17 |
+| San Francisco | 7,094 | 3 | 0.854 | 0.744 | model | 746 / 694 of 3,636 | 0.752 (2) | 25 |
+| Santa Cruz | 1,108 | 3 | 0.837 | 0.719 | model | 189 / 174 of 384 | 0.794 (1) | 9 |
+| Redwood City | 1,397 | 3 | 0.835 | 0.630 | model | 109 / 88 of 272 | 0.783 (1) | 16 |
 | Mountain View | 1,030 | 3 | 0.830 | 0.659 | model | 133 / 92 of 242 | 0.776 (1) | 18 |
 | Los Altos (alone) | 806 | 2 | 0.822 | 0.671 | blend | 40 / 31 of 72 | too few | 9 |
 | San Mateo | 1,519 | 2 | 0.805 | 0.571 | blend | 47 / 30 of 137 | too few | 8 |
 | Menlo Park | 675 | 3 | 0.804 | 0.685 | mixed | 111 / 97 of 170 | too few | 18 |
-| Berkeley | 1,437 | 3 | 0.795 | 0.686 | model | 244 / 234 of 796 | 0.742 (2) | 22 |
-| Santa Monica | 895 | 3 | 0.783 | 0.670 | model | 142 / 119 of 352 | too few | 8 |
+| Berkeley | 1,437 | 3 | 0.792 | 0.686 | model | 240 / 234 of 796 | 0.742 (2) | 22 |
+| Santa Monica | 895 | 3 | 0.783 | 0.670 | model | 144 / 119 of 352 | too few | 8 |
 | East Palo Alto | 279 | 2 | 0.744 | 0.622 | blend | 52 / 42 of 70 | too few | 4 |
 | Los Altos Hills | 372 | 0 | too few | too few | blend | – | too few | 0 |
 
@@ -116,12 +116,12 @@ gain a lot, San Francisco little.
 
 | Later bike crashes per 1,000 intersections, per window scored | Cities (9 in each third) | History alone (median) | Model (median) | Gain in rank score (median) | Top 100: more later crashes than history's top 100 (median) |
 |---|---|---|---|---|---|
-| 15 to 46 (sparse) | Fresno, Chico, Irvine, San Diego, Sunnyvale, San Jose, Los Altos, San Mateo, Encinitas | 0.659 | 0.872 | 0.225 | 38% |
-| 47 to 78 | Sacramento, Cupertino, Oakland, Redwood City, Davis, Palo Alto, South Lake Tahoe, Ventura, Mountain View | 0.670 | 0.870 | 0.177 | 25% |
-| 83 to 185 (dense) | Huntington Beach, Menlo Park, Long Beach, Santa Cruz, East Palo Alto, Santa Monica, Santa Barbara, San Francisco, Berkeley | 0.686 | 0.840 | 0.121 | 14% |
+| 15 to 46 (sparse) | Fresno, Chico, Irvine, San Diego, Sunnyvale, San Jose, Los Altos, San Mateo, Encinitas | 0.659 | 0.872 | 0.225 | 44% |
+| 47 to 78 | Sacramento, Cupertino, Oakland, Redwood City, Davis, Palo Alto, South Lake Tahoe, Ventura, Mountain View | 0.670 | 0.872 | 0.179 | 28% |
+| 83 to 185 (dense) | Huntington Beach, Menlo Park, Long Beach, Santa Cruz, East Palo Alto, Santa Monica, Santa Barbara, San Francisco, Berkeley | 0.686 | 0.837 | 0.119 | 14% |
 
 Over the 27 cities scored, the rank correlation (Spearman) between crashes
-per intersection and the gain in rank score is −0.74, and −0.72 for the
+per intersection and the gain in rank score is −0.75, and −0.67 for the
 top-100 gain. Both come from the results table above: later crashes divided
 by windows scored and by intersections; gain is the rank score minus history
 alone. Part of the gain in the sparse cities is the model ordering the many
@@ -137,9 +137,9 @@ good.
   Irvine, Huntington Beach, Chico and Fresno score highest or gain most over
   history.
   Bike crashes there follow car traffic, which the model reads from car
-  crashes and street length. In San Jose and Sacramento the top 100
-  intersections hold about 35% more later crashes than history alone finds,
-  and in San Diego 25% more.
+  crashes and street length. In San Jose the top 100
+  intersections hold 45% more later crashes than history alone finds, in
+  Sacramento 31% more and in San Diego 18% more.
 - **Intersections with no bike crash on record.** Most intersections have
   none, yet 27% to 93% of later bike crashes (median 53%) happen at them,
   depending on the city and window (27 cities, 74 windows; the highest
@@ -158,35 +158,41 @@ good.
   city).** Berkeley scores lowest but one of
   the cities large enough to fit the model in every window (Santa Monica is
   lower; see the simulation), and at its top 25 intersections
-  the model finds little more than history does (88 later crashes against 85).
+  the model finds no more than history does (82 later crashes against 85).
   It has 0.4 to 0.5 bike crashes per car crash where other cities have 0.1 to
   0.35, and car crashes alone rank its later bike crashes worse than in any
   of the nine other cities first compared. The model expects too many bike crashes on the car
   arterials (Ashby: 57 expected, 24 recorded, over two windows) and too few on
   quieter streets cyclists use (Milvia, a bicycle boulevard: 42 expected, 55
-  recorded). It is not a clean split: California Street, also a bicycle
+  recorded; both from the fits made when the model fitted its spread power,
+  not rerun). It is not a clean split: California Street, also a bicycle
   boulevard, was over-predicted. Across cities, how well the model ranks
   tracks how well car crashes alone rank (correlation 0.84 over ten cities and
   two windows).
   A simulation (under "What the rank score does and does not tell you")
   finds that most of Berkeley's distance from the other cities is what the
-  model's own rates predict, and that its real score falls about 0.02 short
+  model's own rates predict, and that its real score falls about 0.03 short
   of that. The simulation does not say what causes the shortfall.
   Menlo Park shows the same pattern. Santa Cruz, another cycling city, scores
-  0.840, in the lower third, but was not examined in this way. Davis, looked at
+  0.837, in the lower third, but was not examined in this way. Davis, looked at
   later, shows that a cycling city can score highly despite a weak car-only
   ranking: car crashes alone rank its later bike crashes about as poorly as
   Berkeley's (0.65, 0.67 and 0.73 over the three windows, against 0.69, 0.67
-  and 0.71), and the model scores 0.870 there. Whether cycling in Davis is
+  and 0.71), and the model scores 0.872 there. Whether cycling in Davis is
   separated from car traffic in the way suggested for Berkeley was not
   examined.
 - **Where history is already rich.** In San Francisco history alone scores
-  0.744 and the model's top 100 holds only 8% more later crashes (752 against
+  0.744 and the model's top 100 holds only 7% more later crashes (746 against
   694). The model is still better down the list. Davis and Palo Alto are
   similar.
 - **At the very top of the list.** Past bike crashes alone match or beat the
-  model at the top 25 in Encinitas and Menlo Park.
-  The model's gain is mostly further down.
+  model at the top 25 in six cities: Berkeley, Davis, Encinitas, Menlo Park,
+  San Diego and San Francisco, by 2 to 7 later crashes summed over a city's
+  windows. Over all 27 cities the model's top 25 holds 1,912 later crashes
+  and history's 1,675. The model's gain is mostly further down. (When the
+  model fitted its spread power the list was Encinitas and Menlo Park, and
+  the total 1,940; see "The spread power, fixed at 1" in
+  [the model write-up](forecasting_model.md#42-the-spread-power-fixed-at-1).)
 - **Very small cities.** Los Altos Hills (372 intersections) and East Palo
   Alto (279) have too few crashes to fit the model. East Palo Alto scores
   lowest, and Los Altos Hills has too few later crashes to be scored at all.
@@ -223,39 +229,47 @@ good.
 
   The check is `python -m bike_safety_ca.checks.attainable --config <city>`
   (`--synthetic` runs it on the made-up city). Rerun on the crash tables of
-  21 November 2026, 2,000 replicates per window, seed 20261117:
+  21 November 2026 with the spread power at 1, 2,000 replicates per window,
+  seed 20261117:
 
   | City | Rank score, three windows | Mean simulated score | Share of simulations below the real score |
   |---|---|---|---|
-  | Berkeley | 0.804, 0.788, 0.793 | 0.809, 0.813, 0.820 | 37%, 9%, 2% |
-  | Huntington Beach | 0.902, 0.886, 0.897 | 0.891, 0.902, 0.898 | 80%, 11%, 48% |
-  | Oakland | 0.860, 0.868, 0.855 | 0.847, 0.849, 0.857 | 91%, 92%, 42% |
-  | San Francisco | 0.849, 0.855, 0.862 | 0.856, 0.863, 0.863 | 18%, 16%, 49% |
-  | Santa Cruz | 0.839, 0.849, 0.832 | 0.831, 0.836, 0.834 | 62%, 67%, 45% |
-  | Long Beach | 0.858, 0.864, 0.869 | 0.849, 0.859, 0.867 | 87%, 69%, 60% |
-  | Davis | 0.873, 0.877, 0.859 | 0.876, 0.878, 0.880 | 44%, 45%, 16% |
-  | Santa Monica | 0.786, 0.762, 0.801 | 0.776, 0.786, 0.793 | 66%, 20%, 65% |
-  | San Diego | 0.875, 0.883, 0.883 | 0.867, 0.874, 0.877 | 89%, 83%, 85% |
+  | Berkeley | 0.800, 0.785, 0.792 | 0.819, 0.818, 0.830 | 9%, 3%, 0% |
+  | Huntington Beach | 0.901, 0.885, 0.898 | 0.899, 0.906, 0.904 | 56%, 4%, 27% |
+  | Oakland | 0.860, 0.868, 0.855 | 0.851, 0.851, 0.861 | 83%, 90%, 25% |
+  | San Francisco | 0.848, 0.854, 0.861 | 0.878, 0.877, 0.881 | 0%, 0%, 0% |
+  | Santa Cruz | 0.839, 0.845, 0.826 | 0.842, 0.846, 0.851 | 42%, 46%, 8% |
+  | Long Beach | 0.858, 0.863, 0.868 | 0.860, 0.866, 0.873 | 39%, 40%, 28% |
+  | Davis | 0.879, 0.876, 0.860 | 0.881, 0.884, 0.887 | 42%, 36%, 11% |
+  | Santa Monica | 0.786, 0.762, 0.801 | 0.777, 0.784, 0.795 | 63%, 21%, 62% |
+  | San Diego | 0.875, 0.883, 0.882 | 0.874, 0.878, 0.884 | 56%, 72%, 40% |
 
   Berkeley is about 0.10 below Huntington Beach, and the simulated scores
-  differ by about 0.083: under the fitted model, its own ranking has a lower
+  differ by about 0.08: under the fitted model, its own ranking has a lower
   expected score in Berkeley, where the fitted risk is spread more evenly
   over more corners. Berkeley's real score is below the simulated mean by
-  0.005, 0.025 and 0.027, about 0.019 on average. In its last window only 2%
-  of the replicates score as low; that is one of 27 city-windows looked at,
-  the windows overlap, and nothing was adjusted for that, so read it as a
-  pointer. The other cities fall on both sides of their simulated means; San
-  Francisco is a little below in all three windows (0.001 to 0.008) and San
-  Diego a little above in all three (0.006 to 0.009). Santa Monica, a compact
+  0.019, 0.033 and 0.037, about 0.030 on average, and in its last window
+  none of the replicates scores as low. San Francisco is below its simulated
+  mean by 0.020 to 0.030 in all three windows, and no replicate scores as
+  low in any of them. These are 27 city-windows, the windows overlap, and
+  nothing was adjusted for that, but two cities this far below their own
+  simulations is more than chance: in both, the fixed spread power takes
+  risk to be more concentrated at the busiest corners than the later crashes
+  were. (When the model fitted the power, San Francisco was within 0.008 of
+  its simulated mean and Berkeley 0.019 below on average.) That is a fault
+  in the model's stated spread there, not in the order of the list, which is
+  nearly the same either way. The other cities fall on both sides of their
+  simulated means; Long Beach is a little below in all three windows (0.002
+  to 0.005) and Oakland above in two. Santa Monica, a compact
   city with a later bike crash at 7% to 14% of its intersections, scores
   lower than Berkeley and within 0.002 of its simulated mean on average
-  (0.010 and 0.008 above it in two windows, 0.024 below in one): its mean
+  (0.009 and 0.006 above it in two windows, 0.022 below in one): its mean
   score is close to the simulated mean under the fitted model. Its 2020
   police injury-crash records are missing (see the results), which the simulation does
   not allow for. Davis, another cycling city, has a high simulated score and is within
-  0.003 of it in two windows of three (0.021 below in the third): a cycling city can score highly.
+  0.008 of it in two windows of three (0.027 below in the third): a cycling city can score highly.
   Ranking each replicate by its own drawn rates, the best any ranking could
-  do if the model's rates were the truth, scores 0.82 to 0.93 across these
+  do if the model's rates were the truth, scores 0.83 to 0.95 across these
   windows. The
   simulation takes the fitted model as the truth, so it cannot say whether
   risk in Berkeley really is that evenly spread or the model fails to see
@@ -278,21 +292,21 @@ pool without San Jose:
 
 | City | All cyclists, alone | Pooled | 18 or under, alone | Pooled |
 |---|---|---|---|---|
-| Berkeley | 0.795 | 0.790 | 0.742 | 0.780 |
-| Oakland | 0.861 | 0.859 | 0.758 | 0.752 |
-| East Palo Alto | 0.744 | 0.776 | too few | too few |
-| Menlo Park | 0.804 | 0.798 | too few | 0.712 |
-| Redwood City | 0.834 | 0.837 | 0.783 | 0.787 |
-| Cupertino | 0.880 | 0.901 | too few | too few |
-| Los Altos | 0.822 | 0.838 | too few | too few |
+| Berkeley | 0.792 | 0.789 | 0.742 | 0.779 |
+| Oakland | 0.861 | 0.859 | 0.758 | 0.750 |
+| East Palo Alto | 0.744 | 0.772 | too few | too few |
+| Menlo Park | 0.804 | 0.800 | too few | 0.712 |
+| Redwood City | 0.835 | 0.837 | 0.783 | 0.787 |
+| Cupertino | 0.881 | 0.899 | too few | too few |
+| Los Altos | 0.822 | 0.847 | too few | too few |
 | Los Altos Hills | too few | too few | too few | too few |
-| Mountain View | 0.830 | 0.827 | 0.776 | 0.819 |
-| Palo Alto | 0.869 | 0.864 | 0.814 | 0.831 |
+| Mountain View | 0.830 | 0.826 | 0.776 | 0.818 |
+| Palo Alto | 0.867 | 0.863 | 0.814 | 0.831 |
 | Sunnyvale | 0.865 | 0.865 | too few | too few |
 
 - Cities that cannot fit the model in every window when alone gain: East
-  Palo Alto 0.032, Cupertino 0.021 and Los Altos 0.016. Menlo Park, fitted in
-  some windows, is the exception (down 0.006).
+  Palo Alto 0.028, Los Altos 0.025 and Cupertino 0.018. Menlo Park, fitted in
+  some windows, is the exception (down 0.004).
 - Cities that fit the model alone are unchanged, within 0.005 either way.
 - A bigger pool is not better: adding San Jose to six Santa Clara County
   cities moved none of them by more than 0.006.
@@ -301,8 +315,8 @@ pool without San Jose:
   test cannot say whether pooling helps it. That is a limit of the test and
   not a reason against pooling it.
 - Child scores exist both ways in five cities and rise in four of them
-  (Mountain View by 0.043, Berkeley by 0.038, Palo Alto by 0.017, Redwood
-  City by 0.004; Oakland falls by 0.006). Each rests on one or two windows.
+  (Mountain View by 0.042, Berkeley by 0.037, Palo Alto by 0.017, Redwood
+  City by 0.004; Oakland falls by 0.008). Each rests on one or two windows.
 - No intervals were computed and no difference here has been shown to be
   outside the noise. All-cyclist scores rise in four cities, fall in five
   and are level in one.
@@ -386,7 +400,7 @@ crashes, from 28 cities fitted alone:
 Under 100 child crashes, which is where the model cannot be fitted and the
 blend is used, the child ranking loses to the all-cyclist ranking
 every time. At 100 or more the two are level (San Diego, the largest city
-tried, included: 0.815 against 0.822 over its three windows). Nowhere in these cities does a
+tried, included: 0.816 against 0.822 over its three windows). Nowhere in these cities does a
 separate child ranking clearly beat the all-cyclist one.
 
 So:
@@ -531,20 +545,20 @@ the 71 windows in 26 cities that had 30 later crashes of both kinds (of the
 | Mean rank score on later cyclist crashes | Trained on all injury crashes | Trained on visible injury and worse |
 |---|---|---|
 | All injury crashes | 0.857 | 0.843 |
-| Visible injury and worse | 0.852 | 0.839 |
+| Visible injury and worse | 0.852 | 0.838 |
 
 The ranking trained without minor crashes is worse in 69 of the 71 windows
-on all later crashes and in 68 on the visible-and-worse ones, by 0.01 to 0.02
-in most cities and up to 0.05 in one window. The 15 cities with a lasting
-fall in "complaint of pain" reports lose a little more (0.016 on average)
-than the 11 without (0.011).
+on all later crashes and in 69 on the visible-and-worse ones, by 0.01 to 0.02
+in most cities and up to 0.05 in one window. The 16 cities with a lasting
+fall in "complaint of pain" reports lose a little more (0.015 on average)
+than the 10 without (0.011).
 
 Part of that is not a fair comparison. Without the minor crashes a city
 sooner has too few to fit the model and the ranking falls back to the
 hand-built blend. In 8 of the 71 windows only the ranking without them fell
 back, and there it loses 0.03. In the 54 windows (21 cities) where both
 rankings came from a fitted model it loses 0.011 on all later crashes and
-0.010 on the visible-and-worse ones, and is worse in 53 and 51 of them. So
+0.010 on the visible-and-worse ones, and is worse in 53 and 52 of them. So
 the loss is small, but it is there on equal terms: minor crashes still help
 to find where the later serious ones happen, and the ranking keeps them.
 

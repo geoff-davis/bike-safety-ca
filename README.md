@@ -111,9 +111,9 @@ in East Palo Alto, a small city with too few crashes to fit the full model,
 to 0.90 in Irvine.
 
 It does best in spread-out cities built on arterials, where bike crashes
-follow car traffic: in San Jose and Sacramento the 100 corners it ranked
-highest held about 35% more of the later crashes than the 100 with the most
-past crashes. It does least well in small cities with few crashes, and for
+follow car traffic: in San Jose the 100 corners it ranked highest held 45%
+more of the later crashes than the 100 with the most past crashes, and in
+Sacramento 31% more. It does least well in small cities with few crashes, and for
 children outside the large cities.
 
 The model adds most where bike crashes are sparse. In the third of the
