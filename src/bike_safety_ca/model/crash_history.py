@@ -29,6 +29,8 @@ from scipy.stats import nbinom, rankdata
 from bike_safety_ca.model.empirical_bayes import empirical_bayes
 
 FORMULA = "bike ~ log_car + log_street_bike + log_street_car"
+# The range searched when the spread power is fitted with no bounds given.
+POWER_BOUNDS = (0.5, 2.5)
 
 
 def _named(streets: Mapping[Any, Collection[str]], site: Any) -> list[str]:
@@ -141,7 +143,7 @@ def fit_street_model(
     streets: Mapping[Any, Collection[str]],
     pull: float = 20.0,
     car_pull: float = 1.0,
-    spread_power: float | None = None,
+    spread_power: float | tuple[float, float] | None = None,
     extra: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Fit expected bike crashes to the street's bike record and the corner's car record.
@@ -156,7 +158,7 @@ def fit_street_model(
     with its street's car average (``car_pull`` imaginary intersections) by
     ``gamma_blend``.  Counts are negative binomial with variance
     ``expected + alpha * expected ** spread_power``; the power is fitted when
-    not given.  At 2, the textbook case, the weight on a corner's own count,
+    not given (within ``POWER_BOUNDS``), or within the pair of bounds given.  At 2, the textbook case, the weight on a corner's own count,
     ``alpha * expected / (1 + alpha * expected)``, rises with what is expected
     there; at 1, which the rankings use, it is ``alpha / (1 + alpha)`` at every
     corner.  Each intersection's own bike count is then blended in with
@@ -187,12 +189,12 @@ def fit_street_model(
         terms = pd.concat([terms, extra.reindex(bike.index).astype(float)], axis=1)
     count = bike.to_numpy()
     design = np.column_stack([np.ones(len(terms)), terms.to_numpy()])
-    fitted_power = spread_power is None
-    if spread_power is None:
+    fitted_power = spread_power is None or isinstance(spread_power, tuple)
+    if spread_power is None or isinstance(spread_power, tuple):
         spread_power = float(
             minimize_scalar(
                 lambda power: -_fit_spread(count, design, power)[2],
-                bounds=(0.5, 2.5),
+                bounds=POWER_BOUNDS if spread_power is None else spread_power,
                 method="bounded",
                 options={"xatol": 0.02},
             ).x
@@ -353,12 +355,13 @@ def rank_intersections(
     car: pd.Series,
     streets: Mapping[Any, Collection[str]],
     min_crashes: int = MIN_CRASHES,
-    spread_power: float | None = SPREAD_POWER,
+    spread_power: float | tuple[float, float] | None = SPREAD_POWER,
 ) -> dict[str, Any]:
     """Score every intersection, by the fitted model where there is enough to fit it.
 
     ``spread_power`` is passed to ``fit_street_model``; ``None`` fits the power, as
-    the model did before it was fixed at ``SPREAD_POWER``.
+    the model did before it was fixed at ``SPREAD_POWER``, and a pair fits it
+    within those bounds.
 
     With fewer than ``min_crashes`` bike crashes in all, or when the fit fails,
     the score is ``street_blend_score``, which needs no fitting.  On made-up

@@ -53,8 +53,15 @@ GROUPS = {EVERYONE: CYCLISTS, CHILDREN: [CHILD]}
 SCORED_ON = {EVERYONE: (EVERYONE, CHILDREN), CHILDREN: (CHILDREN,)}
 
 FITTED_POWER, POWER_ONE, POWER_TWO = "Spread power fitted", "Spread power 1", "Spread power 2"
-# The model with each spread power; ``None`` fits it.
-VERSIONS: dict[str, float | None] = {FITTED_POWER: None, POWER_ONE: 1.0, POWER_TWO: 2.0}
+POWER_HELD = "Spread power fitted, 1 to 2"
+Power = float | tuple[float, float] | None
+# The model with each spread power; ``None`` fits it, a pair fits it within those bounds.
+VERSIONS: dict[str, Power] = {
+    FITTED_POWER: None,
+    POWER_ONE: 1.0,
+    POWER_TWO: 2.0,
+    POWER_HELD: (1.0, 2.0),
+}
 HISTORY, BLEND = "Past bike crashes", "Hand-built blend"
 REFERENCE = FITTED_POWER
 
@@ -74,7 +81,7 @@ def score_windows(
     sites: pd.Index,
     streets: Mapping[Any, Any],
     windows: Sequence[Window],
-    versions: Mapping[str, float | None] = VERSIONS,
+    versions: Mapping[str, Power] = VERSIONS,
 ) -> pd.DataFrame:
     """One row per window, version, crashes fitted to and crashes scored on.
 

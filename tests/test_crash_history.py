@@ -304,3 +304,17 @@ def test_the_fit_is_chosen_among_the_starts_that_converged(
             crash_history._fit_spread(count, design, 1.5)
     else:
         assert crash_history._fit_spread(count, design, 1.5)[2] == -kept
+
+
+def test_a_pair_of_bounds_holds_the_fitted_spread_power_between_them() -> None:
+    bike, car, streets = _synthetic()
+    free = fit_street_model(bike, car, streets)
+    low, high = free["spread_power"] + 0.2, free["spread_power"] + 0.6
+    held = fit_street_model(bike, car, streets, spread_power=(low, high))
+    # The free fit's power lies below the bounds, so the held one stops near the lower.
+    assert low <= held["spread_power"] <= high
+    assert held["spread_power"] - low < 0.05
+    # It is still counted as a fitted parameter, and it cannot fit better than the free one.
+    fixed = fit_street_model(bike, car, streets, spread_power=held["spread_power"])
+    assert held["aic"] == pytest.approx(fixed["aic"] + 2)
+    assert held["aic"] >= free["aic"] - 1e-6

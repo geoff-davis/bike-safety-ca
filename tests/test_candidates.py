@@ -51,7 +51,7 @@ def test_every_version_is_scored_for_each_fitted_and_scored_group(scored: pd.Dat
     groups = scored.groupby(["fitted on", "scored on"]).size()
     assert set(groups.index) == {(EVERYONE, EVERYONE), (EVERYONE, CHILDREN), (CHILDREN, CHILDREN)}
     assert set(scored.version) == {HISTORY, BLEND, *candidates.VERSIONS}
-    assert groups.eq(len(WINDOWS) * 5).all()
+    assert groups.eq(len(WINDOWS) * (2 + len(candidates.VERSIONS))).all()
     # An open-ended window names the last year with a crash.
     assert set(scored["tested to"]) == {2022, 2024}
 
@@ -61,6 +61,9 @@ def test_each_version_is_fitted_with_its_own_spread_power(scored: pd.DataFrame) 
     assert len(fitted) > 0
     assert fitted[fitted.version.eq(POWER_ONE)]["spread power"].eq(1.0).all()
     assert not fitted[fitted.version.eq(FITTED_POWER)]["spread power"].eq(1.0).any()
+    held = fitted[fitted.version.eq(candidates.POWER_HELD)]["spread power"]
+    assert len(held) > 0
+    assert held.between(1.0, 2.0).all()
 
 
 def test_a_ranking_scored_on_children_is_the_one_fitted_to_everyone(
