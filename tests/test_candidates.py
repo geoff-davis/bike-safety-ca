@@ -145,6 +145,11 @@ def test_a_textbook_model_can_be_the_reference(
 ) -> None:
     hits, sites, streets = city
     classes = pd.DataFrame({"major": "Local", "minor": "Local"}, index=sites)
+    # The made-up city's rates follow its streets alone, which the street-context columns
+    # explain so well that no spread of rates is left to fit.  Every tenth site gets three
+    # times its adult crashes, so the sites differ by more than their streets say.
+    lumpy = hits[hits.group.eq(ADULT) & hits.site.mod(10).eq(0)]
+    hits = pd.concat([hits, lumpy, lumpy], ignore_index=True)
     table = score_windows(
         hits, sites, streets, WINDOWS[:1], versions={POWER_ONE: 1.0}, classes=classes,
         first_year=2015, reference=reference,

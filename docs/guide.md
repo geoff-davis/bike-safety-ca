@@ -445,11 +445,12 @@ rank first.
 | `major`, `minor` | The class of the largest road there and of the next largest |
 | `in_city` | Whether it lies inside the city limit; empty when there is no city-limit outline |
 | `score` | What the rank follows |
-| `expected_bike_crashes` | The model's expected number of police-recorded bike crashes over the years used; empty when the blend was used |
+| `expected_bike_crashes` | The model's estimate of the police-recorded bike crashes at the intersection over the whole of `first_year` to `last_year`, the same years as the two counts below. Not a count per year and not a forecast. Empty when the blend was used |
 | `observed_bike_crashes`, `car_crashes` | Bike crashes and motor-vehicle-only crashes placed there |
 | `method` | "street-length model" or "hand-built blend" |
 | `spread_power` | The spread power the model was fitted with (1); empty for the blend |
 | `fallback_reason` | Why the blend was used; empty for the model |
+| `first_year`, `last_year` | The years of the crashes the ranking was built from, the same on every row. The last may be a part year |
 | `longitude`, `latitude` | The intersection's point |
 
 - `--top N` writes only the N highest-ranked intersections.
@@ -593,9 +594,13 @@ credits and the panel's tables below the map.
 With `--ranking output/ranking/intersection_ranking.csv` (from the
 intersection ranking, below), the map gains a "Show" switch between recorded
 crashes and predicted risk. The risk view draws a circle at each corner in
-the city where the model expects at least half a bike crash, sized by the
-expected count, and lists the model's top corners (`--top`, 20 by default)
-with what it saw at each; clicking a row finds the corner on the map. The
+the city where the model's estimate is at least half a bike crash, sized by
+the estimate, and lists the model's top corners (`--top`, 20 by default)
+with what it saw at each; clicking a row finds the corner on the map. An
+estimate is of the bike crashes recorded at the corner over all the years the
+ranking was built from (the ranking file gives them as `first_year` and
+`last_year`), beside the count on record for the same years. It is not a
+count per year or a forecast of a later period. The
 command also writes `top_corners.md`, a one-page list of them. With `--pdf` it
 prints `top_corners.pdf` and `predicted_risk.pdf`, the risk view with its list
 (this needs Google Chrome or Chromium). Opening the map with `?view=risk` after

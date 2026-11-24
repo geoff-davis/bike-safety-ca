@@ -243,6 +243,8 @@ def test_a_small_town_is_ranked_as_worked_out_by_hand(tmp_path: Path) -> None:
     assert set(table.method) == {"hand-built blend"}
     assert set(table.fallback_reason) == {"5 bike crashes, fewer than 100"}
     assert table.expected_bike_crashes.isna().all()
+    # The years of the crashes counted, on every row: 2015 is before the town's first year.
+    assert set(table.first_year) == {2016} and set(table.last_year) == {2023}
     # The two middle corners tie: the lower intersection number comes first.
     tied = by_name.loc[["Ash Street / Second Avenue", "Birch Street / First Avenue"]]
     assert tied.score.nunique() == 1

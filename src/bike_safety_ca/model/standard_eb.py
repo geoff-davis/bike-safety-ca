@@ -37,7 +37,8 @@ def design(car: pd.Series, classes: pd.DataFrame, years: float) -> pd.DataFrame:
     ``classes`` has one column per road position (the main road, the second
     road), each a label.  Every label but the commonest in its column gets an
     indicator, so the constant stands for the commonest kind of intersection.
-    A label no intersection has gets no column.
+    A label no intersection has gets no column, and nor does anything that
+    is the same at every site (car crashes, say): it would be a second constant.
     """
     columns: dict[str, pd.Series] = {
         "constant": pd.Series(1.0, index=car.index),
@@ -51,7 +52,12 @@ def design(car: pd.Series, classes: pd.DataFrame, years: float) -> pd.DataFrame:
         ordered = sorted(counts.index, key=lambda label: (-counts[label], label))
         for label in ordered[1:]:
             columns[f"{position}: {label}"] = labels.eq(label).astype(float)
-    return pd.DataFrame(columns)
+    return _varying(pd.DataFrame(columns))
+
+
+def _varying(columns: pd.DataFrame) -> pd.DataFrame:
+    """The columns without those that are the same at every site, the constant kept."""
+    return columns.loc[:, columns.nunique().gt(1) | columns.columns.isin(["constant"])]
 
 
 def membership(
@@ -116,25 +122,31 @@ def fit_standard_eb(
     """Fit the model to counts over ``years`` years; return the per-site estimates.
 
     With ``streets`` the regression also has the two ``street_context`` columns.
+    A column that is the same at every site (every site with as many
+    neighbours, say) is left out: it would be a second constant.
 
     ``sites`` has ``observed``, ``predicted`` (the background count over the
     fitting years), ``prior_shape`` (``k``, the same at every site) and ``eb``
     (the expected count over the fitting years given the site's own count;
     rank by this, and scale by later years over ``years`` for a later period).
     The columns are those ``crash_history.forecast`` takes.  Raises
-    ``RuntimeError`` if either fit does not converge.
+    ``RuntimeError`` if the fit does not converge.  A Poisson fit gives the
+    starting values only: it need not converge itself, and does not when a
+    road class has no bike crash at all, which the model fits all the same.
     """
     car = car.reindex(bike.index)
     columns = design(car, classes, years)
     if streets is not None:
-        columns = pd.concat([columns, street_context(car, streets, years)], axis=1)
+        columns = pd.concat([columns, _varying(street_context(car, streets, years))], axis=1)
     count = bike.to_numpy(float)
     offset = np.full(len(count), np.log(years))
     poisson = sm.Poisson(count, columns, offset=offset).fit(disp=0, maxiter=300)
+    if not np.isfinite(poisson.params.to_numpy()).all():
+        raise RuntimeError("standard empirical Bayes model: no starting values")
     fit = sm.NegativeBinomial(count, columns, offset=offset, loglike_method="nb2").fit(
         start_params=np.r_[poisson.params.to_numpy(), 0.5], method="bfgs", maxiter=2000, disp=0
     )
-    if not (poisson.mle_retvals["converged"] and fit.mle_retvals["converged"]):
+    if not fit.mle_retvals["converged"]:
         raise RuntimeError("standard empirical Bayes model did not converge")
     alpha = float(fit.params["alpha"])
     if not alpha > 0:

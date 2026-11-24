@@ -129,8 +129,15 @@ def test_street_context_counts_each_neighbour_once_and_uses_no_bike_crash() -> N
 
 
 def test_street_context_enters_the_regression_only_when_streets_are_given(city: dict) -> None:
+    # On the whole grid every site has the same number of neighbours: that column would be
+    # a second constant, so it is left out and the fit is not singular.
+    grid = fit_standard_eb(city["bike"], city["car"], city["classes"], YEARS, city["streets"])
+    assert "log(1 + intersections on the same streets)" not in grid["coefficients"].index
+    assert "log(1 + car crashes per year at those)" in grid["coefficients"].index
+    # Every seventh site keeps one street, and both columns vary.
+    streets = {site: names if site % 7 else {min(names)} for site, names in city["streets"].items()}
     plain = fit_standard_eb(city["bike"], city["car"], city["classes"], YEARS)
-    wider = fit_standard_eb(city["bike"], city["car"], city["classes"], YEARS, city["streets"])
+    wider = fit_standard_eb(city["bike"], city["car"], city["classes"], YEARS, streets)
     added = set(wider["coefficients"].index) - set(plain["coefficients"].index)
     assert added == {
         "log(1 + intersections on the same streets)",
@@ -139,7 +146,28 @@ def test_street_context_enters_the_regression_only_when_streets_are_given(city: 
     sites, k = wider["sites"], wider["shape"]
     by_hand = sites.predicted * (k + sites.observed) / (k + sites.predicted)
     assert sites.eb.tolist() == pytest.approx(by_hand.tolist())
-    ranked = rank_standard(
-        city["bike"], city["car"], city["classes"], YEARS, streets=city["streets"]
-    )
+    ranked = rank_standard(city["bike"], city["car"], city["classes"], YEARS, streets=streets)
     assert ranked["score"].tolist() == pytest.approx(sites.eb.tolist())
+
+
+def test_a_road_class_with_no_bike_crash_does_not_stop_the_fit(city: dict) -> None:
+    # The Poisson fit that gives the starting values cannot converge here: the class's
+    # coefficient runs off toward minus infinity.  The model's own fit does converge.
+    classes, bike = city["classes"].copy(), city["bike"].copy()
+    quiet = bike.index[bike.index % 23 == 0]
+    classes.loc[quiet, "minor"] = "Track"
+    bike.loc[quiet] = 0
+    fit = fit_standard_eb(bike, city["car"], classes, YEARS)
+    assert fit["coefficients"]["minor: Track"] < -10
+    assert fit["sites"].eb.loc[quiet].max() < 1e-6
+    assert np.isfinite(fit["sites"].eb).all() and fit["shape"] > 0
+    ranked = rank_standard(bike, city["car"], classes, YEARS)
+    assert ranked["reason"] is None
+
+
+def test_street_effects_fit_when_every_site_has_the_same_car_count(city: dict) -> None:
+    # The car column is then a second constant and is left out of both fits alike.
+    car = pd.Series(3, index=city["car"].index)
+    fit = fit_street_effects(city["bike"], car, city["classes"], city["streets"], YEARS)
+    assert "log(1 + car crashes per year)" not in fit["coefficients"].index
+    assert np.isfinite(fit["sites"].eb).all()
