@@ -18,11 +18,13 @@ estimate: the regression and ``k`` are taken as known once fitted.
 
 from __future__ import annotations
 
+from collections.abc import Collection, Mapping
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from scipy import sparse
 
 from bike_safety_ca.model.crash_history import MIN_CRASHES, gamma_blend
 
@@ -52,10 +54,68 @@ def design(car: pd.Series, classes: pd.DataFrame, years: float) -> pd.DataFrame:
     return pd.DataFrame(columns)
 
 
+def membership(
+    index: pd.Index, streets: Mapping[Any, Collection[str]]
+) -> tuple[sparse.csr_matrix, list[str]]:
+    """Intersections by streets: 1 where the street is one of the intersection's.
+
+    Streets are told apart by name, so two streets with one name in the area
+    are one street here.  A name is counted once per intersection.
+    """
+    names = sorted({name for site in index for name in streets.get(site, ()) if name})
+    column = {name: j for j, name in enumerate(names)}
+    rows, columns = [], []
+    for i, site in enumerate(index):
+        for name in {name for name in streets.get(site, ()) if name}:
+            rows.append(i)
+            columns.append(column[name])
+    matrix = sparse.csr_matrix(
+        (np.ones(len(rows)), (rows, columns)), shape=(len(index), len(names))
+    )
+    return matrix, names
+
+
+def street_context(
+    car: pd.Series, streets: Mapping[Any, Collection[str]], years: float
+) -> pd.DataFrame:
+    """Two more columns for the regression, from the other intersections on a site's streets.
+
+    A site's neighbours are the other intersections that share a named street
+    with it, each counted once however many streets are shared.  The columns
+    are ``log(1 + number of neighbours)`` and ``log(1 + car crashes per year
+    at a neighbour)``, the second from the neighbours' total over the fitting
+    years.  A site with no neighbour gets the area's car crashes per
+    intersection per year.  No bike crash enters either column.
+    """
+    member, _ = membership(car.index, streets)
+    shared = (member @ member.T).tocsr()
+    shared.data[:] = 1.0
+    shared.setdiag(0.0)
+    shared.eliminate_zeros()
+    count = car.to_numpy(float)
+    neighbours = np.asarray(shared.sum(axis=1)).ravel()
+    total = shared @ count
+    typical = count.mean() / years if len(count) else 0.0
+    rate = np.where(neighbours > 0, total / (np.maximum(neighbours, 1) * years), typical)
+    return pd.DataFrame(
+        {
+            "log(1 + intersections on the same streets)": np.log1p(neighbours),
+            "log(1 + car crashes per year at those)": np.log1p(rate),
+        },
+        index=car.index,
+    )
+
+
 def fit_standard_eb(
-    bike: pd.Series, car: pd.Series, classes: pd.DataFrame, years: float
+    bike: pd.Series,
+    car: pd.Series,
+    classes: pd.DataFrame,
+    years: float,
+    streets: Mapping[Any, Collection[str]] | None = None,
 ) -> dict[str, Any]:
     """Fit the model to counts over ``years`` years; return the per-site estimates.
+
+    With ``streets`` the regression also has the two ``street_context`` columns.
 
     ``sites`` has ``observed``, ``predicted`` (the background count over the
     fitting years), ``prior_shape`` (``k``, the same at every site) and ``eb``
@@ -66,6 +126,8 @@ def fit_standard_eb(
     """
     car = car.reindex(bike.index)
     columns = design(car, classes, years)
+    if streets is not None:
+        columns = pd.concat([columns, street_context(car, streets, years)], axis=1)
     count = bike.to_numpy(float)
     offset = np.full(len(count), np.log(years))
     poisson = sm.Poisson(count, columns, offset=offset).fit(disp=0, maxiter=300)
@@ -106,13 +168,17 @@ def rank_standard(
     classes: pd.DataFrame,
     years: float,
     min_crashes: int = MIN_CRASHES,
+    streets: Mapping[Any, Collection[str]] | None = None,
 ) -> dict[str, Any]:
     """Score every intersection by the model; by its own count where it cannot be fitted.
 
     The same threshold as ``crash_history.rank_intersections``: with fewer
     than ``min_crashes`` bike crashes, or when the fit fails, the score is the
-    intersection's own count, which is what this model's estimate becomes with
-    no predictors.  Returns ``score``, ``method``, ``reason`` and ``fit``.
+    intersection's own count.  That is a rule, not the model: with no
+    predictors the model would pull every count toward the area's mean, which
+    leaves the order of the counts as it is but not their values.  ``streets``
+    is passed to ``fit_standard_eb``.  Returns ``score``, ``method``,
+    ``reason`` and ``fit``.
     """
     total = int(bike.sum())
     fit, reason = None, None
@@ -120,7 +186,7 @@ def rank_standard(
         reason = f"{total} bike crashes, fewer than {min_crashes}"
     else:
         try:
-            fit = fit_standard_eb(bike, car, classes, years)
+            fit = fit_standard_eb(bike, car, classes, years, streets)
         except (RuntimeError, ValueError, FloatingPointError, np.linalg.LinAlgError) as error:
             reason = f"fit failed: {error}"
     if fit is not None and not bool(np.isfinite(fit["sites"].eb).all()):

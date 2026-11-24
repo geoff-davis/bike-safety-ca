@@ -11,14 +11,23 @@ random intercept).  The regression, the street effects, ``tau`` and the shape
 ``k`` of the intersections' own multipliers are fitted together to the bike
 counts, each count entering once; no street average is worked out first.
 
-Fitting is by the Laplace approximation to the likelihood with the street
-effects summed out, which is what mixed-model software does for counts.  For
-a given ``k`` and ``tau`` the regression and the effects are found together
-(Newton's method on the penalised likelihood, as ``lme4`` does with
-``nAGQ = 0``), and ``k`` and ``tau`` are chosen to maximise the approximate
-likelihood.  The estimate for an intersection then takes the fitted effects
-as known and updates its own multiplier with its own count, as in
-``standard_eb``; the uncertainty of the effects is not carried into it.
+Fitting is approximate.  For a given ``k`` and ``tau`` the regression and the
+effects together maximise the penalised likelihood (Newton's method).  ``k``
+and ``tau`` then maximise that penalised likelihood with a Laplace correction
+for the street effects: ``- S log(tau) - 0.5 log det(Z' W Z + I / tau ** 2)``,
+the curvature in the effects alone with the regression held where it is.  So
+the regression maximises the penalised likelihood, not the corrected one.
+The usual Laplace fit of mixed-model software (``lme4`` with ``nAGQ = 1``)
+optimises the regression against the corrected likelihood too; this is the
+faster and less exact scheme ``lme4`` calls ``nAGQ = 0``, and it has not been
+checked against that or any other package.  The normal distribution of the
+effects is an assumption that pulls them toward 0; ``k`` and ``tau`` are
+fitted with no further prior.
+
+The estimate for an intersection takes the fitted effects as known and
+updates its own multiplier with its own count, as in ``standard_eb``.  The
+uncertainty of the effects is not averaged over, which can move the
+estimates themselves and not only their spread.
 """
 
 from __future__ import annotations
@@ -34,32 +43,11 @@ from scipy.sparse.linalg import splu
 from scipy.special import gammaln
 
 from bike_safety_ca.model.crash_history import MIN_CRASHES, gamma_blend
-from bike_safety_ca.model.standard_eb import COUNT_ONLY, design, fit_standard_eb
+from bike_safety_ca.model.standard_eb import COUNT_ONLY, design, fit_standard_eb, membership
 
 FITTED = "street-effects model"
 # Limits on the search for log(k) and log(tau).
 LOG_SHAPE, LOG_TAU = (-6.0, 8.0), (-6.0, 3.0)
-
-
-def membership(
-    index: pd.Index, streets: Mapping[Any, Collection[str]]
-) -> tuple[sparse.csr_matrix, list[str]]:
-    """Intersections by streets: 1 where the street is one of the intersection's.
-
-    Streets are told apart by name, so two streets with one name in the area
-    are one street here.  A name is counted once per intersection.
-    """
-    names = sorted({name for site in index for name in streets.get(site, ()) if name})
-    column = {name: j for j, name in enumerate(names)}
-    rows, columns = [], []
-    for i, site in enumerate(index):
-        for name in {name for name in streets.get(site, ()) if name}:
-            rows.append(i)
-            columns.append(column[name])
-    matrix = sparse.csr_matrix(
-        (np.ones(len(rows)), (rows, columns)), shape=(len(index), len(names))
-    )
-    return matrix, names
 
 
 def _log_likelihood(count: np.ndarray, mean: np.ndarray, shape: float) -> float:

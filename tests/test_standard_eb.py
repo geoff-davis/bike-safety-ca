@@ -11,13 +11,11 @@ from bike_safety_ca.model.standard_eb import (
     COUNT_ONLY,
     design,
     fit_standard_eb,
-    rank_standard,
-)
-from bike_safety_ca.model.street_effects import (
-    fit_street_effects,
     membership,
-    rank_street_effects,
+    rank_standard,
+    street_context,
 )
+from bike_safety_ca.model.street_effects import fit_street_effects, rank_street_effects
 
 YEARS = 5.0
 
@@ -112,3 +110,36 @@ def test_street_effects_fall_back_like_the_plain_model(city: dict) -> None:
     assert ranked["method"] == COUNT_ONLY and ranked["fit"] is None
     unnamed = rank_street_effects(city["bike"], city["car"], city["classes"], {}, YEARS)
     assert unnamed["fit"] is None and "no named street" in unnamed["reason"]
+
+
+def test_street_context_counts_each_neighbour_once_and_uses_no_bike_crash() -> None:
+    # 1 and 2 share both streets; 3 is on A only; 4 is alone on C; 5 has no name
+    streets = {1: ["A", "B"], 2: ["A", "B"], 3: ["A"], 4: ["C"], 5: []}
+    car = pd.Series([4, 0, 2, 6, 3], index=[1, 2, 3, 4, 5])
+    found = street_context(car, streets, years=2.0)
+    neighbours = np.expm1(found["log(1 + intersections on the same streets)"])
+    assert neighbours.round(9).tolist() == [2, 2, 2, 0, 0]
+    rate = np.expm1(found["log(1 + car crashes per year at those)"])
+    # site 1: neighbours 2 and 3, (0 + 2) crashes over 2 sites and 2 years
+    assert rate.loc[1] == pytest.approx(0.5)
+    assert rate.loc[3] == pytest.approx((4 + 0) / (2 * 2.0))
+    # no neighbour: the area's car crashes per intersection per year
+    assert rate.loc[4] == pytest.approx(15 / 5 / 2.0)
+    assert rate.loc[5] == pytest.approx(15 / 5 / 2.0)
+
+
+def test_street_context_enters_the_regression_only_when_streets_are_given(city: dict) -> None:
+    plain = fit_standard_eb(city["bike"], city["car"], city["classes"], YEARS)
+    wider = fit_standard_eb(city["bike"], city["car"], city["classes"], YEARS, city["streets"])
+    added = set(wider["coefficients"].index) - set(plain["coefficients"].index)
+    assert added == {
+        "log(1 + intersections on the same streets)",
+        "log(1 + car crashes per year at those)",
+    }
+    sites, k = wider["sites"], wider["shape"]
+    by_hand = sites.predicted * (k + sites.observed) / (k + sites.predicted)
+    assert sites.eb.tolist() == pytest.approx(by_hand.tolist())
+    ranked = rank_standard(
+        city["bike"], city["car"], city["classes"], YEARS, streets=city["streets"]
+    )
+    assert ranked["score"].tolist() == pytest.approx(sites.eb.tolist())

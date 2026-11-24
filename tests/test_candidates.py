@@ -121,9 +121,9 @@ def test_textbook_models_are_scored_with_forecasts_when_classes_are_given(
         hits, sites, streets, WINDOWS[:1], versions={POWER_ONE: 1.0}, classes=classes,
         first_year=2015, reference=POWER_ONE,
     )  # fmt: skip
-    assert {candidates.STANDARD, candidates.STREET_EFFECTS} <= set(table.version)
+    assert set(candidates.TEXTBOOK) <= set(table.version)
     own = table[table["fitted on"].eq(table["scored on"]) & table.method.ne(HISTORY)]
-    fitted = own[own.version.isin([POWER_ONE, candidates.STANDARD, candidates.STREET_EFFECTS])]
+    fitted = own[own.version.isin([POWER_ONE, *candidates.TEXTBOOK])]
     fitted = fitted[fitted["alpha"].notna()]
     assert len(fitted) > 0
     # five fitting years (2015 to 2019), two later years: the forecast is 2/5 of the estimate
@@ -139,7 +139,7 @@ def test_textbook_models_are_scored_with_forecasts_when_classes_are_given(
     assert other["expected later crashes"].isna().all()
 
 
-@pytest.mark.parametrize("reference", [candidates.STANDARD, candidates.STREET_EFFECTS])
+@pytest.mark.parametrize("reference", candidates.TEXTBOOK)
 def test_a_textbook_model_can_be_the_reference(
     city: tuple[pd.DataFrame, pd.Index, dict], reference: str
 ) -> None:
@@ -178,7 +178,7 @@ def test_no_forecast_without_a_fitting_period_or_a_later_one(
         hits, sites, streets, [(2014, 2015, 2016)], versions={POWER_ONE: 1.0}, classes=classes,
         first_year=2015,
     )  # fmt: skip
-    textbook = early[early.version.isin([candidates.STANDARD, candidates.STREET_EFFECTS])]
+    textbook = early[early.version.isin(candidates.TEXTBOOK)]
     assert textbook["fallback reason"].eq("no fitting years").all()
     assert early["expected later crashes"].isna().all()
 

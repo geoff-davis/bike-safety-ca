@@ -70,6 +70,9 @@ HISTORY, BLEND = "Past bike crashes", "Hand-built blend"
 STANDARD = "Standard empirical Bayes"
 # The same with a shared effect for each street (``model.street_effects``).
 STREET_EFFECTS = "Street effects, fitted jointly"
+# The textbook model with two columns from the other intersections on a site's streets.
+STREET_CONTEXT = "Standard empirical Bayes with street context"
+TEXTBOOK = (STANDARD, STREET_EFFECTS, STREET_CONTEXT)
 REFERENCE = FITTED_POWER
 # What ``method`` says when a version was fitted and did not fall back.
 FITTED_METHODS = (cross.FITTED, standard_eb.FITTED, street_effects.FITTED)
@@ -144,7 +147,7 @@ def score_windows(
             facts: dict[str, dict[str, Any]] = {}
             fitted: dict[str, bool] = {}
             years = train_to - first + 1
-            names = [*versions, *([STANDARD, STREET_EFFECTS] if classes is not None else [])]
+            names = [*versions, *(TEXTBOOK if classes is not None else [])]
             for name in names:
                 began = time.perf_counter()
                 if name in versions:
@@ -156,9 +159,12 @@ def score_windows(
                         "reason": "no fitting years",
                         "fit": None,
                     }
-                elif name == STANDARD:
+                elif name in (STANDARD, STREET_CONTEXT):
                     assert classes is not None
-                    ranked = rank_standard(early, car, classes, years)
+                    ranked = rank_standard(
+                        early, car, classes, years,
+                        streets=streets if name == STREET_CONTEXT else None,
+                    )  # fmt: skip
                 else:
                     assert classes is not None
                     ranked = rank_street_effects(early, car, classes, streets, years)
@@ -397,7 +403,7 @@ def main() -> None:
     )  # fmt: skip
     parser.add_argument("--out", type=Path, required=True, help="folder for the tables")
     parser.add_argument(
-        "--reference", default=REFERENCE, choices=sorted([*VERSIONS, STANDARD, STREET_EFFECTS]),
+        "--reference", default=REFERENCE, choices=sorted([*VERSIONS, *TEXTBOOK]),
         help="the version the others are compared with",
     )  # fmt: skip
     args = parser.parse_args()
