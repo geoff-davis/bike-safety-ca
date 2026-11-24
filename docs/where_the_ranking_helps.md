@@ -380,8 +380,8 @@ crashes, from 28 cities fitted alone:
 
 | Child crashes in the training years | City-windows (cities) | Ranking fitted to child crashes | All-cyclist ranking | Child ranking better in |
 |---|---|---|---|---|
-| Under 100 | 15 (12) | 0.789 | 0.812 | 0 |
-| 100 or more | 18 (7) | 0.833 | 0.835 | 10 |
+| Under 100 | 15 (12) | 0.789 | 0.810 | 0 |
+| 100 or more | 18 (7) | 0.834 | 0.835 | 10 |
 
 Under 100 child crashes, which is where the model cannot be fitted and the
 blend is used, the child ranking loses to the all-cyclist ranking

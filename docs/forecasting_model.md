@@ -737,40 +737,40 @@ scored, for the model and for past bike crashes alone.
 
 | City | Intersections | Windows scored | Rank score | Past bike crashes alone | Fit | Top 100: model / past, of all later | Children (windows scored) |
 |---|---|---|---|---|---|---|---|
-| Irvine | 4,983 | 3 | 0.904 | 0.679 | model | 167 / 131 of 491 | 0.895 (3) |
-| Huntington Beach | 3,571 | 3 | 0.895 | 0.682 | model | 356 / 286 of 893 | 0.880 (3) |
-| San Jose | 14,136 | 3 | 0.893 | 0.678 | model | 333 / 242 of 1,828 | 0.835 (3) |
-| Sacramento | 10,292 | 3 | 0.889 | 0.670 | model | 227 / 169 of 1,441 | 0.834 (3) |
-| Chico | 2,313 | 3 | 0.885 | 0.638 | model | 96 / 61 of 197 | too few |
-| San Diego | 19,467 | 3 | 0.880 | 0.653 | model | 264 / 212 of 2,438 | 0.815 (3) |
-| Cupertino | 990 | 2 | 0.879 | 0.702 | mixed | 67 / 53 of 101 | too few |
+| Irvine | 4,983 | 3 | 0.904 | 0.679 | model | 165 / 131 of 491 | 0.895 (3) |
+| Huntington Beach | 3,571 | 3 | 0.895 | 0.682 | model | 355 / 286 of 893 | 0.880 (3) |
+| San Jose | 14,136 | 3 | 0.893 | 0.678 | model | 351 / 242 of 1,828 | 0.834 (3) |
+| Sacramento | 10,292 | 3 | 0.889 | 0.670 | model | 222 / 169 of 1,441 | 0.835 (3) |
+| Chico | 2,313 | 3 | 0.885 | 0.638 | model | 95 / 61 of 197 | too few |
+| Cupertino | 990 | 2 | 0.881 | 0.702 | mixed | 68 / 53 of 101 | too few |
+| San Diego | 19,467 | 3 | 0.880 | 0.653 | model | 250 / 212 of 2,438 | 0.816 (3) |
 | South Lake Tahoe | 820 | 1 | 0.876 | 0.529 | blend | 37 / 9 of 55 | too few |
+| Ventura | 2,261 | 3 | 0.873 | 0.667 | model | 192 / 163 of 469 | 0.833 (1) |
 | Encinitas | 1,299 | 3 | 0.872 | 0.659 | mixed | 90 / 69 of 178 | 0.806 (1) |
-| Ventura | 2,261 | 3 | 0.872 | 0.667 | model | 197 / 163 of 469 | 0.833 (1) |
-| Davis | 1,114 | 3 | 0.870 | 0.757 | model | 128 / 115 of 217 | too few |
-| Palo Alto | 1,288 | 2 | 0.869 | 0.737 | model | 78 / 68 of 169 | 0.814 (1) |
-| Sunnyvale | 1,989 | 3 | 0.865 | 0.666 | model | 104 / 74 of 256 | too few |
-| Long Beach | 5,151 | 3 | 0.864 | 0.702 | model | 348 / 315 of 1,543 | 0.778 (3) |
-| Fresno | 11,648 | 3 | 0.863 | 0.553 | mixed | 73 / 52 of 533 | 0.791 (1) |
-| Santa Barbara | 1,594 | 3 | 0.862 | 0.703 | model | 254 / 216 of 628 | 0.814 (2) |
-| Oakland | 5,667 | 3 | 0.861 | 0.688 | model | 205 / 165 of 1,022 | 0.758 (2) |
-| San Francisco | 7,094 | 3 | 0.855 | 0.744 | model | 752 / 694 of 3,636 | 0.750 (2) |
-| Santa Cruz | 1,108 | 3 | 0.840 | 0.719 | model | 195 / 174 of 384 | 0.794 (1) |
-| Redwood City | 1,397 | 3 | 0.834 | 0.630 | model | 110 / 88 of 272 | 0.783 (1) |
+| Davis | 1,114 | 3 | 0.872 | 0.757 | model | 126 / 115 of 217 | too few |
+| Palo Alto | 1,288 | 2 | 0.867 | 0.737 | model | 75 / 68 of 169 | 0.814 (1) |
+| Sunnyvale | 1,989 | 3 | 0.865 | 0.666 | model | 108 / 74 of 256 | too few |
+| Long Beach | 5,151 | 3 | 0.863 | 0.702 | model | 331 / 315 of 1,543 | 0.777 (3) |
+| Fresno | 11,648 | 3 | 0.863 | 0.553 | mixed | 75 / 52 of 533 | 0.791 (1) |
+| Santa Barbara | 1,594 | 3 | 0.863 | 0.703 | model | 250 / 216 of 628 | 0.814 (2) |
+| Oakland | 5,667 | 3 | 0.861 | 0.688 | model | 214 / 165 of 1,022 | 0.758 (2) |
+| San Francisco | 7,094 | 3 | 0.854 | 0.744 | model | 746 / 694 of 3,636 | 0.752 (2) |
+| Santa Cruz | 1,108 | 3 | 0.837 | 0.719 | model | 189 / 174 of 384 | 0.794 (1) |
+| Redwood City | 1,397 | 3 | 0.835 | 0.630 | model | 109 / 88 of 272 | 0.783 (1) |
 | Mountain View | 1,030 | 3 | 0.830 | 0.659 | model | 133 / 92 of 242 | 0.776 (1) |
-| Los Altos (alone) | 806 | 2 | 0.822 | 0.671 | blend | 40 / 31 of 72 | too few |
 | San Mateo | 1,519 | 2 | 0.805 | 0.571 | blend | 47 / 30 of 137 | too few |
 | Menlo Park | 675 | 3 | 0.804 | 0.685 | mixed | 111 / 97 of 170 | too few |
-| Berkeley | 1,437 | 3 | 0.795 | 0.686 | model | 244 / 234 of 796 | 0.742 (2) |
-| Santa Monica | 895 | 3 | 0.783 | 0.670 | model | 142 / 119 of 352 | too few |
+| Berkeley | 1,437 | 3 | 0.792 | 0.686 | model | 240 / 234 of 796 | 0.742 (2) |
+| Santa Monica | 895 | 3 | 0.783 | 0.670 | model | 144 / 119 of 352 | too few |
 | East Palo Alto | 279 | 2 | 0.744 | 0.622 | blend | 52 / 42 of 70 | too few |
 | Los Altos Hills | 372 | 0 | too few | too few | blend | – | too few |
+| Los Altos (alone) | 806 | 2 | 0.822 | 0.671 | blend | 40 / 31 of 72 | too few |
 
 In summary:
 
 | | Cities | Rank score, model | Rank score, past bike crashes alone |
 |---|---|---|---|
-| Scored, all cyclists | 27 | 0.744 to 0.904, median 0.864 | 0.529 to 0.757 |
+| Scored, all cyclists | 27 | 0.744 to 0.904, median 0.863 | 0.529 to 0.757 |
 | Scored for children | 17 | 0.742 to 0.895 | |
 | Model fitted in every window | 19 | | |
 
@@ -998,8 +998,8 @@ cities fitted alone (rerun, cross-city command):
 
 | Child crashes in the fitting years | City-windows (cities) | Ranking fitted to child crashes | All-cyclist ranking | Child ranking better in |
 |---|---|---|---|---|
-| Under 100 | 15 (12) | 0.789 | 0.812 | 0 |
-| 100 or more | 18 (7) | 0.833 | 0.835 | 10 |
+| Under 100 | 15 (12) | 0.789 | 0.810 | 0 |
+| 100 or more | 18 (7) | 0.834 | 0.835 | 10 |
 
 Under 100 child crashes, where the model cannot be fitted and the child
 ranking is the blend, it loses to the all-cyclist ranking every time. At
