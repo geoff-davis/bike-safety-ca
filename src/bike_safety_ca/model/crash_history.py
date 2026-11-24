@@ -339,14 +339,24 @@ def street_blend_score(
 
 MIN_CRASHES = 100
 
+# The spread power the rankings are fitted with.  At 1 every corner's own count gets the
+# same weight, alpha / (1 + alpha).  Fitting the power instead (``None``) changed the
+# hold-out results by far less than the margins set beforehand
+# (``python -m bike_safety_ca.checks.candidates``).
+SPREAD_POWER: float | None = 1.0
+
 
 def rank_intersections(
     bike: pd.Series,
     car: pd.Series,
     streets: Mapping[Any, Collection[str]],
     min_crashes: int = MIN_CRASHES,
+    spread_power: float | None = SPREAD_POWER,
 ) -> dict[str, Any]:
     """Score every intersection, by the fitted model where there is enough to fit it.
+
+    ``spread_power`` is passed to ``fit_street_model``; ``None`` fits the power, as
+    the model did before it was fixed at ``SPREAD_POWER``.
 
     With fewer than ``min_crashes`` bike crashes in all, or when the fit fails,
     the score is ``street_blend_score``, which needs no fitting.  On made-up
@@ -366,7 +376,7 @@ def rank_intersections(
         reason = f"{total} bike crashes, fewer than {min_crashes}"
     else:
         try:
-            fit = fit_street_model(bike, car, streets)
+            fit = fit_street_model(bike, car, streets, spread_power=spread_power)
         except (RuntimeError, ValueError, FloatingPointError) as error:
             reason = f"fit failed: {error}"
     if fit is not None and not bool(np.isfinite(fit["sites"].eb).all()):

@@ -60,6 +60,7 @@ def test_the_command_writes_the_ranking_as_a_table_and_a_map_file(
     assert list(table["rank"]) == list(range(1, len(table) + 1))
     assert table.score.is_monotonic_decreasing and table.score.iloc[0] > table.score.iloc[-1]
     assert set(table.method) == {"street-length model"} and table.fallback_reason.isna().all()
+    assert set(table.spread_power) == {1.0}  # the rankings' setting, written beside the method
     # The model's score is its expected count, given beside the count on record.
     assert (table.expected_bike_crashes == table.score).all()
     assert table.observed_bike_crashes.sum() > 100 and table.car_crashes.sum() > 100
@@ -124,6 +125,7 @@ def test_too_few_child_crashes_are_refused_unless_forced(
     # Too few to fit: the blend is used, and the file and the terminal both say so and why.
     assert set(table.method) == {"hand-built blend"}
     assert set(table.fallback_reason) == {f"{crashes} bike crashes, fewer than 100"}
+    assert table.spread_power.isna().all()
     assert table.expected_bike_crashes.isna().all() and table.score.is_monotonic_decreasing
     said = capsys.readouterr().out
     assert f"Method: hand-built blend ({crashes} bike crashes, fewer than 100)" in said
@@ -295,7 +297,7 @@ def test_a_child_ranking_is_refused_at_99_crashes_and_made_at_100(
     # matters here is at which count the model is tried.
     tried: list[int] = []
 
-    def fit(bike: pd.Series, car: pd.Series, streets: object) -> dict[str, object]:
+    def fit(bike: pd.Series, car: pd.Series, streets: object, **_: object) -> dict[str, object]:
         tried.append(int(bike.sum()))
         raise RuntimeError("four corners")
 

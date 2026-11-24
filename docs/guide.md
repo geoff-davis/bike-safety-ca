@@ -448,6 +448,7 @@ rank first.
 | `expected_bike_crashes` | The model's expected number of police-recorded bike crashes over the years used; empty when the blend was used |
 | `observed_bike_crashes`, `car_crashes` | Bike crashes and motor-vehicle-only crashes placed there |
 | `method` | "street-length model" or "hand-built blend" |
+| `spread_power` | The spread power the model was fitted with (1); empty for the blend |
 | `fallback_reason` | Why the blend was used; empty for the model |
 | `longitude`, `latitude` | The intersection's point |
 

@@ -105,7 +105,9 @@ def test_children_are_also_scored_on_the_all_cyclist_ranking() -> None:
         for k in (25, 50, 100):
             assert row[f"found in top {k}"] == round(top_share(ranked["score"], at(late), k), 1)
         own = children.xs(through, level="trained through").iloc[0]
-        assert row["found in top 100"] != own["found in top 100"]
+        # A different ranking from the child model's.  (One count can agree by chance: at
+        # spread power 1 both find 15 in the top 100 in one window.)
+        assert any(row[name] != own[name] for name in figures[1:] + ["found in top 100"])
         assert row["training crashes"] == int(early.group.eq(CHILD).sum())
 
     # Where every cyclist is a child the two rankings are one and the same.
