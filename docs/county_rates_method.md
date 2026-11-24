@@ -32,7 +32,7 @@ three ways.
 ## Step 1: compare with what the county's ages predict
 
 For each age group *a* take the statewide rate *s_a* (cases per resident per
-year). A county with *N_a* residents in that group would have
+year), from unique visits by age group. A county with *N_a* residents in that group would have
 
     E = Σ_a s_a · N_a
 
@@ -179,12 +179,13 @@ counties.
   residence.
 - **Coding.** Hospitals differ in how fully they code causes; some of the
   difference between counties is recording.
-- **Cause rows are assumed not to overlap.** The statewide table on hand is
-  split by cause, and the statewide rates add its rows up. If one visit can
-  appear under two causes the rates are too high. The total the site showed
-  above that table (noted by hand from its summary line, not checked by the
-  code) lies inside the range the rows give. That fits no overlap but does
-  not prove it, and CDPH has not confirmed it.
+- **Statewide rates count each visit once.** EpiCenter counts a visit once
+  under each injury mechanism or cause it is coded with, so a table split by
+  cause adds up to more than the visits (its FAQ; CDPH confirmed this in
+  reply to us in November 2026). The statewide rates therefore come from the
+  statewide table of unique visits by age group, not from the cause rows.
+  The e-bike report, which has to split by cause, says so and prints the
+  cause rows' total beside the unique visits.
 - **The state's own figures are taken as exact** apart from their hidden
   cells: chance in the statewide counts is not carried into the ranges.
 - **The spread is itself an estimate.** *m* and *k* are fitted and then used
@@ -193,5 +194,5 @@ counties.
 - **One ratio per county.** A county is given one ratio for all years and
   ages in the fit. A county whose rate is changing fast needs a fit by
   period.
-- **Not yet run on real counties.** Only Santa Clara County's tables and one
-  statewide table are on hand. The 58-county fit waits on the data.
+- **Not yet run on real counties.** Only two counties' tables and the
+  statewide tables are on hand. The 58-county fit waits on the data.

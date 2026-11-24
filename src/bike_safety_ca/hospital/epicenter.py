@@ -17,16 +17,17 @@ mechanisms: "MVT-Pedal Cyclist" (a motor-vehicle traffic crash) and "Pedal
 Cyclist, Other" (falls, paths, collisions with bikes or pedestrians). ICD-10-CM
 electric (assisted) bicycle codes, in use from October 2022, are counted under
 those same mechanisms and are separated here by injury cause description.
-A visit can carry codes in both mechanisms, so mechanism rows can sum to more
-than the unique visits; the ``total_*`` queries group without mechanism and give
-unique counts. Hospitalizations are pulled with EpiCenter's comprehensive case
+A visit is counted once under each mechanism or cause it is coded with
+(EpiCenter's FAQ, confirmed by CDPH in November 2026), so mechanism or cause
+rows can sum to more than the unique visits; the ``total_*`` queries group
+without mechanism or cause and give unique counts. Hospitalizations are pulled with EpiCenter's comprehensive case
 definition (an injury code anywhere on the record) and, as
 ``hosp_surveillance``, its surveillance definition (injury is the principal
 diagnosis, the main reason for admission).
 
 The site is a Shiny app with no API, so this module drives it with a
 browser, one table at a time with pauses between settings.  By default it
-pulls only the six tables the county and e-bike reports read
+pulls only the eight tables the county and e-bike reports read
 (``REPORT_TABLES``); ``--all`` pulls every table below, which takes much
 longer, and ``--only`` names tables to pull again.  Playwright is not a
 dependency; run with
@@ -37,10 +38,11 @@ dependency; run with
 Set EPICENTER_CHROMIUM to a Chromium executable if Playwright's own browser is
 not installed.
 
-One statewide table (no county filter, ``ed_state_*`` and ``hosp_state_*``)
-compares electric and ordinary bicycles by age group for 2023–2024, the first
-full years of the e-bike codes: county counts of e-bike admissions are mostly
-suppressed.  It is saved with each county's tables.
+Two statewide tables (no county filter, ``ed_state_*`` and ``hosp_state_*``)
+cover 2023–2024, the first full years of the e-bike codes: one by cause and age
+group, which compares electric and ordinary bicycles (county counts of e-bike
+admissions are mostly suppressed), and one of unique visits by age group, which
+gives the statewide rates.  They are saved with each county's tables.
 
 Saved to the ``--out`` folder: <outcome>_<query>.csv (one row per table cell,
 Count blank when suppressed) and epicenter_manifest.json (filters as the site
@@ -165,7 +167,10 @@ QUERIES: list[tuple[str, tuple[int, int], list[str], tuple[str, ...] | None]] = 
 # Statewide (no county filter), for the years with e-bike codes throughout.
 STATEWIDE_YEARS = (2023, 2024)
 STATEWIDE_QUERIES: list[tuple[str, tuple[int, int], list[str], tuple[str, ...] | None]] = [
+    # Split by cause: a visit coded under two causes is counted under each.
     ("state_bike_cause_age_groups", (0, 100), CAUSE_BY_AGE_GROUP, None),
+    # Unique visits, for the statewide rates.
+    ("state_total_age_groups", (0, 100), ["Age, Summary Groups"], None),
 ]
 Scope = tuple[str | None, tuple[int, int], list[tuple[str, tuple[int, int], list[str], Any]]]
 # The tables the county report and the e-bike report read (file names without
@@ -178,6 +183,8 @@ REPORT_TABLES = frozenset(
         "hosp_total_age_groups",
         "ed_state_bike_cause_age_groups",
         "hosp_state_bike_cause_age_groups",
+        "ed_state_total_age_groups",
+        "hosp_state_total_age_groups",
     }
 )
 # How long to wait for the person to read the agreement and click "I Agree".

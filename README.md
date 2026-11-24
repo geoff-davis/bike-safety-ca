@@ -189,7 +189,7 @@ its PDFs can be published with the TIMS and CCRS credits.
 
 The hospital downloader opens the state's EpiCenter site in a browser window
 and waits for you to read its user agreement and click "I Agree" yourself; it
-never accepts the agreement for you. By default it pulls only the six tables
+never accepts the agreement for you. By default it pulls only the eight tables
 the reports need. Hidden counts (under 11) are never worked out from
 other figures, and every chart credits the California Department of Public
 Health.
