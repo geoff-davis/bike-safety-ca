@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (final test set): Corona alone, Census
+# place 16350.  Not for development: see config/held_back/README.md.
+city: Corona
+county: Riverside
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+ccrs_county_code: 33
+ccrs_cities:
+  - Corona
+latitude: [33.60, 34.12]
+longitude: [-117.87, -117.28]

@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (selection set): South Gate alone, Census
+# place 73080.  Not for development: see config/held_back/README.md.
+city: South Gate
+county: Los Angeles
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+ccrs_county_code: 19
+ccrs_cities:
+  - South Gate
+latitude: [33.71, 34.17]
+longitude: [-118.43, -117.96]

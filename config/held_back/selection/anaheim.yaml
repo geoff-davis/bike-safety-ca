@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (selection set): Anaheim alone, Census
+# place 02000.  Not for development: see config/held_back/README.md.
+city: Anaheim
+county: Orange
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 11N, metres.
+crs: EPSG:26911
+ccrs_county_code: 30
+ccrs_cities:
+  - Anaheim
+latitude: [33.59, 34.08]
+longitude: [-118.22, -117.47]

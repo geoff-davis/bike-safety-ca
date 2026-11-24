@@ -15,6 +15,7 @@ from bike_safety_ca.model.crash_history import (
     shrink_to_street_mean,
     street_blend_score,
     street_length_average,
+    top_capture,
     top_share,
 )
 
@@ -318,3 +319,43 @@ def test_a_pair_of_bounds_holds_the_fitted_spread_power_between_them() -> None:
     fixed = fit_street_model(bike, car, streets, spread_power=held["spread_power"])
     assert held["aic"] == pytest.approx(fixed["aic"] + 2)
     assert held["aic"] >= free["aic"] - 1e-6
+
+
+def test_top_capture_is_the_mean_share_over_every_budget_up_to_the_ceiling() -> None:
+    score = pd.Series([9.0, 7.0, 5.0, 3.0, 1.0])
+    later = pd.Series([4, 0, 3, 2, 1])
+    # budgets 1, 2, 3 capture 4, 4 and 7 of the 10 later crashes
+    assert top_capture(score, later, 3) == pytest.approx((4 + 4 + 7) / 3 / 10)
+    # the same as weights 3/3, 2/3, 1/3 on the first three places
+    assert top_capture(score, later, 3) == pytest.approx((4 * 3 + 0 * 2 + 3 * 1) / 3 / 10)
+    for ceiling in (1, 2, 4, 5):
+        by_budget = [top_share(score, later, k) for k in range(1, ceiling + 1)]
+        assert top_capture(score, later, ceiling) == pytest.approx(np.mean(by_budget) / 10)
+    # a ceiling past the last site is the last site
+    assert top_capture(score, later, 50) == top_capture(score, later, 5)
+
+
+def test_top_capture_shares_places_among_ties() -> None:
+    score = pd.Series([5.0, 3.0, 3.0, 3.0, 1.0, 1.0])
+    later = pd.Series([2, 6, 0, 0, 4, 0])
+    # each of the three tied sites stands for 2 crashes: budgets 1, 2, 3 capture 2, 4, 6
+    assert top_capture(score, later, 3) == pytest.approx((2 + 4 + 6) / 3 / 12)
+    for ceiling in range(1, 7):
+        by_budget = [top_share(score, later, k) for k in range(1, ceiling + 1)]
+        assert top_capture(score, later, ceiling) == pytest.approx(np.mean(by_budget) / 12)
+    # the order the tied sites arrive in does not matter
+    shuffled = [3, 1, 5, 0, 2, 4]
+    assert top_capture(score[shuffled], later[shuffled], 3) == pytest.approx(1 / 3)
+
+
+def test_top_capture_of_a_list_that_says_nothing_is_the_random_value() -> None:
+    later = pd.Series([0, 3, 0, 1, 0, 0, 2, 0, 0, 0] * 20)
+    flat = pd.Series(1.0, index=later.index)
+    assert top_capture(flat, later, 10) == pytest.approx((10 + 1) / (2 * 200))
+
+
+def test_top_capture_is_not_a_number_without_later_crashes_or_places() -> None:
+    score = pd.Series([2.0, 1.0])
+    assert np.isnan(top_capture(score, pd.Series([0, 0]), 1))
+    assert np.isnan(top_capture(score, pd.Series([1, 0]), 0))
+    assert np.isnan(top_capture(pd.Series([], dtype=float), pd.Series([], dtype=float), 3))

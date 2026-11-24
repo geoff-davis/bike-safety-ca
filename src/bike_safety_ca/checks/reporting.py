@@ -117,6 +117,14 @@ REGRADED_BAND = 0.2
 SEVERITY_COLOURS = dict(
     zip(SEVERITIES.values(), ["#c6dbef", "#6baed6", "#2171b5", "#08306b"], strict=True)
 ) | {NO_SEVERITY: "#c4c4c4"}
+# The check of minor-injury recording (``minor_injury_change``): the two least
+# severe grades, per year, in a later period against an earlier one.  2020 is in neither.
+MINOR = ("3", "4")
+MINOR_BEFORE, MINOR_AFTER = (2016, 2019), (2021, 2024)
+MINOR_FALL, MINOR_RISE = 0.5, 1.5
+# Not judged when more than this share of a period's injury crashes has no severity.
+MINOR_UNGRADED = 0.1
+CHANGED, STEADY, NOT_ASSESSABLE = "flagged", "not flagged", "not assessable"
 LINE, FLAG, INK, MUTED, GRID = "#2f6fb5", "#b3261e", "#1f2328", "#6b7280", "#e5e7eb"
 
 
@@ -238,6 +246,53 @@ def by_severity(crashes: pd.DataFrame) -> pd.DataFrame:
     )
     table = table.reindex(index=full, columns=list(SEVERITY_COLOURS), fill_value=0)
     return table if table[NO_SEVERITY].any() else table.drop(columns=NO_SEVERITY)
+
+
+def minor_injury_change(
+    crashes: pd.DataFrame,
+    before: tuple[int, int] = MINOR_BEFORE,
+    after: tuple[int, int] = MINOR_AFTER,
+) -> dict[str, Any]:
+    """Has the recording of minor-injury crashes changed between two periods?
+
+    ``crashes`` is an area's injury crashes (``year``, ``COLLISION_SEVERITY``),
+    every agency together.  ``ratio`` is the minor-injury crashes per year
+    (visible injury and complaint of pain) in ``after`` over the same in
+    ``before``, both ends of a period included.  ``verdict`` is ``CHANGED``
+    when the ratio is under ``MINOR_FALL`` or over ``MINOR_RISE``, and
+    ``STEADY`` otherwise.  It is ``NOT_ASSESSABLE``, with a ``reason``, when
+    a year of either period has no injury crash at all, when more than
+    ``MINOR_UNGRADED`` of a period's injury crashes have no severity, or when
+    the earlier period has no minor-injury crash: none of those is a
+    measured zero.
+
+    A flag is a change in the count, whatever its cause: fewer crashes,
+    fewer reports and a change of grading all look the same here.  A total
+    can also hide one agency's change behind another's.
+    """
+    severity = crashes.COLLISION_SEVERITY.astype("string").str.strip()
+    graded, minor = severity.isin(list(SEVERITIES)), severity.isin(list(MINOR))
+    found: dict[str, Any] = {"ratio": float("nan"), "verdict": NOT_ASSESSABLE, "reason": ""}
+    reasons = []
+    for name, (first, last) in (("before", before), ("after", after)):
+        within = crashes.year.between(first, last)
+        years = last - first + 1
+        found[f"minor per year {name}"] = int((minor & within).sum()) / years
+        found[f"ungraded share {name}"] = (
+            float((~graded & within).sum() / within.sum()) if within.any() else float("nan")
+        )
+        empty = sorted(set(range(first, last + 1)) - set(crashes.year[within].astype(int)))
+        if empty:
+            reasons.append(f"no injury crash in {', '.join(map(str, empty))}")
+        elif found[f"ungraded share {name}"] > MINOR_UNGRADED:
+            reasons.append(f"severity not recorded for many crashes in {first}-{last}")
+    if not reasons and not found["minor per year before"] > 0:
+        reasons.append(f"no minor-injury crash in {before[0]}-{before[1]}")
+    if reasons:
+        return found | {"reason": "; ".join(reasons)}
+    ratio = found["minor per year after"] / found["minor per year before"]
+    changed = ratio < MINOR_FALL or ratio > MINOR_RISE
+    return found | {"ratio": ratio, "verdict": CHANGED if changed else STEADY}
 
 
 def level_step(
@@ -677,6 +732,12 @@ def main() -> None:
     steps = steps.assign(reporting_agency=steps.reporting_agency.map(names))
     print("\nLasting changes of level, in all injury crashes and by severity")
     print(steps.to_string(index=False) if len(steps) else "none")
+    change = minor_injury_change(crashes)
+    print(
+        f"\nMinor-injury crashes per year, {MINOR_AFTER[0]}-{MINOR_AFTER[1]} over "
+        f"{MINOR_BEFORE[0]}-{MINOR_BEFORE[1]}: {change['ratio']:.2f}, {change['verdict']}"
+        + (f" ({change['reason']})" if change["reason"] else "")
+    )
     for path in write(crashes, args.out, config.synthetic):
         logging.info("wrote %s", path)
 
