@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -36,7 +37,13 @@ def _holds_shapefile(path: Path) -> bool:
 
 
 @retry(stop=stop_after_attempt(4), wait=wait_exponential(min=2, max=60), reraise=True)
-def _fetch(url: str, dest: Path) -> None:
+def _fetch(
+    url: str,
+    dest: Path,
+    check: Callable[[Path], bool] = _holds_shapefile,
+    expected: str = "a zip file holding a shapefile",
+) -> None:
+    """Download ``url`` to ``dest``, kept only if ``check`` passes on it (``expected`` says what it wants)."""
     staged = dest.with_name(dest.name + ".part")
     try:
         with httpx.stream(
@@ -50,11 +57,8 @@ def _fetch(url: str, dest: Path) -> None:
             with staged.open("wb") as handle:
                 for chunk in response.iter_bytes():
                     handle.write(chunk)
-        if not _holds_shapefile(staged):
-            raise ValueError(
-                f"the reply from {url} is not a zip file holding a shapefile; "
-                f"{dest.name} was not saved"
-            )
+        if not check(staged):
+            raise ValueError(f"the reply from {url} is not {expected}; {dest.name} was not saved")
         staged.replace(dest)
     except BaseException:
         staged.unlink(missing_ok=True)  # a download cut off part-way leaves nothing behind

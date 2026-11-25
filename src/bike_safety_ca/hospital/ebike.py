@@ -65,9 +65,8 @@ def counts(folder: Path, outcome: str) -> pd.DataFrame:
     every = pd.MultiIndex.from_product([["ebike", "bike"], GROUPS])
     by = [kind.to_numpy(), age]
     total = known.groupby(by)[["low", "high"]].sum().reindex(every, fill_value=0)
-    # A range from a single hidden cell would give away the published cells beside it.
-    if known.hidden.groupby(by).sum().reindex(every, fill_value=0).eq(1).any():
-        raise ValueError("an age group with exactly one hidden cell: do not print its range")
+    # A group joining hidden and published cells is printed as a range: its
+    # published part is in the source's own table, and the hidden cells stay 1 to 10.
     return pd.DataFrame(total.unstack(0)).reindex(GROUPS)
 
 

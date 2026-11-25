@@ -11,7 +11,7 @@ import pytest
 from scipy import stats
 
 from bike_safety_ca import links
-from bike_safety_ca.hospital import ebike, epicenter, population, report, tables
+from bike_safety_ca.hospital import ebike, epicenter, population, profile, report, tables
 
 GROUPS = ["<1", "1-4", "5-9", "10-14", "15-19", "20-24", "25-44", "45-64", "65-84", "85+"]
 CAUSES = [
@@ -158,14 +158,16 @@ def test_the_ebike_report_reads_only_the_statewide_tables(tmp_path, monkeypatch)
     assert f"]({links.REPO})" in text
     low, high = ebike.admission_ratio(tmp_path / "birch")
     assert 0 < low <= high and f"**{low:.2f} to {high:.2f}**" in text
-    # With one hidden e-bike cell in an age group, its range would give that cell away.
+    # One hidden e-bike cell beside published ones: the age group is a range, not withheld.
     for outcome in ("ed", "hosp"):
         name = f"{outcome}_state_bike_cause_age_groups"
         saved = tables.table(tmp_path / "birch", name).drop(columns="kind", errors="ignore")
         saved = saved[saved[report.CAUSE] != CAUSES[3]]
         _save(tmp_path / "birch", name, saved, None, epicenter.STATEWIDE_YEARS)
-    with pytest.raises(ValueError, match="exactly one hidden cell"):
-        ebike.markdown(tmp_path / "birch", tmp_path / "pep")
+    rows = ebike.table(tmp_path / "birch", tmp_path / "pep")
+    mixed = rows.ebike_visits_high > rows.ebike_visits_low
+    assert mixed.any() and (rows.ebike_visits_high - rows.ebike_visits_low)[mixed].eq(9).all()
+    ebike.markdown(tmp_path / "birch", tmp_path / "pep")
 
 
 def test_the_downloader_refuses_an_unknown_county_or_table():
@@ -178,7 +180,13 @@ def test_the_downloader_refuses_an_unknown_county_or_table():
 
 
 def test_the_default_pull_is_exactly_the_tables_the_reports_read():
-    assert set(report.TABLES) | set(ebike.STATE_TABLES) == epicenter.REPORT_TABLES
+    assert (
+        set(report.TABLES)
+        | set(ebike.STATE_TABLES)
+        | set(profile.TABLES)
+        | set(profile.TREND_TABLES)
+        == epicenter.REPORT_TABLES
+    )
     assert epicenter.REPORT_TABLES <= set(epicenter.table_names())
 
 

@@ -257,4 +257,8 @@ def test_statewide_tables_are_pulled_statewide_and_county_ones_for_the_county():
             for q in queries:
                 state = q[0].startswith("state_")
                 assert (where is None) == state
-                assert span == (epicenter.STATEWIDE_YEARS if state else epicenter.YEARS)
+                # Trends span the county years; the rest of the statewide tables, 2023-2024.
+                trend = q[0].startswith("state_trend_")
+                assert span == (
+                    epicenter.STATEWIDE_YEARS if state and not trend else epicenter.YEARS
+                )

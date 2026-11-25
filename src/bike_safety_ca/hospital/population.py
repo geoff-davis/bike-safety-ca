@@ -53,6 +53,8 @@ AGE_GROUPS = {
     "65-84": ["AGE6569_TOT", "AGE7074_TOT", "AGE7579_TOT", "AGE8084_TOT"],
     "85+": ["AGE85PLUS_TOT"],
 }
+# EpiCenter's sex labels -> the Census column suffix and total column for each
+SEXES = {"Male": ("_MALE", "POPEST_MALE"), "Female": ("_FEM", "POPEST_FEM")}
 # EpiCenter's own labels for the two groups joined into "0-4"
 UNDER_FIVE = ("<1", "&lt;1", "1-4")
 COUNTIES = 58
@@ -121,6 +123,13 @@ NAMES = (
 log = logging.getLogger(__name__)
 
 
+def _holds_county_table(path: Path) -> bool:
+    """A Census county CSV: its header names the county code and the population estimate."""
+    with path.open(encoding="latin-1") as handle:
+        header = handle.readline().strip().split(",")
+    return {"COUNTY", "CTYNAME", "YEAR", "POPESTIMATE"} <= set(header)
+
+
 def download(out: Path, overwrite: bool = False) -> list[Path]:
     """Fetch the two Census files into ``out``; returns their paths."""
     out.mkdir(parents=True, exist_ok=True)
@@ -128,17 +137,24 @@ def download(out: Path, overwrite: bool = False) -> list[Path]:
     for name, url, *_ in SOURCES:
         dest = out / name
         if overwrite or not dest.exists():
-            _fetch(url, dest)
+            _fetch(url, dest, _holds_county_table, "a Census county table (CSV)")
         paths.append(dest)
     return paths
 
 
-def tidy(raw: pd.DataFrame, first_year: int, first_code: int, last_year: int) -> pd.DataFrame:
+def tidy(
+    raw: pd.DataFrame,
+    first_year: int,
+    first_code: int,
+    last_year: int,
+    sex: str | None = None,
+) -> pd.DataFrame:
     """One Census file as rows of county, year, age group and residents.
 
     ``raw`` has the file's columns; ``first_code`` is the YEAR code of 1 July
     ``first_year``.  Codes before it (census counts and estimate bases) and
-    years after ``last_year`` are left out.
+    years after ``last_year`` are left out.  ``sex`` ("Male" or "Female")
+    counts that sex only; None counts everyone.
     """
     named = set(zip(raw.COUNTY.astype(int), raw.CTYNAME))
     if named != {(code, f"{name} County") for code, name in zip(CODES, NAMES)}:
@@ -146,8 +162,12 @@ def tidy(raw: pd.DataFrame, first_year: int, first_code: int, last_year: int) ->
     year = raw.YEAR.astype(int) - first_code + first_year
     kept = raw[(year >= first_year) & (year <= last_year)]
     year = year[kept.index]
-    total = kept.POPESTIMATE.astype(int)
-    parts = {group: kept[columns].astype(int).sum(axis=1) for group, columns in AGE_GROUPS.items()}
+    suffix, total_column = SEXES[sex] if sex else ("_TOT", "POPESTIMATE")
+    total = kept[total_column].astype(int)
+    parts = {
+        group: kept[[c.removesuffix("_TOT") + suffix for c in columns]].astype(int).sum(axis=1)
+        for group, columns in AGE_GROUPS.items()
+    }
     wide = pd.DataFrame(parts)
     if not wide.sum(axis=1).eq(total).all():
         raise ValueError("the age groups do not add up to the county totals")
@@ -157,13 +177,36 @@ def tidy(raw: pd.DataFrame, first_year: int, first_code: int, last_year: int) ->
     return long.sort_values(["county", "year"]).reset_index(drop=True)
 
 
-def residents(folder: Path) -> pd.DataFrame:
-    """Residents by county, year (2010 on) and age group, from the saved files."""
+def residents(folder: Path, by_sex: bool = False) -> pd.DataFrame:
+    """Residents by county, year (2010 on) and age group, from the saved files.
+
+    With ``by_sex`` each row is one sex too, in a ``sex`` column named as
+    EpiCenter names it ("Male", "Female").
+    """
     frames = []
     for name, _url, first_year, first_code, last_year in SOURCES:
         raw = pd.read_csv(folder / name, encoding="latin-1", dtype=str)
-        frames.append(tidy(raw, first_year, first_code, last_year))
+        if not by_sex:
+            frames.append(tidy(raw, first_year, first_code, last_year))
+            continue
+        for sex in SEXES:
+            frames.append(tidy(raw, first_year, first_code, last_year, sex).assign(sex=sex))
     table = pd.concat(frames, ignore_index=True)
+    if by_sex:
+        whole = residents(folder).set_index(["county", "year", "age_group"]).residents
+        summed = table.groupby(["county", "year", "age_group"]).residents.sum()
+        if not summed.reindex(whole.index).eq(whole).all():
+            raise ValueError("men and women do not add up to everyone")
+        for sex in SEXES:
+            one = table[table.sex.eq(sex)].drop(columns="sex")
+            _complete(one)
+        return table
+    _complete(table)
+    return table
+
+
+def _complete(table: pd.DataFrame) -> None:
+    """Stop unless every county has every age group in every year, once, with no missing count."""
     years = range(SOURCES[0][2], SOURCES[-1][4] + 1)
     counties = sorted(table.county.unique())
     complete = pd.MultiIndex.from_product([counties, years, AGE_GROUPS])
@@ -179,7 +222,6 @@ def residents(folder: Path) -> pd.DataFrame:
         )
     if table.residents.isna().any() or (table.residents < 0).any():
         raise ValueError("a missing or negative resident count")
-    return table
 
 
 def age_group(label: str) -> str:

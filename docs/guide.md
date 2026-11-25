@@ -662,12 +662,28 @@ uv run python -m bike_safety_ca.hospital.report --county "Santa Clara" \
 uv run python -m bike_safety_ca.hospital.ebike \
     --tables data/raw/epicenter/santa_clara --residents data/raw/census/pep \
     --out output/hospital --pdf
+# all of California by age, sex, e-bike or not, and motor vehicle involved or not
+uv run python -m bike_safety_ca.hospital.profile \
+    --tables data/raw/epicenter/santa_clara --residents data/raw/census/pep \
+    --out output/hospital --pdf
 ```
+
+The statewide profile gives visits and admissions per 100,000 residents by age
+and sex (each visit counted once), how often a motor vehicle was involved
+(EpiCenter's "MVT-Pedal Cyclist" mechanism) by age and sex, the e-bike share
+and the motor-vehicle share for e-bikes and other bicycles, and the share
+admitted, each as a chart with its table in the appendix. The charts add a
+95% interval for chance to the range hidden counts allow. Once the two
+`*_state_trend_*` tables are pulled it adds trends over 2016–2024: rates by
+year for four broad age groups, the motor-vehicle share by year, and the
+e-bike share from 2023; without them it leaves the trends out. Its splits by
+cause or mechanism count a visit once under each cause it is coded with, so
+they are shares of coded injuries.
 
 Use one folder per county; the downloader refuses to mix two. `--pdf` needs
 Google Chrome or Chromium. The pull drives the site one table at a time. By
-default it pulls only the eight tables the two reports read; `--all` pulls the
-full set (69 tables, much slower), and `--only` names tables to pull
+default it pulls only the twenty tables the three reports read; `--all` pulls the
+full set (81 tables, much slower), and `--only` names tables to pull
 again, such as `--only ed_total_age_groups`.
 
 A hidden count is never worked out from totals or other cells. It enters
