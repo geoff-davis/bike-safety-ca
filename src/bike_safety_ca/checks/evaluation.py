@@ -60,6 +60,9 @@ TRAIN_TO, TEST_FROM, TEST_TO = 2020, 2021, 2024
 MARGIN = 1.0  # percentage points of capture
 NO_WORSE, WORSE, INCONCLUSIVE = "no worse", "worse", "inconclusive"
 CITY_MEAN, POOLED = "city mean", "pooled"
+# The columns a comparison can be made on: the capture, or the capture as a
+# percentage of what the best possible list would have captured.
+CAPTURE, OF_BEST = "capture", "share of best"
 DRAWS, SEED = 10_000, 20261124
 
 
@@ -78,6 +81,9 @@ def score_city(
     not a number when the city has no later crash of that kind.  ``larger``
     says the fitting years hold ``MIN_CRASHES`` bike crashes or more;
     ``fitted`` that the model itself was scored and not its fallback.
+    ``best capture`` is what a list in order of the later crashes themselves
+    would have captured, and ``share of best`` the capture as a percentage
+    of it.  That list is made with hindsight: it is not a benchmark a forecast is expected to reach.
     """
     train_to, test_from, test_to = window
 
@@ -108,7 +114,10 @@ def score_city(
     rows = []
     for outcome, frame in outcomes.items():
         later = count(frame, CYCLISTS, test_from, test_to)
+        # the list in order of the later crashes themselves: no list can capture more
+        best = 100 * top_capture(later.astype(float), later, places)
         for model in MODELS:
+            capture = 100 * top_capture(scores[model], later, places)
             rows.append(
                 {
                     "model": model,
@@ -119,7 +128,9 @@ def score_city(
                     "larger": int(early.sum()) >= MIN_CRASHES,
                     "fitted": fitted[model],
                     "later crashes": int(later.sum()),
-                    "capture": 100 * top_capture(scores[model], later, places),
+                    CAPTURE: capture,
+                    "best capture": best,
+                    OF_BEST: 100 * capture / best,
                 }
             )
     return pd.DataFrame(rows)
@@ -144,8 +155,11 @@ def compare(
     how: str = CITY_MEAN,
     draws: int = DRAWS,
     seed: int = SEED,
+    value: str = CAPTURE,
 ) -> dict[str, Any]:
     """``model`` minus ``other`` over the cities of ``table``, with a resampled range.
+
+    ``value`` is the column compared: ``CAPTURE`` or ``OF_BEST``.
 
     ``table`` is ``score_city`` for several cities with a ``city`` column.
     ``units`` maps a city to its unit (itself when not given or not named);
@@ -160,14 +174,14 @@ def compare(
     if rows.empty:
         return {
             "model": model, "other": other, "outcome": outcome, "aggregate": how,
-            "cities": 0, "without": 0, "units": 0,
+            "value": value, "cities": 0, "without": 0, "units": 0,
             **dict.fromkeys(("model value", "other value", "difference", "lower", "upper"), float("nan")),
         }  # fmt: skip
-    wide = rows.pivot(index="city", columns="model", values="capture")
+    wide = rows.pivot(index="city", columns="model", values=value)
     later = rows.groupby("city")["later crashes"].first().reindex(wide.index).to_numpy(float)
     mine, theirs = wide[model].to_numpy(float), wide[other].to_numpy(float)
     found: dict[str, Any] = {
-        "model": model, "other": other, "outcome": outcome, "aggregate": how,
+        "model": model, "other": other, "outcome": outcome, "aggregate": how, "value": value,
         "cities": int((later > 0).sum()), "without": int((later == 0).sum()),
         "model value": _aggregate(mine, later, how), "other value": _aggregate(theirs, later, how),
     }  # fmt: skip
@@ -291,7 +305,8 @@ def report(
     and the chosen model against past car crashes, pooled on fatal or
     severe crashes.  ``without flagged cities`` repeats ``primary`` over the
     larger cities that are ``clear`` (a sensitivity result, which has no
-    values when none is).  ``smaller cities`` is the chosen model against
+    values when none is).  ``share of best possible`` repeats ``primary``
+    on ``OF_BEST``, a secondary result with no rule.  ``smaller cities`` is the chosen model against
     the two floors, pooled over the cities under the fitting threshold.
     """
     result: dict[str, Any] = {"frozen": dict(frozen)} if frozen else select(table, units, **options)
@@ -307,6 +322,10 @@ def report(
     unflagged = larger[larger.city.map(lambda city: bool(clear.get(city, False)))]
     result["without flagged cities"] = [
         compare(unflagged, a, b, units, **options) for a, b in pairs
+    ]
+    # A secondary result: the primary pairs as a share of the best possible list.
+    result["share of best possible"] = [
+        compare(larger, a, b, units, value=OF_BEST, **options) for a, b in pairs
     ]
     smaller = table[~table.larger]
     result["smaller cities"] = [
