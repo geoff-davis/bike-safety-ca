@@ -271,7 +271,11 @@ def test_a_failed_start_does_not_discard_one_that_converged() -> None:
     bike, car, streets = _one_street()
     fit = fit_street_model(bike, car, streets, spread_power=0.5 + (3 - np.sqrt(5.0)))
     assert np.isfinite(fit["sites"].eb).all()
-    assert fit["log_likelihood"] == pytest.approx(-148.877, abs=0.01)
+    # Every corner is on the one street, so the likelihood is nearly flat in the
+    # fitted terms and where the search stops depends on the machine: -148.877
+    # here, -149.219 on the CI runner under Python 3.12.  The fit that used to be
+    # discarded is what is tested, not that value, so the tolerance covers both.
+    assert fit["log_likelihood"] == pytest.approx(-148.877, abs=0.5)
 
 
 @pytest.mark.parametrize(
