@@ -82,3 +82,66 @@ Verdict: **accepted, round 2**. ES-001 through ES-003 are closed; no new correct
 Verification used the actual snapshot functions extracted by AST, with synthetic comparison bounds and in-memory frame/path/loading stand-ins. These checks exercised selection branches, early validation and result construction without accessing records or writing test artifacts. They do not independently verify pandas/NumPy integration or numerical fitting. The handoff reports `make check` passing (707 tests); full pytest/make checks were not rerun here because NumPy, pandas and pytest are unavailable. No protected paths were opened and no real city was fitted or scored.
 
 Ledger: ES-001 closed; ES-002 closed; ES-003 closed. Loop evaluation-scoring-1 ends accepted at round 2. The explicitly deferred sensitivity, smaller-stratum, additional secondary measures and manifests remain outside this acceptance. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or held-back scoring run.
+
+## Loop 2 (`evaluation-scoring-2`): handoff, round 1
+
+- Implementer: `bsc-implementer`, pane `wF:p1`. Base commit `601e59a`. Snapshot: `/tmp/bsc-review/evaluation-scoring2-r1/` (`staged.diff` against `601e59a`, and `tree/`). Round 1 of at most 3. Expires (UTC): `2026-11-25T01:14:59Z`.
+- Files: `src/bike_safety_ca/checks/evaluation.py`, `tests/test_evaluation.py`.
+- Intended behaviour: the pieces the plan requires before a selection city is scored that loop 1 left out.
+  - `reporting_checks`: per city, `reporting.minor_injury_change` on the merged table and the agency check's certain falls and rises in injury crashes (as `reporting.diagnose` computes them) from the first fitting year to the last scored year. `clear` only when the first is "not flagged" (so "not assessable" is not clear) and the second lists nothing. Reads counts, no ranking and no score. Restricting the agency check to certain changes in those years is a choice made here; the plan says only "the existing agency reporting check".
+  - `main`: `without flagged cities` repeats the primary pairs over larger cities that are clear (a sensitivity result); `smaller cities` gives the pooled all-injury pairs over cities under the fitting threshold (descriptive); `manifest.csv` lists every scored city with its unit, sizes, later crash counts, the two checks and a hash of its crash table; `run.json` records the revision, window, margin, draws, seed and assignment salt and the configs not built.
+- Verification: `make check` passes (710 tests). The command was run end to end on the 28 development cities only: 21 clear, 3 flagged by the minor-injury check, 7 with an agency year. No held-back city has been scored.
+- Known limitations: `main` itself is covered by the two refusal tests and the development rehearsal, not by a unit test of a full run; `run.json` records HEAD and does not say whether the tree was clean; count accuracy and the other secondary measures are still not built.
+
+## Review — evaluation-scoring-2, round 1
+
+Verdict: **changes required, round 1**. Two confirmed correctness findings in the newly added outputs. The previously closed ES-001 through ES-003 remain closed.
+
+### ES-004 — an empty clear subset aborts the entire run (confirmed, blocking, high)
+
+Location: `src/bike_safety_ca/checks/evaluation.py:333–334`, through `compare` at lines 158–161.
+
+Every larger city may legitimately be flagged or not assessable, especially while only a few cities are built. Then `clear` has zero rows, but the new code unconditionally calls `compare(clear, ...)`. Pivoting an empty scored table leaves no model columns, so `wide[model]` raises `KeyError`. The valid primary and companion calculations have already completed and `cities.csv` has been written, but `result.json`, `manifest.csv` and `run.json` are not written. A descriptive sensitivity subset must not make the main result unusable.
+
+Handle zero clear cities explicitly: emit a clearly unavailable/empty sensitivity result with its city count and reason, or make `compare` return a consistent zero-city, undefined comparison without trying to access nonexistent model columns or resample zero groups. Do not substitute all cities for an empty subset. Add a command-level regression where all scored larger cities have `clear=False`, including not-assessable checks, and verify that the primary/companion result and manifests are still produced.
+
+Verification: executed the actual AST-extracted `compare` with an empty-frame stand-in whose pivot has no model columns, matching the empty pandas shape. It raises `KeyError: 'B: spread power 1'` before aggregation. Source inspection confirms that the newly unconditional sensitivity call precedes all three final output files. No real city or record was used.
+
+### ES-005 — smaller cities are not compared with the car-history floor (confirmed, blocking, medium)
+
+Location: `evaluation.py:336–338`, reusing `pairs` from line 324.
+
+The accepted smaller-city design evaluates the deployed blend against both history floors. The new smaller-city output reuses the larger primary pairs: chosen-minus-past-bike and chosen-minus-comparator. B, H and street context all fall back to the same blend under the fitting threshold, so the second comparison is identically blend-minus-blend, while past car crashes are never included. For example, choosing B with comparator H emits pooled B−past-bike and B−H, with no B−past-car result.
+
+Construct the smaller-city descriptive pairs against BIKE and CARS, using the deployed blend (or the equivalent chosen candidate fallback). An additional candidate/comparator entry may be retained, but cannot replace the car floor. Keep these results pooled and outside the decision rule. Test a table containing smaller cities and assert that both floor comparisons are emitted.
+
+Verification: executed the actual AST assignment that builds `result['smaller cities']`, with a nonempty synthetic smaller table and a trace-only comparison function. It emitted `(B, BIKE)` and `(B, H)`, both pooled, and no CARS comparison.
+
+### Other scope and verification
+
+The new `clear` predicate appropriately distinguishes not-assessable minor checks from clear cities, retains flagged cities in the main results, and labels the filtered result as sensitivity rather than a correction. The manifest retains the scored city's unit and later outcome counts, reporting results and crash-table checksum. The explicit choice to use only certain agency changes is recorded in the handoff and docstring; the existing dirty-tree/revision limitation is acknowledged rather than re-reported.
+
+Full pytest/`make check` were not independently rerun because this review environment lacks NumPy, pandas and pytest. The handoff reports 710 passing tests and a development-only rehearsal. The focused standard-library checks used the actual new control flow with synthetic stand-ins; they do not verify pandas integration or numerical resampling. No real crash records or protected paths were opened, and no city was built, fitted or scored by this review.
+
+Ledger: ES-004 and ES-005 open; ES-001 through ES-003 remain closed. Request round 2 with a fresh snapshot after testing the findings. Implementer releases the reviewer lock. This review does not authorize a commit, push, merge or held-back evaluation run.
+
+## Loop 2: handoff, round 2
+
+- Implementer: `bsc-implementer`, pane `wF:p1`. Snapshot: `/tmp/bsc-review/evaluation-scoring2-r2/` (`staged.diff` against `601e59a`). Round 2 of at most 3. Expires (UTC): `2026-11-25T01:22:07Z`.
+- ES-004: confirmed and fixed. `compare` on no cities returns the comparison with no values (0 cities, not a number) instead of raising, so a set with no clear larger city, or no smaller city, still writes every output. Tested for both, and that the result still serialises.
+- ES-005: confirmed and fixed. The smaller cities are compared with both floors (past bike crashes and past car crashes), pooled, never with the comparator.
+- To make both testable the result assembly moved out of `main` into `report(table, units, clear, frozen)`, tested on made-up scores for the pairs, aggregates, outcomes and city counts of each result, with and without a frozen choice. `main` now reads, calls `report`, and writes.
+- `make check` passes (712 tests). Rehearsed again end to end on the development cities only.
+
+## Review — evaluation-scoring-2, round 2
+
+Verdict: **accepted, round 2**. ES-004 and ES-005 are closed; no new correctness findings in the revised scope.
+
+- **ES-004 closed:** `compare` now detects an empty outcome subset before pivoting or resampling and returns zero city/unit counts with undefined numerical results. The extracted `report` function preserves primary and companion results when no larger city is clear, and also handles an empty smaller-city subset. Regression tests exercise both cases and serialization.
+- **ES-005 closed:** smaller-city output now explicitly compares the deployed candidate fallback against both BIKE and CARS, pooled, instead of substituting the fitted-model comparator for the car floor. The new assembly test checks both pairs and the smaller-city count.
+
+Verification: executed the actual AST-extracted empty-comparison path with a stand-in that raises if pivoting is attempted. It returned the expected zero counts and undefined values for both outcomes. Exercised the actual `report` assembly with synthetic frame/selection/comparison stand-ins: no-clear cities, no-smaller cities, both floor pairs, retained primary/companion results, and both selection and frozen-choice paths pass. Read the refactoring, its call from `main`, and the new regression tests. These focused checks exercise control flow and result construction, not pandas integration or numerical bootstrap behavior.
+
+The handoff reports `make check` passing (712 tests) and a repeated development-only rehearsal. Full pytest/make checks were not independently rerun here because NumPy, pandas and pytest are unavailable. No protected paths or records were opened and no real city was built, fitted or scored.
+
+Ledger: ES-004 closed; ES-005 closed; ES-001 through ES-003 remain closed. Loop evaluation-scoring-2 ends accepted at round 2. The known remaining secondary-measure and revision/dirty-tree limitations retain their stated scope. Implementer releases the reviewer lock. This review does not authorize a commit, push, merge or held-back evaluation run.
