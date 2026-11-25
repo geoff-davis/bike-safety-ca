@@ -256,3 +256,69 @@ def test_the_scores_do_not_depend_on_the_order_street_names_are_read_in() -> Non
     backwards = scores({site: roads[::-1] for site, roads in names.items()})
     rotated = scores({site: roads[1:] + roads[:1] for site, roads in names.items()})
     assert forwards == backwards == rotated
+
+
+def _one_street() -> tuple[pd.Series, pd.Series, dict]:
+    """120 corners on one street: the first optimiser start fails here, the second converges."""
+    rng = np.random.default_rng(7)
+    bike, car = pd.Series(rng.poisson(1, 120)), pd.Series(rng.poisson(3, 120))
+    return bike, car, {site: {"S"} for site in bike.index}
+
+
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.SingularMatrixWarning")
+def test_a_failed_start_does_not_discard_one_that_converged() -> None:
+    bike, car, streets = _one_street()
+    fit = fit_street_model(bike, car, streets, spread_power=0.5 + (3 - np.sqrt(5.0)))
+    assert np.isfinite(fit["sites"].eb).all()
+    # Every corner is on the one street, so the likelihood is nearly flat in the
+    # fitted terms and where the search stops depends on the machine: -148.877
+    # here, -149.219 on the CI runner under Python 3.12.  The fit that used to be
+    # discarded is what is tested, not that value, so the tolerance covers both.
+    assert fit["log_likelihood"] == pytest.approx(-148.877, abs=0.5)
+
+
+@pytest.mark.parametrize(
+    ("attempts", "kept"),
+    [
+        ([(False, np.nan), (True, 9.0)], 9.0),  # a failed start with no value
+        ([(False, 3.0), (True, 9.0)], 9.0),  # a failed start that stopped lower
+        ([(True, 9.0), (True, 4.0)], 4.0),  # both converged: the lower one
+        ([(True, np.inf), (True, 9.0)], 9.0),
+        ([(False, 3.0), (False, np.nan)], None),  # neither usable: the fit fails
+    ],
+)
+def test_the_fit_is_chosen_among_the_starts_that_converged(
+    monkeypatch: pytest.MonkeyPatch, attempts: list[tuple[bool, float]], kept: float | None
+) -> None:
+    from types import SimpleNamespace
+
+    from bike_safety_ca.model import crash_history
+
+    queue = iter(attempts)
+
+    def stub(loss: object, start: np.ndarray, **_: object) -> SimpleNamespace:
+        success, value = next(queue)
+        return SimpleNamespace(success=success, fun=value, x=np.zeros(len(start)))
+
+    monkeypatch.setattr(crash_history, "minimize", stub)
+    count, design = np.ones(4), np.ones((4, 1))
+    if kept is None:
+        with pytest.raises(RuntimeError, match="did not converge"):
+            crash_history._fit_spread(count, design, 1.5)
+    else:
+        assert crash_history._fit_spread(count, design, 1.5)[2] == -kept
+
+
+def test_a_pair_of_bounds_holds_the_fitted_spread_power_between_them() -> None:
+    bike, car, streets = _synthetic()
+    free = fit_street_model(bike, car, streets)
+    low, high = free["spread_power"] + 0.2, free["spread_power"] + 0.6
+    held = fit_street_model(bike, car, streets, spread_power=(low, high))
+    # The free fit's power lies below the bounds, so the held one stops near the lower.
+    assert low <= held["spread_power"] <= high
+    assert held["spread_power"] - low < 0.05
+    # It is still counted as a fitted parameter, and it cannot fit better than the free one.
+    fixed = fit_street_model(bike, car, streets, spread_power=held["spread_power"])
+    assert held["aic"] == pytest.approx(fixed["aic"] + 2)
+    assert held["aic"] >= free["aic"] - 1e-6

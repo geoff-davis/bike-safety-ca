@@ -133,7 +133,9 @@ def score_corridors(
     index = km.index
     corners = {name: sites for name, sites in corners.items() if name in index}
     reasons = []
-    ranked = rank_intersections(bike_site, car_site, streets, min_crashes)
+    # The corner part keeps the fitted spread power: the corridor table sums expected
+    # counts, and only the intersection ranking has been compared at power 1.
+    ranked = rank_intersections(bike_site, car_site, streets, min_crashes, spread_power=None)
     if ranked["fit"] is not None:
         corner_score, corner_method = ranked["score"], MODEL
     else:  # the blend only orders corners; past crashes keep the sum a count
