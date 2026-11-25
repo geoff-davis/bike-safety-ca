@@ -145,7 +145,7 @@ good.
   depending on the city and window (27 cities, 74 windows; the highest
   shares are in cities with gaps in police reporting). History cannot order
   them at all; the model can. See "Corners with no bike crash on record" in
-  [the model write-up](forecasting_model.md#62-corners-with-no-bike-crash-on-record).
+  [the model write-up](forecasting_model.md#52-corners-with-no-bike-crash-on-record).
 - **Cities with little bike history per corner.** Fresno's history alone
   scores 0.553; the model scores 0.863.
 - **Children, in the large cities.** With 40 or more later child crashes a
@@ -192,7 +192,7 @@ good.
   and history's 1,675. The model's gain is mostly further down. (When the
   model fitted its spread power the list was Encinitas and Menlo Park, and
   the total 1,940; see "The spread power, fixed at 1" in
-  [the model write-up](forecasting_model.md#42-the-spread-power-fixed-at-1).)
+  [the model write-up](forecasting_model.md#122-the-spread-power-fixed-at-1).)
 - **Very small cities.** Los Altos Hills (372 intersections) and East Palo
   Alto (279) have too few crashes to fit the model. East Palo Alto scores
   lowest, and Los Altos Hills has too few later crashes to be scored at all.
@@ -210,7 +210,7 @@ good.
 - **Much of it is exposure.** In an earlier one-off run on the Los Altos
   study area (its script is not included), street length alone scored 0.849 against the model's 0.856 (see
   "What each choice contributes" in
-  [the model write-up](forecasting_model.md#46-what-each-choice-contributes)).
+  [the model write-up](forecasting_model.md#126-what-each-choice-contributes)).
 - **It ignores the level.** A forecast wrong by a factor of two everywhere
   scores the same.
 - **It is not comparable across cities.** It depends on how varied a city's
@@ -324,7 +324,7 @@ pool without San Jose:
 Two cautions. Pool with cities that resemble yours: South Lake Tahoe has no
 such neighbour. And a pool mixes police departments, so a change in one
 department's reporting distorts a ranking across the pool (see "Pooling with neighbours" in
-[the model write-up](forecasting_model.md#73-pooling-with-neighbours)): run the reporting check on the pool, and score or publish inside each
+[the model write-up](forecasting_model.md#63-pooling-with-neighbours)): run the reporting check on the pool, and score or publish inside each
 city. A pool cannot yet cross a county line.
 
 **Setting up a pool.** A pooled area is an ordinary config, built with the

@@ -1,86 +1,350 @@
 # The intersection crash forecasting model
 
-Status: 22 November 2026. This is the full write-up of the model that ranks
-intersections by the bike crashes police are likely to record there: what it
-assumes, its form, why each choice was made, how it was tested, how it does
-in 28 California cities, what it falls back to with less data, and the crash
-records it is built from. Derivations are in the appendix.
+Status: 24 November 2026. This is the full write-up of the model that ranks
+intersections by the bike crashes police are likely to record there. It
+starts with how well the model does on cities it was not developed on,
+against past bike crashes alone and against a model from the road-safety
+literature, and how that was evaluated. The earlier tests, the fallback for
+small cities, the crash records and the limits follow. The model itself,
+the reason for each choice and the derivations are at the end.
 
 Every figure is a total over many intersections, or a score; no individual
 crash is described. Figures built from crash records carry the credits at
 the end. [Where the ranking helps most and least](where_the_ranking_helps.md)
-is the detailed companion for the city-by-city results, and the
-[guide](guide.md) says how to run each command.
+is the detailed companion for the city-by-city results on the development
+cities, and the [guide](guide.md) says how to run each command.
 
 **What a reader can rerun.** The crash records are not in this repository
 (see "Crash records" in the guide), so no table here can be rerun from it
-alone. With TIMS exports and the CCRS download, the tables marked "rerun"
-come from the repository's own commands at revision `c87bd4e`, on the crash
-tables of 21 November 2026; the command is given with each. Tables marked
-"one-off" come from scripts that are not in the repository, and those
-marked "not rerun" have not been repeated since the fixes of 15 to 21
+alone. With TIMS exports and the CCRS download, the figures of sections 1
+and 2 come from one command at the revision tagged
+`evaluation-final-test-run`, and the tables marked "rerun" in the later
+sections from the repository's own commands at revision `c87bd4e`, on the
+crash tables of 21 November 2026; the command is given with each. Tables
+marked "one-off" come from scripts that are not in the repository, and
+those marked "not rerun" have not been repeated since the fixes of 15 to 21
 November 2026 to crash placement, street names and the merge of the two
-sources. "Which figures are current", near the end, lists them.
+sources. "Which figures are current" lists them.
 
 ## Contents
 
 - [Summary](#summary)
-- [1. What is forecast](#1-what-is-forecast)
-- [2. Assumptions](#2-assumptions)
-- [3. The model](#3-the-model)
-- [4. Why each choice was made](#4-why-each-choice-was-made)
-- [5. How it was tested](#5-how-it-was-tested)
-- [6. Performance on California cities](#6-performance-on-california-cities)
-- [7. Cities with less data: the fallback](#7-cities-with-less-data-the-fallback)
-- [8. The crash records](#8-the-crash-records)
-- [9. Limits](#9-limits)
-- [10. Which figures are current, and reproducing them](#10-which-figures-are-current-and-reproducing-them)
+- [1. How well it performs](#1-how-well-it-performs)
+- [2. How it was evaluated](#2-how-it-was-evaluated)
+- [3. What is forecast](#3-what-is-forecast)
+- [4. How it was tested during development](#4-how-it-was-tested-during-development)
+- [5. Performance on the development cities](#5-performance-on-the-development-cities)
+- [6. Cities with less data: the fallback](#6-cities-with-less-data-the-fallback)
+- [7. The crash records](#7-the-crash-records)
+- [8. Limits](#8-limits)
+- [9. Which figures are current, and reproducing them](#9-which-figures-are-current-and-reproducing-them)
+- [10. Assumptions](#10-assumptions)
+- [11. The model](#11-the-model)
+- [12. Why each choice was made](#12-why-each-choice-was-made)
 - [Appendix: derivations](#appendix-derivations)
 - [References](#references)
 - [Data credits](#data-credits)
 
 ## Summary
 
-- The model follows from two ordinary assumptions: crash counts are Poisson
-  with rates that vary from corner to corner around an expectation, and the
-  bike-crash rate is a product of powers of car and bike traffic.
-- Neither flow is measured. The corner's car-crash record stands in for car
-  traffic, and the bike-crash record of the corner's named streets stands in
-  for bike traffic. The only road feature used is the number of
-  intersections on each named street.
-- Three choices matter, each made on the fitting years alone: a street with
-  little record is pulled hard toward what is typical for a street with that
-  many intersections; a corner's own crash count is blended with that
-  background by one weight for the whole fit; and a corner on two streets
-  adds the two streets' averages.
-- What is ranked is the model's estimate of the number of police-recorded
-  bike crashes at the corner over the years it was fitted on, not risk per
-  rider. The maps and lists show that estimate beside the count on record
-  for the same years. It is not a count per year, and not a forecast of a
-  later period (section 1).
-- The last step is a weighted average of a background, learned from the
-  corner's streets and its car crashes, and the corner's own count. The
-  steps before it are not one textbook probability model: the background is
-  built from the same crash histories it is then compared with. The whole is
-  a prediction and shrinkage procedure that has been tested, and section
-  4.11 gives how it compares with textbook models fitted to the same data.
-- Tested by fitting on early years and scoring on later ones, it ranks
-  later bike crashes better than past bike crashes alone in every one of the
-  27 cities that could be scored, with mean rank scores (area under the ROC
-  curve) from 0.74 to 0.90 and 0.86 in the Los Altos study area. These are
-  retrospective tests on years seen during development, not a measure of
-  accuracy on new data.
-- With fewer than 100 bike crashes at intersections, or when the fit fails,
-  the code uses a hand-built blend of the same inputs that needs no fitting.
-  It orders intersections but gives no expected count. Fitting on a wider
-  area and reading the ranking inside the city is the better answer; for
-  children with under 100 crashes, the all-cyclist ranking is used.
-- The records are TIMS (SWITRS, injury crashes) merged with CCRS. The state's
-  move from SWITRS to CCRS, and changes in how departments report, move
-  counts by more than safety does. A reporting check is run before any
-  comparison of years or cities.
+- **On 37 cities held back from its development, the model's list finds
+  more of the later bike crashes than a list of past bike crashes alone in
+  every city.** Fitted on crashes through 2020 and scored on 2021–2024, it
+  captures 29.3% of later bike crashes at the top of the list against 21.3%,
+  a gain of 8.0 percentage points (6.8 to 9.1). A list in random order would
+  capture 2.5% (section 1).
+- **It is ahead of the closest model from the road-safety literature by a
+  small margin.** A negative binomial regression with the empirical Bayes
+  update, given the same street information, captures 28.7%: 0.6 points
+  less (0.2 to 1.0). Past car crashes alone capture 26.7%, so most of the
+  gain over past bike crashes can be had from the car-crash record, and the
+  model adds 2.6 points to that (1.8 to 3.4).
+- **How it was evaluated.** 64 cities that played no part in building the
+  model were split by a fixed rule into 22 for choosing between versions of
+  the model and 42 for one final test. The measure, the margins and the two
+  claims were written down first, the version was chosen on the first set,
+  and the final set was scored once (section 2).
+- **The gain is about the same on the cities the model was built on** (6.2
+  points over the same years) **and on fatal and severe crashes alone** (8.0
+  points, pooled), which are recorded more steadily than minor ones.
+- **What is ranked** is the model's estimate of the number of
+  police-recorded bike crashes at the corner over the years it was fitted
+  on, not risk per rider. The maps and lists show that estimate beside the
+  count on record for the same years. It is not a count per year, and not a
+  forecast of a later period (section 3).
+- **The model in one paragraph.** A corner's estimate is a weighted average
+  of a background and the corner's own count. The background comes from the
+  corner's car crashes, which stand in for car traffic, and the bike-crash
+  record of its named streets, which stands in for bike traffic. The only
+  road feature used is the number of intersections on each named street.
+  The steps are not one textbook probability model: the background is built
+  from the same crash histories it is then compared with. It is a
+  prediction and shrinkage procedure, justified by the tests. Sections 10
+  to 12 and the appendix give the assumptions, the formulas, the reason for
+  each choice and the derivations.
+- **Small cities.** With fewer than 100 bike crashes at intersections, or
+  when the fit fails, the code uses a hand-built blend of the same inputs
+  that needs no fitting. It orders intersections but gives no expected
+  count. On the five held-back cities under that threshold it is 5.7 points
+  ahead of past bike crashes alone. Fitting on a wider area and reading the
+  ranking inside the city is the better answer; for children with under 100
+  crashes, the all-cyclist ranking is used (section 6).
+- **The records** are TIMS (SWITRS, injury crashes) merged with CCRS. The
+  state's move from SWITRS to CCRS, and changes in how departments report,
+  move counts by more than safety does. A reporting check is run before any
+  comparison of years or cities (section 7).
+- **What the evaluation does not show.** It covers one pair of periods,
+  larger California cities and police-recorded injury crashes. The later
+  years had already happened when the test was run; a ranking frozen now
+  and scored on crashes not yet recorded has not been tried (section 8).
 
-## 1. What is forecast
+## 1. How well it performs
+
+All figures here are from the final test of section 2: 37 cities that
+played no part in building the model, each with at least 100 bike crashes
+at intersections in the fitting years. Every list is built from crashes
+through 2020 and scored on bike injury crashes at intersections in 2021 to
+2024, 3,756 of them.
+
+### 1.1 The measure
+
+**Capture at the top.** Take the first $k$ intersections on a list and
+count the share of the city's later bike crashes that happened at them.
+The score is the average of that share over every $k$ from 1 up to 5% of
+the city's intersections. It is higher when the corners with later crashes
+are near the top, and highest when the worst are first: the first corner
+counts toward every $k$, the last toward one. Intersections with equal
+scores share their places.
+
+- A list in random order scores about 2.5%.
+- The best possible list, in order of the later crashes themselves, scores
+  67% on average in these cities, not 100%: a short list cannot hold every
+  corner where a crash will happen. That list needs hindsight, and much of
+  where crashes fall in four years is chance, so it is a ceiling and not a
+  target.
+- The plain share of later crashes in the top 5% of corners is higher than
+  this score, because the score also averages over the shorter lists.
+
+The headline for a set of cities is the mean of the cities' scores, each
+city counting once. Ranges in brackets are the 5th to 95th percentile over
+10,000 resamplings of whole police agencies (Compton, Lancaster and Norwalk
+share one, so they are drawn together).
+
+### 1.2 Against simple lists and a model from the literature
+
+| List | Capture at the top | Share of the best possible |
+|---|---|---|
+| This model | 29.3% | 43.9% |
+| This model with the spread power fitted | 29.3% | 43.9% |
+| Empirical Bayes regression with street context | 28.7% | 42.9% |
+| Hand-built blend (the fallback) | 28.3% | 42.3% |
+| Past car crashes alone | 26.7% | 39.6% |
+| Past bike crashes alone | 21.3% | 32.4% |
+| Random order | 2.5% | |
+
+This model's lead over each, in percentage points of capture at the top:
+
+| This model minus | Difference | Cities where this model is ahead |
+|---|---|---|
+| Past bike crashes alone | +8.0 (+6.8 to +9.1) | 37 of 37 |
+| Past car crashes alone | +2.6 (+1.8 to +3.4) | 30 of 37 |
+| Hand-built blend | +1.0 (+0.4 to +1.5) | |
+| Empirical Bayes regression with street context | +0.6 (+0.2 to +1.0) | 23 of 37 |
+| This model with the spread power fitted | +0.01 (−0.18 to +0.24) | |
+
+Reading the tables:
+
+- **Past bike crashes alone** is the list a city makes by counting. The
+  model is ahead of it in every city, by 0.05 points in the closest
+  (Alhambra) and by 18 in the widest (Citrus Heights). As a share of the
+  best possible list the gain is 11.6 points (10.0 to 13.1).
+- **Past car crashes alone** is a much stronger list than past bike
+  crashes: where cars crash, bikes later do. Most of the model's gain over
+  bike crashes alone is available from the car record, and what the model
+  adds on top is 2.6 points.
+- **Empirical Bayes regression with street context** is the closest
+  standard method: a negative binomial regression of the bike count on the
+  corner's car crashes, the classes of its two main roads, and two columns
+  describing the other intersections on its streets, followed by the usual
+  update with the corner's own count (Hauer and others 2002). It uses
+  standard software and no predictor built from bike crashes. The model is
+  ahead by 0.6 points on average and in 23 of the 37 cities, so the
+  standard method does nearly as well. Section 12.11 describes it.
+- **The spread power** makes no difference: fixing it at 1, as the model
+  does, and fitting it give the same result to within 0.2 points.
+
+Which of these were claims and which are descriptions matters. Two claims
+were written down before the final test: that the model beats past bike
+crashes alone, and that it is no worse than the version with the power
+fitted by more than 1 point. Both were met. The comparisons with car
+crashes, the blend and the regression were not declared beforehand; they
+are computed from the same single run and reported as descriptions.
+
+Two models from the literature were not scored on the held-back cities.
+The regression without the street columns and a version with a random
+effect for each street were compared on the development cities only, where
+both did worse than the regression with street context (section 12.11).
+The kernel-smoothed empirical Bayes method of Katicha and Flintsch (2023)
+has not been run on these data at all.
+
+### 1.3 Fatal and severe crashes
+
+Minor injuries are recorded less steadily than serious ones (section 7.3),
+so the same lists were also scored on later bike crashes recorded as fatal
+or severe, pooled over the 37 cities. The lists themselves are unchanged:
+they are built from all injury crashes.
+
+| This model minus | Difference, fatal or severe, pooled |
+|---|---|
+| Past bike crashes alone | +8.0 (+5.7 to +10.2) |
+| Past car crashes alone | +2.6 (+0.9 to +4.3) |
+| This model with the spread power fitted | −0.4 (−0.7 to −0.1) |
+
+The gains are the same size as for all injury crashes. On this outcome the
+fitted power is slightly ahead; on the selection cities it was slightly
+behind (+0.35), so the difference is taken as noise of about a third of a
+point. This result had no pass or fail attached.
+
+### 1.4 Cities with a change in reporting, and smaller cities
+
+- **Without flagged cities.** Four of the 37 cities are flagged by a check
+  of their counts: a sharp change in minor-injury crashes between 2016–2019
+  and 2021–2024, or a fall or rise in an agency's yearly injury crashes
+  (section 2.5). Without them the lead over past bike crashes alone is 8.2
+  points (6.9 to 9.4) and over the fitted power 0.02.
+- **Smaller cities.** Five held-back cities have fewer than 100 bike
+  crashes at intersections in the fitting years, so every list there is the
+  hand-built blend. Pooled, it is 5.7 points ahead of past bike crashes
+  alone (3.4 to 7.3) and 1.7 ahead of past car crashes alone (0.1 to 3.2).
+
+### 1.5 The same measure on the other sets of cities
+
+| Set | Cities | This model | Past bike crashes alone | Difference |
+|---|---|---|---|---|
+| Development cities | 22 | 26.8% | 20.6% | +6.2 (+4.9 to +7.5) |
+| Selection set | 21 | 26.4% | 19.0% | +7.4 (+6.0 to +8.9) |
+| Final test | 37 | 29.3% | 21.3% | +8.0 (+6.8 to +9.1) |
+
+The development cities are the ones the model was built on, scored over
+the same years. The model does no worse on cities it had never seen. The
+levels differ between sets because the cities do, not because the model
+changed.
+
+## 2. How it was evaluated
+
+The tests of sections 4 and 5 were run on cities and years seen while the
+model was built, and the spread power was chosen on them. They cannot say
+how the model does elsewhere. This evaluation was designed for that
+question and fixed before any of its cities was scored. An independent
+code reviewer read the plan and the code before each step.
+
+### 2.1 The cities
+
+- **Candidates.** California cities outside the 28 used in development,
+  with at least 100 bike injury crashes on record in 2016 to 2020: 64
+  cities.
+- **Two sets.** Each city's Census place code is hashed with a fixed
+  phrase, and the result decides the set: about a third to a **selection
+  set** (22 cities), the rest to a **final-test set** (42). Cities sharing a police
+  agency go together. The rule leaves no room to place a city by its results.
+- **Larger and smaller.** A city counts in the headline if it has at least
+  100 bike crashes at intersections in the fitting years, the same
+  threshold at which the model is fitted and not its fallback: 21 of the 22
+  and 37 of the 42. The others are reported apart (section 1.4).
+- **Built before scoring.** All 64 were downloaded and built, and their
+  counts checked, before any list was scored. Each city is scored inside
+  its Census municipal limit.
+
+### 2.2 The periods
+
+Lists are built from crashes from 2015 through 2020 and scored on 2021 to
+2024, the last year TIMS reports as final. One pair of periods is used, so
+that no crash is counted in two overlapping tests.
+
+### 2.3 The decision rule
+
+Three versions were candidates, in order of simplicity: the regression
+with street context, this model with the spread power at 1, and this model
+with the power fitted between 1 and 2. A simpler version is kept unless it
+is shown to be worse.
+
+- **No worse** means the 5th percentile of the difference in capture at
+  the top (simpler minus the other, city mean) is above −1 percentage
+  point.
+- **On the selection set:** power 1 against the fitted power first, then
+  the regression against whichever was kept.
+- **Before the final test** the chosen version and its comparator were
+  written to a file. The scoring command will not score the final-test set
+  without that file.
+- **On the final-test set,** scored once, two claims: the chosen version
+  beats past bike crashes alone (5th percentile of the difference above 0),
+  and it is no worse than its comparator.
+
+### 2.4 What the selection set chose
+
+| Comparison, 21 cities | Difference | Verdict |
+|---|---|---|
+| Power 1 minus fitted power | +0.38 (+0.06 to +0.78) | No worse; power 1 kept |
+| Regression with street context minus power 1 | −0.55 (−1.05 to −0.05) | Inconclusive; power 1 kept |
+
+The regression was a near miss: its mean loss is inside the margin and its
+lower bound 0.05 beyond it. The choice written down was this model with
+the power at 1, compared with the fitted power.
+
+### 2.5 The reporting check
+
+Los Angeles's injury crash counts fell by more than half after 2020, almost
+all of it in minor injuries, while fatal and severe counts held. A fall
+like that is a change in what is recorded, and a later period recorded
+differently from the fitting period is a poor test. Two checks on counts,
+which read no list and no score, mark such cities:
+
+- minor-injury crashes per year in 2021–2024 below half, or above one and a
+  half times, the 2016–2019 level;
+- a fall or rise in an agency's yearly injury crashes, by the check of
+  section 7.4.
+
+Flagged cities stay in the headline. The result without them is given
+beside it (section 1.4). Los Angeles is in the selection set and is flagged
+by both; in the final-test set Culver City is, and Alhambra, Ontario,
+Santa Clara, Santa Rosa and Corona by the second alone.
+
+### 2.6 What was fixed in advance, and what was not
+
+- **Fixed before any held-back city was scored:** the candidates, the
+  measure, the periods, the margin, the two sets, the two claims, the
+  fatal-and-severe result and the reporting check.
+- **Known before the sets were fixed:** Los Angeles's yearly counts by
+  severity had been looked at, which is what prompted the reporting check.
+  No list had been scored there.
+- **Added after the selection set was scored and before the final test:**
+  capture as a share of the best possible list (the second column of
+  section 1.2). It is a secondary figure and enters no rule.
+- **Not declared, computed afterwards from the same run:** the comparisons
+  with past car crashes, the hand-built blend and the regression in section
+  1.2.
+- **Not changed after any result:** the sets, the candidates, the measure
+  and the rule.
+
+### 2.7 Reproducing it
+
+```bash
+uv run python -m bike_safety_ca.checks.evaluation \
+    --configs config/held_back/selection --units <units.csv> --out <folder>
+uv run python -m bike_safety_ca.checks.evaluation \
+    --configs config/held_back/final_test --units <units.csv> \
+    --frozen <folder>/frozen.json --out <folder>
+```
+
+The configs for the 64 cities are in `config/held_back/`, and
+`checks/assignment.py` holds the rule that split them. Each run writes the
+cities' scores, the results, a manifest of every city (sizes, later
+crashes, the two checks and a hash of its crash table) and a record of the
+revision. The figures here are from the revision tagged
+`evaluation-final-test-run`, on crash tables built on 24 November 2026
+from TIMS exports for 2015 to June 2026 and CCRS.
+
+## 3. What is forecast
 
 For each intersection $i$ in an area, the model estimates the number of
 police-recorded injury crashes involving a cyclist, from the crashes
@@ -88,13 +352,13 @@ recorded over a set of years. Three numbers are kept apart throughout:
 
 - **The count on record**, $y_i$: the bike crashes recorded at the corner in
   the fitting years. A small count reflects chance as well as the road.
-- **The model's estimate**, $\hat\lambda_i$ (section 3.6): the number of
+- **The model's estimate**, $\hat\lambda_i$ (section 11.6): the number of
   recorded bike crashes the model puts at the corner over those same years,
   from the corner's own count and what is learned from its streets. This is
   what the corners are ranked by and what the maps, lists and ranking files
   show (`expected_bike_crashes`, with the years in `first_year` and
   `last_year`). It is a total over the whole period, not a count per year.
-- **A forecast for a later period** (section 3.7): the estimate scaled by
+- **A forecast for a later period** (section 11.7): the estimate scaled by
   the length of the later period. It assumes the rate and the way crashes
   are recorded stay as they were in the fitting years. It is used in this
   document's tests only; no map or list shows one.
@@ -110,656 +374,18 @@ In the code:
   or under `child_max_age` (18 in every config here). A crash with no
   cyclist's age recorded counts toward all cyclists but not toward children.
 - A crash **at an intersection** is one placed there by the rules in
-  section 8.5. Crashes between intersections are not used by this model;
+  section 7.5. Crashes between intersections are not used by this model;
   the corridor table counts them (see "Corridors" in the guide).
 
 The quantity is a count of police records, not a risk per rider. A corner can
 rank high because many people ride through it, and a count of police
 records misses crashes that are not reported (most falls, and many minor
-crashes). The level of the forecast is not reliable either (section 5.5);
+crashes). The level of the forecast is not reliable either (section 4.5);
 what the model is for is the order.
 
-## 2. Assumptions
+## 4. How it was tested during development
 
-Each assumption is listed with what follows if it fails. Sections 3 and 4
-show where each is used.
-
-1. **Counts are Poisson given the rate.** Bike crashes at intersection $i$
-   over the fitting years are $y_i \mid \lambda_i \sim
-   \text{Poisson}(\lambda_i)$, independently given the rates. Standard for
-   crash counts.
-2. **Rates vary around an expectation, as a gamma distribution.** Corners
-   with the same surroundings do not share one rate:
-   $\lambda_i \sim \text{Gamma}$ with mean $\mu_i$ and shape $s_i$, so that
-   counts are negative binomial with variance
-   $\mu_i + \alpha\,\mu_i^{p}$. The rankings fix the power at $p = 1$
-   (section 4.2); 2 is the textbook case. If the true spread of rates has another shape, the blend in
-   section 3.6 is still a reasonable weighting but no longer the exact
-   posterior mean.
-3. **The bike-crash rate is a product of powers of traffic.**
-   $\lambda^{\text{bike}} = c\,V^{a}B^{b}$ with car flow $V$ and bike flow
-   $B$, and car crashes $\lambda^{\text{car}} \propto V^{q}$. This is the
-   usual form of intersection crash models (Highway Safety Manual, Part C)
-   and of "safety in numbers" work (Jacobsen 2003; Elvik and Bjørnskau
-   2017).
-4. **A corner's car-crash record stands in for its car traffic.** This
-   follows from assumption 3 if car crashes are recorded alike across the
-   area. The record also carries street design and reporting, so it is a
-   predictor of bike crashes, not a measurement of traffic. Where one department stops filing some reports, its corners' car
-   terms are too low (section 8.3).
-5. **Bike traffic is similar along a named street.** Riders travel along
-   streets, so the bike crashes at a street's other corners stand in for
-   the bike flow at this one. A corner on two streets takes riders from both,
-   so its two streets' figures are added. Where riding is concentrated on
-   a different set of streets from car traffic (the Berkeley reading in
-   [the companion note](where_the_ranking_helps.md#where-it-helps-least)),
-   this works less well.
-6. **What is typical for a street depends on its length.** The expected
-   bike crashes per corner of a named street with $n$ intersections is a
-   power of $n$, $t(n) = e^{\beta_0} n^{\beta_1}$. Long named streets are
-   the through routes.
-7. **Rates are steady over time up to a common factor.** The ranking needs
-   only the relative rates to carry over from the fitting years to the
-   later ones. The overall level is not assumed to carry over, and in the
-   tests it did not (section 5.5).
-8. **Reporting is uniform across the area and over the years.** A crash is
-   equally likely to be recorded wherever and whenever it happens. This is
-   the weakest assumption: section 8.3 shows departments whose reporting
-   falls or changes, and a pooled ranking is distorted by it.
-9. **Crashes are placed correctly.** Each crash is put at the right
-   intersection, or at none. Section 8.5 gives the rules and how many
-   crashes cannot be placed.
-10. **The street map applies to every year.** Intersections and street
-    names are today's OpenStreetMap, used for all years. A corner rebuilt
-    or renamed in the period is treated as unchanged.
-11. **For fitting, corners are treated as independent.** They are not:
-    corners on one street share a street average, and each corner's count
-    is in its neighbours' averages. The likelihood is used as a fitting
-    criterion and to compare fits, not for standard errors or formal tests.
-
-## 3. The model
-
-The code is `fit_street_model` in `src/bike_safety_ca/model/crash_history.py`,
-called through `rank_intersections`, which falls back to the blend of
-section 7 when there are too few crashes. The steps below follow the code.
-
-### 3.1 Notation
-
-| Symbol | Meaning |
-|---|---|
-| $y_i$ | Bike crashes at intersection $i$ in the fitting years (or child crashes, for the child ranking) |
-| $x_i$ | Car crashes at $i$ in the same years |
-| $R(i)$ | The named streets that meet at $i$ (by `street_key`: the name with its street type, so Park Avenue and Park Place are two streets) |
-| $n_r$ | Number of intersections in the area on street $r$ |
-| $Y_r$ | Bike crashes summed over the intersections on street $r$ |
-| $t(n)$, $t^{\text{car}}(n)$ | Typical bike (car) crashes per corner on a street with $n$ intersections |
-| $Q$, $Q^{\text{car}}$ | Strength of the pull toward $t(n)$: 20 for bike crashes, 1 for car crashes |
-| $\mu_i$ | The model's expectation for $i$ before its own bike count is used |
-| $p$, $\alpha$ | Spread power and scale: variance $\mu + \alpha\mu^{p}$ |
-| $s_i$ | Gamma shape at $i$: $s_i = \mu_i^{2-p}/\alpha$ |
-
-### 3.2 Typical value for a street of a given length
-
-For each named street $r$, the total $Y_r$ is fitted by Poisson regression
-on $\log n_r$ with offset $\log n_r$:
-
-$$
-\log E[Y_r] = \log n_r + \beta_0 + \beta_1 \log n_r,
-$$
-
-so the typical value per corner is
-
-$$
-t(n) = e^{\beta_0}\, n^{\beta_1}.
-$$
-
-The fit is on every named street in the area, each corner's count included
-(`street_length_average`). An intersection with no named street is given
-$t(1) = e^{\beta_0}$ in place of a street average. The same is done for car
-crashes, giving $t^{\text{car}}(n)$.
-
-### 3.3 Street averages, leaving the corner out (blend A)
-
-For a corner $i$ on street $r$, the street's average is taken over its other
-corners, pulled toward the typical value by $Q$ imaginary corners:
-
-$$
-\bar m_{r,-i} = \frac{(Y_r - y_i) + Q\,t(n_r)}{(n_r - 1) + Q}.
-$$
-
-A corner's street bike term is the **sum** over its streets:
-
-$$
-m_i = \sum_{r \in R(i)} \bar m_{r,-i}.
-$$
-
-$Q = 20$ (the argument `pull`). It is not fitted in each run; it was chosen
-on the fitting years (section 4.4).
-
-### 3.4 The car term (blend B)
-
-The street car average $m^{\text{car}}_i$ is built the same way from car
-counts, with $Q^{\text{car}} = 1$ (`car_pull`). The corner's own car count
-is then blended with it as a gamma-Poisson posterior mean, with one shape
-$k$ for all corners, fitted by maximum likelihood to the car counts as
-negative binomial around $m^{\text{car}}_i$ (`fit_shape`):
-
-$$
-\tilde x_i = \frac{k + x_i}{k/m^{\text{car}}_i + 1}.
-$$
-
-Unlike blend A, the corner's own count is in it: car crashes are only a
-predictor of bike crashes, so using them does not put the same number on
-both sides of the fit.
-
-### 3.5 The expectation and the fit
-
-$$
-\mu_i = \exp\bigl(\gamma_0 + b\log m_i + a\log\tilde x_i\bigr)
-= e^{\gamma_0}\, m_i^{\,b}\, \tilde x_i^{\,a}.
-$$
-
-The bike counts are negative binomial around $\mu_i$ with variance
-$\mu_i + \alpha\mu_i^{p}$, that is with gamma shape
-$s_i = \mu_i^{2-p}/\alpha$. For a given $p$, $(\gamma_0, b, a, \alpha)$ are
-fitted by maximum likelihood (L-BFGS-B, started from two values of $\alpha$,
-keeping the better; a failure to converge raises an error, and the fallback
-is used). The rankings set $p = 1$ (`SPREAD_POWER`; section 4.2). Asked to
-fit it (`spread_power=None`), the code chooses $p$ by a one-dimensional
-search over $[0.5, 2.5]$ that maximises the profile log-likelihood
-(`_fit_spread`).
-
-The fitted numbers are $\gamma_0$, $b$, $a$, $\alpha$, the car shape $k$,
-and the two pairs $(\beta_0, \beta_1)$ for the typical values: nine in
-all, with $p$, $Q$ and $Q^{\text{car}}$ set beforehand.
-
-### 3.6 The corner's own count, and what is ranked (blend C)
-
-The estimate the intersections are ranked by is the posterior mean of the
-corner's rate given its own count:
-
-$$
-\hat\lambda_i = E[\lambda_i \mid y_i]
-= \frac{s_i + y_i}{s_i/\mu_i + 1}
-= w_i\,\mu_i + (1 - w_i)\,y_i,
-\qquad w_i = \frac{s_i}{s_i + \mu_i}.
-$$
-
-With the rankings' $p = 1$ the shape is $s_i = \mu_i/\alpha$, and the
-weight is the same at every corner of one fit:
-
-$$
-\hat\lambda_i = \frac{\mu_i + \alpha\,y_i}{1 + \alpha}
-= (1 - u)\,\mu_i + u\,y_i, \qquad u = \frac{\alpha}{1 + \alpha}.
-$$
-
-Both $\mu_i$ and $y_i$ are counts over the fitting years. For example, with
-a background of 0.5 crashes, two crashes on record and $u = 0.4$, the
-estimate is $0.6 \times 0.5 + 0.4 \times 2 = 1.1$. The weight is fitted, so
-it differs between cities and between fitting periods.
-
-In plain terms the model does three things. It estimates a background
-number of crashes for the corner from its streets and its car crashes
-(sections 3.2 to 3.5). It combines that background with the corner's own
-count, by the weighted average above. And it ranks the corners by the
-result. A corner with no crash on record is not put at zero, and a corner
-with one bad stretch is not taken at face value.
-
-Only this last step is a textbook calculation. The background is itself
-built from crash counts, including those of the neighbouring corners whose
-own estimates use this corner's count in turn, so the steps together are
-not a single probability model with one likelihood. They are a procedure
-whose worth rests on the tests in sections 5 and 6, and nothing here says
-that a street's traffic or design causes the crashes.
-
-The last step is the empirical Bayes estimate used in road safety to correct
-regression to the mean (Hauer 1997). It is a plug-in estimate: $\mu_i$ and
-$\alpha$ are fitted to the same crashes and then treated as known
-(assumption 11). It is the column `eb` in the fit, the
-`score` the ranking writes, and `expected_bike_crashes` in the ranking file:
-an estimated count over the whole of the fitting years.
-
-### 3.7 Forecast for a later period
-
-After the fit the rate at $i$ is gamma with shape $s_i + y_i$ and rate
-$s_i/\mu_i + 1$. The count in a later period $r$ times as long as the
-fitting period is negative binomial with
-
-$$
-\text{mean}_i = r\,\frac{s_i + y_i}{s_i/\mu_i + 1}, \qquad
-\text{variance}_i = \text{mean}_i + r^2\,\frac{s_i + y_i}{(s_i/\mu_i + 1)^2}.
-$$
-
-`forecast` returns both. The forecast carries the fitting years' rate
-forward unchanged: it assumes that neither the rate nor the way crashes are
-recorded changes, and no trend is fitted. In the closed test periods the
-crashes recorded were about a fifth fewer than forecast (section 4.11),
-so the level should not be relied on. Summing variances over a group of intersections
-treats the fitted street averages and parameters as known and the corners
-as independent, so the spread of a group total is somewhat understated.
-
-### 3.8 The three blends side by side
-
-The model pulls a noisy number toward a steadier one in three places. They
-are not the same operation, and the differences are deliberate.
-
-| | A. Street bike average | B. Corner's car crashes | C. Corner's bike crashes |
-|---|---|---|---|
-| What is noisy | Bike crashes at the street's other corners | The corner's own car count | The corner's own bike count |
-| Pulled toward | $t(n)$ for a street with that many intersections | The street car average (itself pulled toward $t^{\text{car}}(n)$) | The fitted expectation $\mu_i$ |
-| Corner's own count in it? | No | Yes | Yes |
-| Strength | $Q = 20$ imaginary corners | Street average: $Q^{\text{car}} = 1$. Blend: one gamma shape, about 0.25 | Shape $\mu_i/\alpha$ (the case $p = 1$) |
-| Role | A predictor in $\mu_i$ | A predictor in $\mu_i$ | The estimate ranked by |
-| Code | `street_length_average(bike, streets, pull)` | `street_length_average(car, streets, car_pull)`, `fit_shape`, `gamma_blend` | `gamma_blend` with `prior_shape` |
-
-What each does to a corner with no record: A gives a corner on a street with
-no bike crash the typical value for a street of that length, which is low
-for short streets. B gives a corner with no car crash a small positive car
-term set by its street. C leaves a corner with no bike crash a little below
-its expectation, at $\mu_i\,s_i/(s_i + \mu_i)$.
-
-### 3.9 Fitted values
-
-Los Altos study area (4,208 intersections), fitted on 2014 to the year shown
-with $p = 1$. The last column is the power the fit chooses when asked to.
-Rerun: one-off script calling `fit_street_model` on the hold-out's inputs,
-revision `3ae2f89`.
-
-| Fitted on | Bike crashes | Street bike power $b$ | Car power $a$ | $\alpha$ | Weight on own count $u$ | Car shape $k$ | $p$ if fitted |
-|---|---|---|---|---|---|---|---|
-| All cyclists, 2014–2018 | 449 | 1.49 | 0.36 | 0.20 | 0.17 | 0.26 | 1.21 |
-| All cyclists, 2014–2020 | 596 | 1.57 | 0.32 | 0.25 | 0.20 | 0.25 | 1.35 |
-| All cyclists, 2014–2022 | 710 | 1.50 | 0.34 | 0.24 | 0.19 | 0.24 | 1.41 |
-| Children, 2014–2018 | 174 | 1.46 | 0.34 | 0.10 | 0.09 | 0.26 | 1.58 |
-| Children, 2014–2020 | 221 | 1.56 | 0.32 | 0.17 | 0.14 | 0.25 | 1.55 |
-| Children, 2014–2022 | 261 | 1.53 | 0.32 | 0.16 | 0.14 | 0.24 | 1.56 |
-
-So a corner's own bike count gets about a fifth of the weight in the
-all-cyclist rankings here and a seventh or less in the child rankings, and
-the fitted background the rest.
-
-The values are stable between fits. The street bike power is above 1
-because the strong pull narrows the range of the street averages and the
-power widens it again; it is not an estimate of how crashes grow with bike
-traffic. The car power, about a third, is not the $a$ of a traffic model
-either: the two powers describe how the two crash records predict bike
-crashes together (appendix A.6).
-
-## 4. Why each choice was made
-
-Each choice was made by comparing fits on the fitting years, then checked on
-the later years. The later years were seen during development (section
-5.1), so they confirm rather than test.
-
-### 4.1 Poisson counts with gamma-distributed rates
-
-If rates did not vary between corners with the same surroundings (a plain
-Poisson, $s \to \infty$), a corner's own count would add nothing to the
-expectation. They do vary: the counts are overdispersed against any
-expectation tried. The gamma is the conjugate choice, which gives the
-closed-form blend of section 3.6 and the negative binomial likelihood.
-This is the standard model for crash counts (Hauer 1997; Highway Safety
-Manual).
-
-### 4.2 The spread power, fixed at 1
-
-How much the corner's own count should weigh depends on how the spread of
-rates grows with the expectation (appendix A.3):
-
-- With $p = 1$, every corner's own count gets the same weight,
-  $\alpha/(1 + \alpha)$, whatever its expectation.
-- With $p = 2$, the textbook negative binomial, the weight is
-  $\alpha\mu/(1 + \alpha\mu)$: it rises with the expectation, and a corner
-  where little is expected is held close to it.
-- In between, the weight still rises with the expectation, more slowly. What
-  grows as the expectation falls is the proportional effect of a first
-  crash, $1 + \alpha\mu^{p-2}$, not the weight.
-
-The model first fitted $p$. On the Los Altos study area it came out between
-1.2 and 1.6, and across 62 windows in 23 cities between 0.54 and 2.49, above
-2 in two of them. Above 2 the estimate at a corner with no crash can fall as
-its expectation rises (where $\alpha(p - 2)\mu^{p-1} > 1$).
-
-Fitting it did not improve the rankings. Refitting every window with
-$p = 1$ and with $p$ fitted (`python -m bike_safety_ca.checks.candidates`,
-revision `0b56c05`, crash tables of 21 November 2026), the average change
-from fitting $p$ to fixing it at 1 is, with shares in percentage points of
-the later crashes:
-
-| Ranking | Windows (cities) | Rank score | Top 25 | Top 50 | Top 100 | Top 5% of corners |
-|---|---|---|---|---|---|---|
-| Fitted to all cyclists, scored on all cyclists | 62 (23) | −0.0003 | −0.25 | +0.07 | −0.27 | +0.19 |
-| Fitted to all cyclists, scored on children | 33 (17) | −0.0004 | −0.30 | −0.13 | −0.18 | +0.04 |
-| Fitted to children, scored on children | 18 (7) | +0.0003 | −0.41 | −0.17 | +0.24 | −0.19 |
-
-The margins written down before the comparison were 0.005 of rank score and
-1 percentage point in the top 50 and the top 5% of corners. Drawing whole
-cities again with replacement 10,000 times, the all-cyclist rank-score
-change stays between −0.0007 and +0.0002 (5th to 95th percentile), and the
-top-25 change between −0.58 and +0.08 points. So the rankings use $p = 1$:
-one parameter fewer, no search over $p$, and a weight that can be stated in
-a sentence. These are the windows the model was developed on, and windows
-within a city overlap, so this shows average differences inside the margins
-here, not that the two are equivalent.
-`rank_intersections(..., spread_power=None)` still fits $p$. The corridor
-table (`model/corridors.py`) keeps the fitted power for its corner part; it
-has not been compared.
-
-What fixing the power costs:
-
-- **The very top of the list.** The top 25 and the top 100 had no margin of
-  their own, and both come out a little lower on average: over the 62
-  all-cyclist windows the top 25 lists hold 1,777 later crashes with $p = 1$
-  and 1,805 with $p$ fitted. In four more cities than before (six in all),
-  past bike crashes alone now match or beat the model's top 25 (see the
-  companion note).
-- **Single windows move more than the averages.** In the Los Altos study
-  area the ranking fitted to child crashes through 2018 finds 4 of 87 later
-  child crashes in its top 25 with $p = 1$ and 10 with $p$ fitted, with the
-  same 14 in its top 50.
-- **The likelihood is lower in the largest cities.** Over the 64
-  all-cyclist windows with a fitted model, the AIC is lower with $p = 1$ in
-  32, higher by more than 2 in 28 and higher by more than 10 in nine: all
-  three windows of San Francisco (by 56 to 90, where the fitted power is
-  about 1.6) and of Long Beach, two of San Diego and one of Ventura. The
-  simulation of section 6.4 shows the same thing: with $p = 1$ San
-  Francisco's real score is below every one of its simulated scores.
-  (One-off script calling `fit_street_model`, revision `0b56c05`.)
-
-An earlier version of this section concluded from the AIC that the
-estimates at the busiest corners are less trustworthy with $p = 1$. A direct
-check does not bear that out. Forecasting each closed later period from the
-fitting years and comparing with what was recorded (40 windows in 21
-cities, section 4.11), the corners in the model's own top 25 were forecast
-at 1.34 times the crashes later recorded with $p = 1$, and at 1.43 times
-with $p$ fitted between 1 and 2. Both are too high, and $p = 1$ is the
-less wrong of the two there. Over all corners the two differ by 0.0006 in
-Poisson deviance per intersection, in favour of the fitted power.
-
-A power fitted but held between 1 and 2 was compared as well, since it keeps
-the estimate monotone. Against it, $p = 1$ changes the all-cyclist rank
-score by −0.0004 (−0.0008 to −0.0001) and the top 25 by −0.30 points, the
-top 50 by +0.04 and the top 5% by +0.14. That is inside the margins, so the
-simpler setting was kept.
-
-### 4.3 Crash records in place of traffic
-
-No city in the tests has counts of bike traffic at its intersections, and
-car counts cover few streets. Under assumption 3, car flow can be replaced
-by the car-crash rate, $V^{a} \propto (\lambda^{\text{car}})^{a/q}$, and the
-bike flow along a street by the street's bike-crash record. The earlier
-one-off checks support the substitution: on the 70 study-area streets with
-measured daily car volumes and three or more intersections, measured volume
-had a rank correlation of 0.72 with car crashes per corner and 0.59 with
-bike crashes per corner (not rerun).
-
-### 4.4 Leaving the corner out of its street average, and pulling hard
-
-**Leaving it out.** Bike crashes are what the model fits. If a corner's own
-bike count were in its street average, the same number would be on both
-sides of the fit and the street term would take credit for the corner's
-own record. So blend A uses the other corners only, and the corner's own
-count enters only in blend C. Two indirect routes remain: $t(n)$ is fitted
-on all streets, and each corner's count is in its neighbours' averages.
-Car crashes are only a predictor, so the corner's own car count goes
-straight into blend B.
-
-**Toward a length-typical value.** The median named street has two
-intersections, so most street averages rest on very little. Pulling a
-short street with no record toward the overall mean, as the first version
-of the model did, rates it too high: bike crashes per corner rise with
-street length, roughly as $n^{0.7}$ (children $n^{0.6}$, car crashes
-$n^{0.84}$; earlier one-off fits, not rerun).
-
-**Pulling hard.** Training log-likelihood on the study area, all cyclists
-(rerun, same script as section 3.9):
-
-| Fitted on | $Q = 1$ | $Q = 8$ | $Q = 20$ | $Q = 40$ |
-|---|---|---|---|---|
-| 2014–2018 | −1064 | −1044 | −1038 | −1041 |
-| 2014–2020 | −1286 | −1257 | −1250 | −1256 |
-| 2014–2022 | −1439 | −1411 | −1404 | −1411 |
-
-The fit improves up to about 20 imaginary corners in every window and falls
-off after. With $Q = 20$, a street's own record counts for much only on
-long streets.
-
-**The car pull.** For car crashes the strength hardly matters: going from 1
-to 3 or 8 imaginary corners changed the training log-likelihood by about 1
-in the earlier one-off runs, so it is left at 1. With a car shape of about
-0.25, the corner's own car count gets more than half the weight wherever
-the street average is above 0.25 crashes; the street average mainly decides
-what a corner with no car crash gets in place of zero.
-
-**Why only blend C has a spread power to choose.** In C the power decides
-how much one bike crash moves a corner with a low expectation, and the
-training log-likelihood is lower by 2 to 4 with $p = 2$ than with $p = 1$
-in each window. In B the textbook form is used with one fitted shape. Another
-power for the car blend has not been tried; given how little the car pull
-matters, it is unlikely to change much.
-
-### 4.5 Adding the averages of a corner's streets
-
-Riders arrive along both streets, so the bike flow through a corner is the
-sum of the flows on its streets, not their mean (appendix A.7). The sum fit
-the fitting years better than the mean in the earlier one-off runs (AIC
-lower by about 30 to 50; not rerun).
-
-### 4.6 What each choice contributes
-
-One-off runs on the study area, all cyclists, from when the model fitted
-$p$; not rerun since the fixes of 15 to 21 November 2026, which moved the
-model's study-area score by 0.002 at most, or since $p$ was fixed at 1,
-which moved it by 0.001. Average rank score over the three windows (section 5), and the forecast
-log-likelihood summed over the windows with the level set to the actual
-total (higher is better):
-
-| Version | Study area | Los Altos | Log-likelihood, study area |
-|---|---|---|---|
-| First version: mean over streets, pulled to the overall mean, $p = 2$ | 0.817 | 0.796 | −1880 |
-| Sum over streets | 0.824 | 0.792 | −1861 |
-| and $p$ fitted | 0.827 | 0.810 | −1845 |
-| and pulled to the street-length value, $Q = 20$ (the model before $p$ was fixed) | 0.856 | 0.847 | −1792 |
-| Street length alone, no street bike record | 0.849 | 0.842 | −1825 |
-| Crash history with same-street averages (earlier fitted formula) | 0.836 | 0.828 | −1850 |
-
-The pull toward the length-typical value is the largest single gain. Street
-length alone does most of the work of the street term; the street's own
-bike record adds a little, mainly on long streets.
-
-### 4.7 Road and traffic information that was tried
-
-Three kinds of extra information were tried on top of the model in earlier
-one-off runs on the study area (not rerun; scripts not included). Average
-rank score over the three windows:
-
-| Version | Study area, all | Study area, children | Los Altos, all | Los Altos, children |
-|---|---|---|---|---|
-| The model | 0.856 | 0.853 | 0.847 | 0.847 |
-| Pulled toward the typical value for road class, not length | 0.842 | 0.834 | 0.815 | 0.806 |
-| Pulled toward the typical value for class and length | 0.852 | 0.847 | 0.833 | 0.828 |
-| Plus major and minor road class as corner factors | 0.860 | 0.857 | 0.846 | 0.848 |
-| Measured car volume in the value a street is pulled toward | 0.850 | | 0.841 | |
-| Plus modelled school bike trips through the corner | 0.857 | 0.866 | 0.851 | 0.852 |
-| Road-and-traffic model of the Los Altos analysis, refitted | 0.856 | 0.866 | 0.830 | 0.808 |
-
-- **Road class** is a worse target than length. Once the corner's car record
-  is in the model, car crashes already carry what class knows; length adds
-  something else, whether the street is a through route. Class as corner
-  factors improves the training fit a little; the gain on later crashes is
-  within noise.
-- **Measured car volumes** cover 70 streets touching 1,183 of the 4,208
-  intersections. As a separate corner factor they move the rank score by
-  0.003 or less, with a fitted power of about −0.3: given the same crash
-  record, a corner on a busier street has slightly fewer bike crashes.
-- **Modelled school bike trips**, $(1 + \text{trips})^{g}$ with $g \approx
-  0.35$, close the gap to the road-and-traffic model for children across the
-  study area (resampling range +0.003 to +0.024), but not clearly in Los
-  Altos. The term is not in `fit_street_model`; the trips come from a route
-  model that is not in this repository.
-
-### 4.8 Tried and dropped
-
-All on the fitting years first, in earlier one-off runs:
-
-- **Older crashes counting for less.** An old crash predicts later ones
-  about as well as a recent one; no consistent difference across windows.
-- **The street's car record as an extra factor.** Fitted power near zero.
-- **Street bike crashes per car crash, not per corner.** Fits much worse.
-- **Pulling street averages toward a value predicted from the street's car
-  record.** No gain.
-- **Street length as a separate factor beside the street average.** No
-  better than the pull, with one more parameter.
-- **Dividing the corner's car count by its street's car average**, which
-  the theory suggests if bike flow were constant along a street. Worse.
-- **No-fit versions of the product with a fixed shape.** They rank about as
-  well as the hand-built blend (0.82 to 0.83) but are far too concentrated
-  to be read as expected counts.
-
-### 4.9 How the earlier formulas relate to it
-
-Two earlier rankings are still in the code and in the hold-out table. The
-model explains why they worked.
-
-The hand-built blend, `street_blend_score` (also the fallback, section 7),
-is a product of the corner's bike and car counts, each first blended with
-its street mean (appendix A.9). The product is assumption 3; the
-fixed-weight blend of a corner with its street is blend C with $p = 1$; the
-"1 +" keeps a corner with no record from scoring zero, the job the pull does
-in blend A.
-
-The earlier fitted formula, `fit_history_model`, is a negative binomial fit
-on $(1 + x_i)$, $(1 + \text{street bike sum})$ and
-$(1 + \text{street car sum})$, where "street sum" is the sum over a corner's
-streets of the mean at the street's other corners, with no pull. Its fitted
-powers were about 0.8, 1.9 and 0.5 to 1.0. Raw street sums with "1 +" never
-lift a street with no record to the average, so short streets are treated
-as quiet; the power of 1.9 trusts a street's record mainly where it is
-large, which imitates the strong pull; and the "1 +" floors compress the low
-end, as $p < 2$ does.
-
-### 4.10 How this relates to published methods
-
-Parts of the model are standard, parts are close to published methods
-without being the same, and parts are this project's own.
-
-**The same mathematics.**
-
-- Blend C, a model's expectation combined with the site's own count through
-  a gamma–Poisson posterior, is the empirical Bayes estimate of road safety
-  (Hauer 1997; Hauer and others 2002 is the short tutorial). The Highway
-  Safety Manual uses the case $p = 2$, where the weight on the model's
-  expectation is $1/(1 + \alpha\mu)$. With $p = 1$ it is $1/(1 + \alpha)$
-  at every site.
-- The variance $\mu + \alpha\mu^{p}$ is the NB-P family of Greene (2008),
-  with the two usual negative binomial models, NB1 and NB2, as $p = 1$ and
-  $p = 2$.
-- Blend A's weight on a street's own record, $(n - 1)/(n - 1 + Q)$, is a
-  Bühlmann credibility factor (Bühlmann 1967; appendix A.5).
-
-**Close, but not the same.**
-
-- Wang, Zhao and Jackson (2019) compare NB1, NB2 and NB-P for crashes at
-  rural two-lane intersections, and El-Basyouny and Sayed (2006) compare a
-  fixed with a site-varying negative binomial shape on road segments. The
-  question of section 4.2, whether a more flexible spread changes what the
-  model is used for, is theirs; the finding here, a better fit to the counts
-  in some cities with nearly the same order, is for this project's data
-  only.
-- Katicha and Flintsch (2023) combine a spatially smoothed crash estimate
-  with each location's own count by empirical Bayes (their KDEB). The street
-  averages here play the part of their smoothed estimate, but they are
-  averages along named streets and not a kernel over distance, they leave
-  the corner out, they are pulled toward a value typical of the street's
-  length, and a car-crash term stands beside them. KDEB has not been run on
-  these data, so nothing here says which does better.
-
-**This project's own, and not compared with a published method:** street
-averages that leave the corner out and are pulled toward a length-typical
-value; car crashes standing in for car traffic; adding the averages of a
-corner's streets. Their support is the hold-out comparisons of this
-section and no more.
-
-### 4.11 Textbook models fitted to the same data
-
-The model's steps were arrived at by trial on the test windows, so it was
-compared with three models that a statistician would write down first. All
-use the same crashes, the same placement, the same 100-crash floor and the
-same tests (`python -m bike_safety_ca.checks.candidates`, revision
-`4382343`, crash tables of 21 November 2026).
-
-- **Textbook empirical Bayes** (`model/standard_eb.py`). A negative binomial
-  regression (NB2, fitted with statsmodels) of the bike count on the corner's
-  car crashes and the classes of its two main roads, then the usual update
-  with the corner's own count (Hauer and others 2002). No predictor is built
-  from bike crashes.
-- **The same with street context.** Two more regression columns, set before
-  the run by an outside reviewer and not varied: the number of other
-  intersections sharing a named street with the corner, and the car crashes
-  per year at those intersections.
-- **Street effects fitted jointly** (`model/street_effects.py`). The textbook
-  model with a normally distributed effect for each named street, fitted in
-  one step by an approximate method written for this comparison. It has not
-  been checked against a maintained package and stays experimental.
-
-The margins were written down beforehand: a mean loss of no more than 0.005
-of rank score, and 1 percentage point of later crashes in the top 50 and in
-the top 5% of corners, against the model with the power fitted between 1 and
-2. Change from that reference, rankings fitted to and scored on all
-cyclists, 62 windows in 23 cities (5th to 95th percentile over 10,000 draws
-of whole cities in brackets):
-
-| Model | Rank score | Top 25 | Top 50 | Top 5% of corners |
-|---|---|---|---|---|
-| This model, $p = 1$ | −0.0004 (−0.0008 to −0.0001) | −0.30 | +0.04 | +0.14 |
-| Textbook empirical Bayes | −0.0240 (−0.0281 to −0.0204) | −1.40 | −0.76 | −1.24 |
-| With street context | −0.0080 (−0.0104 to −0.0057) | −1.21 | −0.44 | −0.58 |
-| Street effects fitted jointly | −0.0107 (−0.0132 to −0.0085) | −0.45 | −0.68 | −0.40 |
-
-None of the three meets the rank-score margin, so the model was kept.
-Measured against $p = 1$ itself the street-context model loses 0.0075
-(0.0052 to 0.0099), and on the 40 windows whose later period ends in 2022,
-before any provisional records, 0.0077: the conclusion does not depend on
-the reference or on the newest records.
-
-What this does and does not show:
-
-- The two street-context columns recovered about two thirds of the textbook
-  model's rank-score gap on these windows. Much of what this model adds is
-  information about the corner's streets, which a textbook model can use
-  too. The comparison does not separate the rest into better inputs and
-  better machinery.
-- The street-context model is the closest conventional comparator: a
-  standard likelihood, standard software and no predictor built from bike
-  crashes. It loses about half a point of later crashes in the top 50 and
-  the top 5%, which is inside those margins, and 1.2 points in the top 25.
-  It is kept in the comparison command as the standing benchmark for later
-  changes.
-- For rankings fitted to child crashes (18 windows in 7 cities) it loses
-  0.0077 of rank score (0.0006 to 0.0152) and 1.3 points in the top 50
-  (from 3.8 lost to 0.7 gained).
-- Forecast counts were checked on the 40 closed later periods (2019–2022 or
-  2021–2022; whether every agency's records are complete for those years
-  was not audited). Every model forecast the same total to within 0.03% in
-  every window, and over all of them the crashes recorded were 79% of that
-  total. The windows overlap, and this is a mismatch between these periods,
-  not a measured trend. In each model's own top 25 corners the forecast was
-  1.34 times what was recorded for this model with $p = 1$, 1.43 with the
-  power fitted, and 1.62 to 1.69 for the three textbook models. Poisson
-  deviance per intersection, which with equal totals mainly measures where
-  each model puts the crashes, is higher than the reference's by 0.0006 for
-  $p = 1$, 0.0065 for street effects, 0.0076 for street context and 0.0162
-  for the plain textbook model.
-- All of this is on the windows the model was developed on. No city or
-  period was held back, and no result here says how any of these models
-  would do on new data.
-
-The decision record, with the full tables, is
-[plans/model-review-decision.md](../plans/model-review-decision.md).
-
-## 5. How it was tested
-
-### 5.1 Design
+### 4.1 Design
 
 Each ranking is built from crashes up to a cut-off year and scored on bike
 crashes after it (`checks/holdout.py`). Every config here uses three windows:
@@ -782,8 +408,9 @@ What these tests are and are not:
   0.01 are within noise. The 28 cities were added after the model was first
   fixed, so their results at that point were a test on places the model had
   not seen, though in the same years. They have since been used to choose
-  the spread power (section 4.2), so they are development evidence too. No
-  city or period has been held back.
+  the spread power (section 12.2), so they are development evidence too. No
+  city or period was held back from these tests; the evaluation of
+  sections 1 and 2 is on cities that were.
 - **Overlapping.** The second window lies inside the first, so the three are
   not independent, and sums over them are for comparison only.
 - **Today's map.** Every window uses the street map of 2026, so the test asks
@@ -794,7 +421,7 @@ What these tests are and are not:
   is close to those crashes' own ranks. The floor limits what the test can
   show, not where the ranking can be used.
 
-### 5.2 Measures
+### 4.2 Measures
 
 **Rank score.** The area under the ROC curve of the score against "had a
 later crash": the chance that an intersection with a later bike crash is
@@ -811,11 +438,11 @@ with 10 intersections that had a later crash and about 0.05 with 30.
 places (`top_share`). This is closer to "where to look first", but a fixed
 top 100 is 1% of Fresno's intersections and 36% of East Palo Alto's.
 
-**Forecast level and spread.** The forecast of section 3.7 against the
+**Forecast level and spread.** The forecast of section 11.7 against the
 counts that happened, by groups of intersections, and the ratio of summed
-squared errors to summed forecast variance (section 5.5).
+squared errors to summed forecast variance (section 4.5).
 
-### 5.3 Results on the Los Altos study area
+### 4.3 Results on the Los Altos study area
 
 The study area is the one of the Los Altos case study: two-mile circles
 around the study's public schools plus the city limit, 4,208 intersections,
@@ -870,7 +497,7 @@ bike or car crash of their own. Those are 3,340 to 3,530 of the 4,208
 intersections, and 21% to 34% of later bike crashes happened at them; 39% to
 58% happened at corners with no earlier bike crash. Among the corners with
 no crash of either kind the model's rank score is 0.71 to 0.80 (rerun, same
-script as section 3.9). Ranking by past bike crashes cannot order them at
+script as section 11.9). Ranking by past bike crashes cannot order them at
 all.
 
 Resampling intersections in the earlier one-off runs (300 draws, 5% to 95%
@@ -881,22 +508,22 @@ model was 0.000 (−0.011 to 0.011) and −0.013 (−0.026 to 0.001). The
 resampling treats intersections as independent and does not redo the choice
 of model, so the ranges are narrower than the real uncertainty.
 
-### 5.4 The tests on many cities
+### 4.4 The tests on many cities
 
-The same windows were run on 28 cities and four pooled areas (section 6).
+The same windows were run on 28 cities and four pooled areas (section 5).
 The cities were added after the model was first fixed. One choice has since
-been made on them, the spread power (section 4.2); they are retrospective
+been made on them, the spread power (section 12.2); they are retrospective
 tests, one run per city.
 
-### 5.5 Forecast level and spread
+### 4.5 Forecast level and spread
 
-Study area, the two windows before 2023. Rerun, same script as section 3.9.
+Study area, the two windows before 2023. Rerun, same script as section 11.9.
 
 **Level.** Carried forward at the fitting years' rate, the forecast is too
 high: 359 against 261 recorded for all cyclists in 2019–2022, and 170
 against 114 in 2021–2022 (children: 139 against 87, and 63 against 40).
 Recorded crashes per year fell after the fitting years, partly in 2020 and
-partly through reporting (section 8.3). A model of where crashes happen
+partly through reporting (section 7.3). A model of where crashes happen
 cannot know that, and no forecast of the level is offered.
 
 **Spread.** With the level set to the actual total, intersections grouped
@@ -926,10 +553,10 @@ They take the fitted street averages and parameters as known. They show the
 spread is of the right size over many intersections; they do not show that
 the stated uncertainty for any one intersection is right.
 
-## 6. Performance on California cities
+## 5. Performance on the development cities
 
 The ranking was run on 28 cities and four pooled areas, each with the
-windows of section 5.1. Crash records are TIMS exports for 2015 to June
+windows of section 4.1. Crash records are TIMS exports for 2015 to June
 2026 merged with CCRS; streets are from OpenStreetMap and city limits from
 the Census Bureau. Each city is scored over all the intersections it was
 fitted on. The tables in this section are rerun at revision `c87bd4e`:
@@ -942,7 +569,7 @@ The run took about six minutes. Its output matched, figure for figure, the
 run of 21 November 2026 behind
 [the companion note](where_the_ranking_helps.md), which discusses each city.
 
-### 6.1 Results by city
+### 5.1 Results by city
 
 All cyclists unless marked. Means are over the windows scored (30 or more
 later crashes). "Fit" says whether the model was fitted in every window, in
@@ -991,10 +618,10 @@ In summary:
 
 - The model beats past bike crashes alone in every city scored, on both
   measures.
-- Scores are not comparable across cities (section 5.2), and many rest on
+- Scores are not comparable across cities (section 4.2), and many rest on
   few later crashes. No intervals were computed for this table.
 - Santa Monica's police have no injury crash on record for 2020, so its
-  windows are tested and fitted with a year missing (section 8.3). Fresno,
+  windows are tested and fitted with a year missing (section 7.3). Fresno,
   Palo Alto, San Mateo and South Lake Tahoe have reporting changes inside
   the fitting or test years.
 - The companion note discusses where the model helps most (spread-out
@@ -1003,7 +630,7 @@ In summary:
   where history is already rich; the very top of the list; very small
   cities).
 
-### 6.2 Corners with no bike crash on record
+### 5.2 Corners with no bike crash on record
 
 Most intersections have no bike crash in the fitting years, yet many later
 crashes happen at them, and past bike crashes cannot order them at all.
@@ -1018,13 +645,13 @@ Over the 74 windows scored in 27 cities (one-off script calling
 
 The highest shares are in Fresno (80% to 93%), San Mateo (77% to 86%) and
 South Lake Tahoe (93%, one window), where police reporting was far below
-normal for part of the fitting years (section 8.3), so the "history" has
+normal for part of the fitting years (section 7.3), so the "history" has
 gaps. Without those three the share runs from 27% (San Francisco) to 71%.
 
 This replaces the figure of "a quarter to 70%" in twelve cities, from an
 earlier run, that the README and the companion note used to quote.
 
-### 6.3 Car crashes alone
+### 5.3 Car crashes alone
 
 How well car crashes alone rank later bike crashes says how far a city's
 bike crashes follow car traffic. Mean over the windows scored, same one-off
@@ -1052,7 +679,7 @@ cities and two windows, from an earlier run.) Davis and Fresno are the clear
 exceptions: there the street terms and the corner's own record do most of
 the work.
 
-### 6.4 Does the score look like the model's own simulations?
+### 5.4 Does the score look like the model's own simulations?
 
 A simulation draws later crashes from the fitted model's own rates and
 scores the model's ranking on them; the mean is the score the ranking would
@@ -1067,12 +694,12 @@ score about 0.03 short of that on average. San Francisco's real score is
 0.02 to 0.03 below its simulated mean in every window and below all 2,000
 of its simulations: with the power fixed at 1 the model takes its risk to be
 more concentrated at the busiest corners than the later crashes were
-(section 4.2).
+(section 12.2).
 
-### 6.5 With and without minor crashes
+### 5.5 With and without minor crashes
 
 Departments differ in how many "complaint of pain" crashes they file
-(section 8.3), so the ranking was built twice per window, from all injury
+(section 7.3), so the ranking was built twice per window, from all injury
 crashes and from crashes with a visible injury or worse (bike and car
 crashes alike), and each scored on later cyclist crashes of both kinds.
 Rerun, from the cross-city command. Over the 71 windows in 26 cities with
@@ -1091,9 +718,9 @@ the 54 windows (21 cities) where both came from a fitted model, it loses
 0.011 and 0.010, and is worse in 53 and 52 of them. Minor crashes help find
 where later serious ones happen, and the ranking keeps them.
 
-## 7. Cities with less data: the fallback
+## 6. Cities with less data: the fallback
 
-### 7.1 When the code falls back
+### 6.1 When the code falls back
 
 `rank_intersections` uses the hand-built blend in place of the model when
 
@@ -1114,7 +741,7 @@ blend does as well or better below about 50 (docstring of
 default sits between. Below it, ten fitted numbers rest on too few crashes,
 and the fit either fails or overfits.
 
-### 7.2 What it falls back to
+### 6.2 What it falls back to
 
 The hand-built blend `street_blend_score` needs no fitting:
 
@@ -1134,11 +761,11 @@ intersections; it is not an expected count, so the ranking file leaves
 `expected_bike_crashes` empty and no forecast is possible.
 
 How it compares where both can be run: 0.832 against 0.857 for the model on
-the study area (section 5.3), and 0.82 to 0.83 for no-fit versions of the
+the study area (section 4.3), and 0.82 to 0.83 for no-fit versions of the
 model's product. Where the model cannot be fitted it is what is left; the
 better answer is usually to fit on a wider area.
 
-### 7.3 Pooling with neighbours
+### 6.3 Pooling with neighbours
 
 A small city does not have to fall back. Fit the model on the city together
 with its neighbours, then read the ranking inside the city. The Los Altos
@@ -1193,7 +820,7 @@ Run the reporting check on the pool, and score or publish inside each city.
 A pool cannot yet cross a county line. "Setting up a pool" in the companion
 note gives the steps.
 
-### 7.4 Child rankings
+### 6.4 Child rankings
 
 In the Los Altos study area 37% to 39% of bike crashes in the fitting years
 involve a cyclist of known age 18 or under, so a child ranking has well
@@ -1224,7 +851,7 @@ child crashes in the fitting years, they are 0.854 and 0.851. Nowhere in
 these cities does a separate child ranking clearly beat the all-cyclist one.
 At the top of the list the study-area child ranking does worse than the
 all-cyclist one: its top 25 holds 15 of the 203 later child crashes against
-21 (section 5.3).
+21 (section 4.3).
 
 So the code and the guide follow these rules:
 
@@ -1240,7 +867,7 @@ So the code and the guide follow these rules:
 - Where the all-cyclist ranking is used for children, say so. A missing
   child ranking is not a finding of no risk to children.
 
-## 8. The crash records
+## 7. The crash records
 
 The model is only as good as the police records it is fitted to. This
 section says where they come from, what the state's change of records system
@@ -1251,7 +878,7 @@ revision `c87bd4e`, using the repository's own loading and checking
 functions; they print totals only. Years run from 2015 to the latest record
 (June to November 2026, by city); 2026 is unfinished everywhere.
 
-### 8.1 Two sources: TIMS and CCRS
+### 7.1 Two sources: TIMS and CCRS
 
 | | TIMS | CCRS |
 |---|---|---|
@@ -1262,7 +889,7 @@ functions; they print totals only. Years run from 2015 to the latest record
 | Timeliness | Months behind | Updated monthly; later reports and corrections keep arriving |
 | Coordinates | Geocoded by SafeTREC where it could | As recorded on the report; some early years tens of kilometres off |
 | Cause | Vehicle Code section and cause category | Section only; the merge infers the category |
-| Injury grade | Crash severity 1 to 4, victim degree of injury | Extent of injury per person, in the newer grades (section 8.2) |
+| Injury grade | Crash severity 1 to 4, victim degree of injury | Extent of injury per person, in the newer grades (section 7.2) |
 | Terms | Credit asked; not an official record; litigation limits | Public domain; no credit asked |
 
 TIMS is the primary source. Every TIMS crash is kept with its own values,
@@ -1273,7 +900,7 @@ tables but not used by the model or the reporting check, which use injury
 crashes only so that the two sources are compared like for like. Building
 from CCRS alone is not supported yet.
 
-### 8.2 The change from SWITRS to CCRS
+### 7.2 The change from SWITRS to CCRS
 
 CCRS is the Highway Patrol's database that replaced SWITRS, and it now feeds
 TIMS. Local departments moved to filing through it at different times. The
@@ -1339,7 +966,7 @@ cities pooled (rerun):
 The newer grades appear from 2017, earlier than CCRS-style case numbers,
 and by 2026 they are more than four-fifths of injured people (86%). Whether "suspected
 minor injury" covers exactly what "other visible injury" did has not been
-checked. The crash severities change with them (section 8.3), so severity
+checked. The crash severities change with them (section 7.3), so severity
 counts are not comparable across an agency's change of system.
 
 **Reporting through the change.** A change of records system is when a
@@ -1359,7 +986,7 @@ one crash from one agency (within 2 minutes and 100 m, with the same
 parties). Nothing is dropped; the pairs are written out for checking. The
 guide lists the rules in full ("Building the crash tables").
 
-### 8.3 Changes in police reporting
+### 7.3 Changes in police reporting
 
 A ranking built from police reports reads a fall in reports as a fall in
 crashes. Three kinds of change matter for the model.
@@ -1396,7 +1023,7 @@ The "typical year" here is the yearly check's trimmed median over all
 years. After a long collapse it can settle between the old and new levels:
 Palo Alto police's 188 compares with about 350 a year before 2022 in the
 level-step table below, and Sacramento highway patrol's 170 with about 280
-before 2020. This is one of the check's known weaknesses (section 8.4,
+before 2020. This is one of the check's known weaknesses (section 7.4,
 issue #1); the falls are real either way.
 
 **Minor-injury reports falling while totals hold.** A department can stop
@@ -1423,7 +1050,7 @@ pooled):
 Some of this may be real. Some is not: the jump in 2025 comes mostly from
 San Diego, where the share graded visible rose from 34% to 62%, and San
 Jose, from 31% to 45%, with little change in most other cities. The
-reporting check's table of lasting changes of level (section 8.4) finds the
+reporting check's table of lasting changes of level (section 7.4) finds the
 agency-level steps. Over 2015 to 2025, 19 of the 28 cities have at least one
 agency with a step, 26 agencies in all (rerun, cross-city command):
 
@@ -1469,12 +1096,12 @@ fell, and none of these steps has been confirmed with a department.
 **What this does to the model.** Two things. Counts are not comparable
 across a step, between years or between cities, and a ranking pooled over
 cities gives more weight to the ones that file more minor crashes. But
-leaving minor crashes out does not help the ranking (section 6.5), so it
+leaving minor crashes out does not help the ranking (section 5.5), so it
 keeps them. Where an agency's reporting falls, score and publish inside
 each city, and keep its flagged years out of any before-and-after
 comparison.
 
-### 8.4 The reporting check
+### 7.4 The reporting check
 
 `python -m bike_safety_ca.checks.reporting --config <city>` is run before
 comparing years or cities, and before trusting a pooled ranking. It counts
@@ -1516,7 +1143,7 @@ it, with at least three finished years on each side, at most one of them on
 the wrong side of the midpoint between the levels, and 20 crashes a year on
 the higher side. It looks in all injury crashes and at each severity, and
 for a step at one severity says whether the other severities took it up
-(`regraded`) or not (`fewer reports`, `more reports`). Section 8.3 gives
+(`regraded`) or not (`fewer reports`, `more reports`). Section 7.3 gives
 what it finds.
 
 **Two pictures.** Reports per quarter by case-number style, which shows when
@@ -1543,7 +1170,7 @@ crashes per year by severity, which shows regrading.
 
 A flag is a question for the department, not proof that reporting changed.
 
-### 8.5 Placing crashes on the map
+### 7.5 Placing crashes on the map
 
 **Where the point comes from.** Share of injury crashes by the source of
 their point (rerun):
@@ -1621,101 +1248,748 @@ them is not robust. Unplaced crashes are a risk if they cluster: if a
 street's crashes are often reported in a way that cannot be placed, that
 street is under-ranked. This has not been examined.
 
-## 9. Limits
+## 8. Limits
 
 - **Police records, not crashes.** The model ranks where police record bike
   injury crashes. Unreported crashes, most falls among them, are not seen,
   and a department's reporting habits are part of what it learns (section
-  8.3).
+  7.3).
 - **Counts, not risk.** A corner ranks high because many people ride
   through it as well as because it is dangerous for each of them. No
   measure of exposure is used.
-- **Retrospective tests only.** Every test is on years seen during
-  development. A forward test, with a ranking frozen now and scored on
-  crashes not yet recorded, has not been done.
+- **One held-back test, on years already past.** The evaluation of
+  sections 1 and 2 is on cities the model was not developed on, with one
+  pair of periods (through 2020, then 2021–2024), in larger California
+  cities. Every other test is on cities and years seen during development.
+  A forward test, with a ranking frozen now and scored on crashes not yet
+  recorded, has not been done.
 - **Scores are not comparable across cities**, and most city scores rest on
   one to three overlapping windows with no interval computed.
 - **The level is not forecast.** Totals fell after the fitting years in the
   study area; the forecast is useful for ordering and for the relative
   spread, not for the number of crashes next year.
 - **Corners are treated as independent in the fit** (assumption 11), so the
-  log-likelihood comparisons in section 4 are comparisons of fit, not
+  log-likelihood comparisons in section 12 are comparisons of fit, not
   tests, and the forecast variance of a group total is somewhat too small.
 - **One street map for all years.** Changes to streets during the period are
   not seen. Neither are changes made after a crash, which the model reads as
   continuing risk.
 - **Crashes between intersections are left out**, a quarter of located bike
-  crashes in the median city (section 8.5).
+  crashes in the median city (section 7.5).
 - **Small cities** fall back to the blend, which gives no expected count,
   unless fitted with neighbours. A pool cannot cross a county line yet.
 - **Children.** No city here gains from a separate child ranking (section
-  7.4); the all-cyclist ranking is used for children where there are fewer
+  6.4); the all-cyclist ranking is used for children where there are fewer
   than 100 child crashes, and the choice should be stated.
-- **The spread power is fixed at 1 for the rankings** (section 4.2). The
+- **The spread power is fixed at 1 for the rankings** (section 12.2). The
   order barely differs from the one with the power fitted, but the top 25 is
   slightly worse on average, and in San Francisco, Long Beach and San Diego
   the counts fit clearly worse, so expected counts at their busiest corners
   should be read with more caution than the ranks.
-- **Figures not rerun.** Section 4 and parts of sections 5 and 6 rest on
-  one-off runs from before the fixes of 15 to 21 November 2026 (section 10).
+- **Figures not rerun.** Section 12 and parts of sections 4 and 5 rest on
+  one-off runs from before the fixes of 15 to 21 November 2026 (section 9).
 
-## 10. Which figures are current, and reproducing them
+## 9. Which figures are current, and reproducing them
 
 Every figure that depends on the model was rerun with the spread power at 1,
-at revision `3ae2f89` or later; the figures on the crash records (section 8)
+at revision `3ae2f89` or later; the figures on the crash records (section 7)
 are from revision `c87bd4e`. All are on the crash tables built on 21 November
 2026 from TIMS exports (2015 to June 2026, 2014 for the study area) and CCRS
 (2016 to November 2026).
+
+The figures of sections 1 and 2 are from
+`python -m bike_safety_ca.checks.evaluation` at the revision tagged
+`evaluation-final-test-run` (section 2.7), on the held-back cities' crash
+tables built on 24 November 2026.
 
 **Rerun with repository commands:**
 
 | Section | Figures | Command |
 |---|---|---|
-| 4.2 | Spread power 1 against the fitted power, all cities | `python -m bike_safety_ca.checks.candidates --configs config --out <folder>` |
-| 5.3 | Los Altos study-area rank scores, by window, top 25/50/100 | `python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml --out <file>` |
-| 6.1, 6.5, 7.3, 7.4, 8.3 (level steps) | City table, severity sensitivity, pooled table, child table, level-step counts and table | `python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out <folder>` (about six minutes) |
-| 6.4 (companion table) | Simulated against real rank scores, nine cities | `python -m bike_safety_ca.checks.attainable --config config/<city>.yaml`, per city |
-| 8.3, 8.4 (yearly flags) | Falls and rises, counts of marks | `python -m bike_safety_ca.checks.reporting --config config/<city>.yaml`, per city |
+| 12.2 | Spread power 1 against the fitted power, all cities | `python -m bike_safety_ca.checks.candidates --configs config --out <folder>` |
+| 4.3 | Los Altos study-area rank scores, by window, top 25/50/100 | `python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml --out <file>` |
+| 5.1, 5.5, 6.3, 6.4, 7.3 (level steps) | City table, severity sensitivity, pooled table, child table, level-step counts and table | `python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out <folder>` (about six minutes) |
+| 5.4 (companion table) | Simulated against real rank scores, nine cities | `python -m bike_safety_ca.checks.attainable --config config/<city>.yaml`, per city |
+| 7.3, 7.4 (yearly flags) | Falls and rises, counts of marks | `python -m bike_safety_ca.checks.reporting --config config/<city>.yaml`, per city |
 
 **Rerun with one-off scripts** (not in the repository; each calls the
 repository's own functions and prints totals only):
 
-- 4.2 (AIC by window): `fit_street_model` with the power fitted and fixed,
+- 12.2 (AIC by window): `fit_street_model` with the power fitted and fixed,
   per city and window.
-- 3.9, 4.4 (the $Q$ table), 5.3 (corners with no crash), 5.5: fits of
+- 11.9, 12.4 (the $Q$ table), 4.3 (corners with no crash), 4.5: fits of
   `fit_street_model` and `forecast` on the hold-out's inputs for the study
   area.
-- 6.2, 6.3: `rank_intersections` and `rank_score` per city and window.
-- 8.2, 8.3 (severity shares), 8.5 (point sources): tables of the merged
+- 5.2, 5.3: `rank_intersections` and `rank_score` per city and window.
+- 7.2, 7.3 (severity shares), 7.5 (point sources): tables of the merged
   crash files and `reporting.report_format`, all 28 cities pooled.
-- 8.5 (share at an intersection): `build_junctions` and `assign_crashes` per
+- 7.5 (share at an intersection): `build_junctions` and `assign_crashes` per
   city.
 
 **Not rerun since the fixes of 15 to 21 November 2026**, kept with that
 label where they appear:
 
-- 4.3: rank correlations of 0.72 and 0.59 with measured car volume.
-- 4.4: the street-length powers $n^{0.7}$, $n^{0.6}$ and $n^{0.84}$, and the
+- 12.3: rank correlations of 0.72 and 0.59 with measured car volume.
+- 12.4: the street-length powers $n^{0.7}$, $n^{0.6}$ and $n^{0.84}$, and the
   car-pull comparison.
-- 4.5: the AIC gap of 30 to 50 between sum and mean over streets.
-- 4.6 and 4.7: the tables of what each choice contributes and of road and
+- 12.5: the AIC gap of 30 to 50 between sum and mean over streets.
+- 12.6 and 12.7: the tables of what each choice contributes and of road and
   traffic information.
-- 4.8: the tried-and-dropped list, including 0.82 to 0.83 for no-fit
+- 12.8: the tried-and-dropped list, including 0.82 to 0.83 for no-fit
   products.
-- 4.9: the fitted powers of the earlier formula.
-- 5.3: the road-and-traffic row and the resampling ranges.
-- 6.3: the correlation of 0.84 quoted from the companion note.
+- 12.9: the fitted powers of the earlier formula.
+- 4.3: the road-and-traffic row and the resampling ranges.
+- 5.3: the correlation of 0.84 quoted from the companion note.
 
 Earlier figures that this note replaces: "a quarter to 70%" of later crashes
 at corners with no bike crash, in twelve cities (now 27% to 93%, median 53%,
-over 27 cities, section 6.2); the top-ranked counts "of 586" and "of 204"
+over 27 cities, section 5.2); the top-ranked counts "of 586" and "of 204"
 (now of 593 and of 203); the study-area log-likelihoods of about −1454 to
 −1422 by pull (now −1439 to −1404); and the level of 358 against 263 (now
 359 against 261).
 
+## 10. Assumptions
+
+Each assumption is listed with what follows if it fails. Sections 11 and 12
+show where each is used.
+
+1. **Counts are Poisson given the rate.** Bike crashes at intersection $i$
+   over the fitting years are $y_i \mid \lambda_i \sim
+   \text{Poisson}(\lambda_i)$, independently given the rates. Standard for
+   crash counts.
+2. **Rates vary around an expectation, as a gamma distribution.** Corners
+   with the same surroundings do not share one rate:
+   $\lambda_i \sim \text{Gamma}$ with mean $\mu_i$ and shape $s_i$, so that
+   counts are negative binomial with variance
+   $\mu_i + \alpha\,\mu_i^{p}$. The rankings fix the power at $p = 1$
+   (section 12.2); 2 is the textbook case. If the true spread of rates has another shape, the blend in
+   section 11.6 is still a reasonable weighting but no longer the exact
+   posterior mean.
+3. **The bike-crash rate is a product of powers of traffic.**
+   $\lambda^{\text{bike}} = c\,V^{a}B^{b}$ with car flow $V$ and bike flow
+   $B$, and car crashes $\lambda^{\text{car}} \propto V^{q}$. This is the
+   usual form of intersection crash models (Highway Safety Manual, Part C)
+   and of "safety in numbers" work (Jacobsen 2003; Elvik and Bjørnskau
+   2017).
+4. **A corner's car-crash record stands in for its car traffic.** This
+   follows from assumption 3 if car crashes are recorded alike across the
+   area. The record also carries street design and reporting, so it is a
+   predictor of bike crashes, not a measurement of traffic. Where one department stops filing some reports, its corners' car
+   terms are too low (section 7.3).
+5. **Bike traffic is similar along a named street.** Riders travel along
+   streets, so the bike crashes at a street's other corners stand in for
+   the bike flow at this one. A corner on two streets takes riders from both,
+   so its two streets' figures are added. Where riding is concentrated on
+   a different set of streets from car traffic (the Berkeley reading in
+   [the companion note](where_the_ranking_helps.md#where-it-helps-least)),
+   this works less well.
+6. **What is typical for a street depends on its length.** The expected
+   bike crashes per corner of a named street with $n$ intersections is a
+   power of $n$, $t(n) = e^{\beta_0} n^{\beta_1}$. Long named streets are
+   the through routes.
+7. **Rates are steady over time up to a common factor.** The ranking needs
+   only the relative rates to carry over from the fitting years to the
+   later ones. The overall level is not assumed to carry over, and in the
+   tests it did not (section 4.5).
+8. **Reporting is uniform across the area and over the years.** A crash is
+   equally likely to be recorded wherever and whenever it happens. This is
+   the weakest assumption: section 7.3 shows departments whose reporting
+   falls or changes, and a pooled ranking is distorted by it.
+9. **Crashes are placed correctly.** Each crash is put at the right
+   intersection, or at none. Section 7.5 gives the rules and how many
+   crashes cannot be placed.
+10. **The street map applies to every year.** Intersections and street
+    names are today's OpenStreetMap, used for all years. A corner rebuilt
+    or renamed in the period is treated as unchanged.
+11. **For fitting, corners are treated as independent.** They are not:
+    corners on one street share a street average, and each corner's count
+    is in its neighbours' averages. The likelihood is used as a fitting
+    criterion and to compare fits, not for standard errors or formal tests.
+
+## 11. The model
+
+The code is `fit_street_model` in `src/bike_safety_ca/model/crash_history.py`,
+called through `rank_intersections`, which falls back to the blend of
+section 6 when there are too few crashes. The steps below follow the code.
+
+### 11.1 Notation
+
+| Symbol | Meaning |
+|---|---|
+| $y_i$ | Bike crashes at intersection $i$ in the fitting years (or child crashes, for the child ranking) |
+| $x_i$ | Car crashes at $i$ in the same years |
+| $R(i)$ | The named streets that meet at $i$ (by `street_key`: the name with its street type, so Park Avenue and Park Place are two streets) |
+| $n_r$ | Number of intersections in the area on street $r$ |
+| $Y_r$ | Bike crashes summed over the intersections on street $r$ |
+| $t(n)$, $t^{\text{car}}(n)$ | Typical bike (car) crashes per corner on a street with $n$ intersections |
+| $Q$, $Q^{\text{car}}$ | Strength of the pull toward $t(n)$: 20 for bike crashes, 1 for car crashes |
+| $\mu_i$ | The model's expectation for $i$ before its own bike count is used |
+| $p$, $\alpha$ | Spread power and scale: variance $\mu + \alpha\mu^{p}$ |
+| $s_i$ | Gamma shape at $i$: $s_i = \mu_i^{2-p}/\alpha$ |
+
+### 11.2 Typical value for a street of a given length
+
+For each named street $r$, the total $Y_r$ is fitted by Poisson regression
+on $\log n_r$ with offset $\log n_r$:
+
+$$
+\log E[Y_r] = \log n_r + \beta_0 + \beta_1 \log n_r,
+$$
+
+so the typical value per corner is
+
+$$
+t(n) = e^{\beta_0}\, n^{\beta_1}.
+$$
+
+The fit is on every named street in the area, each corner's count included
+(`street_length_average`). An intersection with no named street is given
+$t(1) = e^{\beta_0}$ in place of a street average. The same is done for car
+crashes, giving $t^{\text{car}}(n)$.
+
+### 11.3 Street averages, leaving the corner out (blend A)
+
+For a corner $i$ on street $r$, the street's average is taken over its other
+corners, pulled toward the typical value by $Q$ imaginary corners:
+
+$$
+\bar m_{r,-i} = \frac{(Y_r - y_i) + Q\,t(n_r)}{(n_r - 1) + Q}.
+$$
+
+A corner's street bike term is the **sum** over its streets:
+
+$$
+m_i = \sum_{r \in R(i)} \bar m_{r,-i}.
+$$
+
+$Q = 20$ (the argument `pull`). It is not fitted in each run; it was chosen
+on the fitting years (section 12.4).
+
+### 11.4 The car term (blend B)
+
+The street car average $m^{\text{car}}_i$ is built the same way from car
+counts, with $Q^{\text{car}} = 1$ (`car_pull`). The corner's own car count
+is then blended with it as a gamma-Poisson posterior mean, with one shape
+$k$ for all corners, fitted by maximum likelihood to the car counts as
+negative binomial around $m^{\text{car}}_i$ (`fit_shape`):
+
+$$
+\tilde x_i = \frac{k + x_i}{k/m^{\text{car}}_i + 1}.
+$$
+
+Unlike blend A, the corner's own count is in it: car crashes are only a
+predictor of bike crashes, so using them does not put the same number on
+both sides of the fit.
+
+### 11.5 The expectation and the fit
+
+$$
+\mu_i = \exp\bigl(\gamma_0 + b\log m_i + a\log\tilde x_i\bigr)
+= e^{\gamma_0}\, m_i^{\,b}\, \tilde x_i^{\,a}.
+$$
+
+The bike counts are negative binomial around $\mu_i$ with variance
+$\mu_i + \alpha\mu_i^{p}$, that is with gamma shape
+$s_i = \mu_i^{2-p}/\alpha$. For a given $p$, $(\gamma_0, b, a, \alpha)$ are
+fitted by maximum likelihood (L-BFGS-B, started from two values of $\alpha$,
+keeping the better; a failure to converge raises an error, and the fallback
+is used). The rankings set $p = 1$ (`SPREAD_POWER`; section 12.2). Asked to
+fit it (`spread_power=None`), the code chooses $p$ by a one-dimensional
+search over $[0.5, 2.5]$ that maximises the profile log-likelihood
+(`_fit_spread`).
+
+The fitted numbers are $\gamma_0$, $b$, $a$, $\alpha$, the car shape $k$,
+and the two pairs $(\beta_0, \beta_1)$ for the typical values: nine in
+all, with $p$, $Q$ and $Q^{\text{car}}$ set beforehand.
+
+### 11.6 The corner's own count, and what is ranked (blend C)
+
+The estimate the intersections are ranked by is the posterior mean of the
+corner's rate given its own count:
+
+$$
+\hat\lambda_i = E[\lambda_i \mid y_i]
+= \frac{s_i + y_i}{s_i/\mu_i + 1}
+= w_i\,\mu_i + (1 - w_i)\,y_i,
+\qquad w_i = \frac{s_i}{s_i + \mu_i}.
+$$
+
+With the rankings' $p = 1$ the shape is $s_i = \mu_i/\alpha$, and the
+weight is the same at every corner of one fit:
+
+$$
+\hat\lambda_i = \frac{\mu_i + \alpha\,y_i}{1 + \alpha}
+= (1 - u)\,\mu_i + u\,y_i, \qquad u = \frac{\alpha}{1 + \alpha}.
+$$
+
+Both $\mu_i$ and $y_i$ are counts over the fitting years. For example, with
+a background of 0.5 crashes, two crashes on record and $u = 0.4$, the
+estimate is $0.6 \times 0.5 + 0.4 \times 2 = 1.1$. The weight is fitted, so
+it differs between cities and between fitting periods.
+
+In plain terms the model does three things. It estimates a background
+number of crashes for the corner from its streets and its car crashes
+(sections 11.2 to 11.5). It combines that background with the corner's own
+count, by the weighted average above. And it ranks the corners by the
+result. A corner with no crash on record is not put at zero, and a corner
+with one bad stretch is not taken at face value.
+
+Only this last step is a textbook calculation. The background is itself
+built from crash counts, including those of the neighbouring corners whose
+own estimates use this corner's count in turn, so the steps together are
+not a single probability model with one likelihood. They are a procedure
+whose worth rests on the tests in sections 4 and 5, and nothing here says
+that a street's traffic or design causes the crashes.
+
+The last step is the empirical Bayes estimate used in road safety to correct
+regression to the mean (Hauer 1997). It is a plug-in estimate: $\mu_i$ and
+$\alpha$ are fitted to the same crashes and then treated as known
+(assumption 11). It is the column `eb` in the fit, the
+`score` the ranking writes, and `expected_bike_crashes` in the ranking file:
+an estimated count over the whole of the fitting years.
+
+### 11.7 Forecast for a later period
+
+After the fit the rate at $i$ is gamma with shape $s_i + y_i$ and rate
+$s_i/\mu_i + 1$. The count in a later period $r$ times as long as the
+fitting period is negative binomial with
+
+$$
+\text{mean}_i = r\,\frac{s_i + y_i}{s_i/\mu_i + 1}, \qquad
+\text{variance}_i = \text{mean}_i + r^2\,\frac{s_i + y_i}{(s_i/\mu_i + 1)^2}.
+$$
+
+`forecast` returns both. The forecast carries the fitting years' rate
+forward unchanged: it assumes that neither the rate nor the way crashes are
+recorded changes, and no trend is fitted. In the closed test periods the
+crashes recorded were about a fifth fewer than forecast (section 12.11),
+so the level should not be relied on. Summing variances over a group of intersections
+treats the fitted street averages and parameters as known and the corners
+as independent, so the spread of a group total is somewhat understated.
+
+### 11.8 The three blends side by side
+
+The model pulls a noisy number toward a steadier one in three places. They
+are not the same operation, and the differences are deliberate.
+
+| | A. Street bike average | B. Corner's car crashes | C. Corner's bike crashes |
+|---|---|---|---|
+| What is noisy | Bike crashes at the street's other corners | The corner's own car count | The corner's own bike count |
+| Pulled toward | $t(n)$ for a street with that many intersections | The street car average (itself pulled toward $t^{\text{car}}(n)$) | The fitted expectation $\mu_i$ |
+| Corner's own count in it? | No | Yes | Yes |
+| Strength | $Q = 20$ imaginary corners | Street average: $Q^{\text{car}} = 1$. Blend: one gamma shape, about 0.25 | Shape $\mu_i/\alpha$ (the case $p = 1$) |
+| Role | A predictor in $\mu_i$ | A predictor in $\mu_i$ | The estimate ranked by |
+| Code | `street_length_average(bike, streets, pull)` | `street_length_average(car, streets, car_pull)`, `fit_shape`, `gamma_blend` | `gamma_blend` with `prior_shape` |
+
+What each does to a corner with no record: A gives a corner on a street with
+no bike crash the typical value for a street of that length, which is low
+for short streets. B gives a corner with no car crash a small positive car
+term set by its street. C leaves a corner with no bike crash a little below
+its expectation, at $\mu_i\,s_i/(s_i + \mu_i)$.
+
+### 11.9 Fitted values
+
+Los Altos study area (4,208 intersections), fitted on 2014 to the year shown
+with $p = 1$. The last column is the power the fit chooses when asked to.
+Rerun: one-off script calling `fit_street_model` on the hold-out's inputs,
+revision `3ae2f89`.
+
+| Fitted on | Bike crashes | Street bike power $b$ | Car power $a$ | $\alpha$ | Weight on own count $u$ | Car shape $k$ | $p$ if fitted |
+|---|---|---|---|---|---|---|---|
+| All cyclists, 2014–2018 | 449 | 1.49 | 0.36 | 0.20 | 0.17 | 0.26 | 1.21 |
+| All cyclists, 2014–2020 | 596 | 1.57 | 0.32 | 0.25 | 0.20 | 0.25 | 1.35 |
+| All cyclists, 2014–2022 | 710 | 1.50 | 0.34 | 0.24 | 0.19 | 0.24 | 1.41 |
+| Children, 2014–2018 | 174 | 1.46 | 0.34 | 0.10 | 0.09 | 0.26 | 1.58 |
+| Children, 2014–2020 | 221 | 1.56 | 0.32 | 0.17 | 0.14 | 0.25 | 1.55 |
+| Children, 2014–2022 | 261 | 1.53 | 0.32 | 0.16 | 0.14 | 0.24 | 1.56 |
+
+So a corner's own bike count gets about a fifth of the weight in the
+all-cyclist rankings here and a seventh or less in the child rankings, and
+the fitted background the rest.
+
+The values are stable between fits. The street bike power is above 1
+because the strong pull narrows the range of the street averages and the
+power widens it again; it is not an estimate of how crashes grow with bike
+traffic. The car power, about a third, is not the $a$ of a traffic model
+either: the two powers describe how the two crash records predict bike
+crashes together (appendix A.6).
+
+## 12. Why each choice was made
+
+Each choice was made by comparing fits on the fitting years, then checked on
+the later years. The later years were seen during development (section
+4.1), so they confirm rather than test.
+
+### 12.1 Poisson counts with gamma-distributed rates
+
+If rates did not vary between corners with the same surroundings (a plain
+Poisson, $s \to \infty$), a corner's own count would add nothing to the
+expectation. They do vary: the counts are overdispersed against any
+expectation tried. The gamma is the conjugate choice, which gives the
+closed-form blend of section 11.6 and the negative binomial likelihood.
+This is the standard model for crash counts (Hauer 1997; Highway Safety
+Manual).
+
+### 12.2 The spread power, fixed at 1
+
+How much the corner's own count should weigh depends on how the spread of
+rates grows with the expectation (appendix A.3):
+
+- With $p = 1$, every corner's own count gets the same weight,
+  $\alpha/(1 + \alpha)$, whatever its expectation.
+- With $p = 2$, the textbook negative binomial, the weight is
+  $\alpha\mu/(1 + \alpha\mu)$: it rises with the expectation, and a corner
+  where little is expected is held close to it.
+- In between, the weight still rises with the expectation, more slowly. What
+  grows as the expectation falls is the proportional effect of a first
+  crash, $1 + \alpha\mu^{p-2}$, not the weight.
+
+The model first fitted $p$. On the Los Altos study area it came out between
+1.2 and 1.6, and across 62 windows in 23 cities between 0.54 and 2.49, above
+2 in two of them. Above 2 the estimate at a corner with no crash can fall as
+its expectation rises (where $\alpha(p - 2)\mu^{p-1} > 1$).
+
+Fitting it did not improve the rankings. Refitting every window with
+$p = 1$ and with $p$ fitted (`python -m bike_safety_ca.checks.candidates`,
+revision `0b56c05`, crash tables of 21 November 2026), the average change
+from fitting $p$ to fixing it at 1 is, with shares in percentage points of
+the later crashes:
+
+| Ranking | Windows (cities) | Rank score | Top 25 | Top 50 | Top 100 | Top 5% of corners |
+|---|---|---|---|---|---|---|
+| Fitted to all cyclists, scored on all cyclists | 62 (23) | −0.0003 | −0.25 | +0.07 | −0.27 | +0.19 |
+| Fitted to all cyclists, scored on children | 33 (17) | −0.0004 | −0.30 | −0.13 | −0.18 | +0.04 |
+| Fitted to children, scored on children | 18 (7) | +0.0003 | −0.41 | −0.17 | +0.24 | −0.19 |
+
+The margins written down before the comparison were 0.005 of rank score and
+1 percentage point in the top 50 and the top 5% of corners. Drawing whole
+cities again with replacement 10,000 times, the all-cyclist rank-score
+change stays between −0.0007 and +0.0002 (5th to 95th percentile), and the
+top-25 change between −0.58 and +0.08 points. So the rankings use $p = 1$:
+one parameter fewer, no search over $p$, and a weight that can be stated in
+a sentence. These are the windows the model was developed on, and windows
+within a city overlap, so this shows average differences inside the margins
+here, not that the two are equivalent.
+`rank_intersections(..., spread_power=None)` still fits $p$. The corridor
+table (`model/corridors.py`) keeps the fitted power for its corner part; it
+has not been compared.
+
+What fixing the power costs:
+
+- **The very top of the list.** The top 25 and the top 100 had no margin of
+  their own, and both come out a little lower on average: over the 62
+  all-cyclist windows the top 25 lists hold 1,777 later crashes with $p = 1$
+  and 1,805 with $p$ fitted. In four more cities than before (six in all),
+  past bike crashes alone now match or beat the model's top 25 (see the
+  companion note).
+- **Single windows move more than the averages.** In the Los Altos study
+  area the ranking fitted to child crashes through 2018 finds 4 of 87 later
+  child crashes in its top 25 with $p = 1$ and 10 with $p$ fitted, with the
+  same 14 in its top 50.
+- **The likelihood is lower in the largest cities.** Over the 64
+  all-cyclist windows with a fitted model, the AIC is lower with $p = 1$ in
+  32, higher by more than 2 in 28 and higher by more than 10 in nine: all
+  three windows of San Francisco (by 56 to 90, where the fitted power is
+  about 1.6) and of Long Beach, two of San Diego and one of Ventura. The
+  simulation of section 5.4 shows the same thing: with $p = 1$ San
+  Francisco's real score is below every one of its simulated scores.
+  (One-off script calling `fit_street_model`, revision `0b56c05`.)
+
+An earlier version of this section concluded from the AIC that the
+estimates at the busiest corners are less trustworthy with $p = 1$. A direct
+check does not bear that out. Forecasting each closed later period from the
+fitting years and comparing with what was recorded (40 windows in 21
+cities, section 12.11), the corners in the model's own top 25 were forecast
+at 1.34 times the crashes later recorded with $p = 1$, and at 1.43 times
+with $p$ fitted between 1 and 2. Both are too high, and $p = 1$ is the
+less wrong of the two there. Over all corners the two differ by 0.0006 in
+Poisson deviance per intersection, in favour of the fitted power.
+
+A power fitted but held between 1 and 2 was compared as well, since it keeps
+the estimate monotone. Against it, $p = 1$ changes the all-cyclist rank
+score by −0.0004 (−0.0008 to −0.0001) and the top 25 by −0.30 points, the
+top 50 by +0.04 and the top 5% by +0.14. That is inside the margins, so the
+simpler setting was kept.
+
+### 12.3 Crash records in place of traffic
+
+No city in the tests has counts of bike traffic at its intersections, and
+car counts cover few streets. Under assumption 3, car flow can be replaced
+by the car-crash rate, $V^{a} \propto (\lambda^{\text{car}})^{a/q}$, and the
+bike flow along a street by the street's bike-crash record. The earlier
+one-off checks support the substitution: on the 70 study-area streets with
+measured daily car volumes and three or more intersections, measured volume
+had a rank correlation of 0.72 with car crashes per corner and 0.59 with
+bike crashes per corner (not rerun).
+
+### 12.4 Leaving the corner out of its street average, and pulling hard
+
+**Leaving it out.** Bike crashes are what the model fits. If a corner's own
+bike count were in its street average, the same number would be on both
+sides of the fit and the street term would take credit for the corner's
+own record. So blend A uses the other corners only, and the corner's own
+count enters only in blend C. Two indirect routes remain: $t(n)$ is fitted
+on all streets, and each corner's count is in its neighbours' averages.
+Car crashes are only a predictor, so the corner's own car count goes
+straight into blend B.
+
+**Toward a length-typical value.** The median named street has two
+intersections, so most street averages rest on very little. Pulling a
+short street with no record toward the overall mean, as the first version
+of the model did, rates it too high: bike crashes per corner rise with
+street length, roughly as $n^{0.7}$ (children $n^{0.6}$, car crashes
+$n^{0.84}$; earlier one-off fits, not rerun).
+
+**Pulling hard.** Training log-likelihood on the study area, all cyclists
+(rerun, same script as section 11.9):
+
+| Fitted on | $Q = 1$ | $Q = 8$ | $Q = 20$ | $Q = 40$ |
+|---|---|---|---|---|
+| 2014–2018 | −1064 | −1044 | −1038 | −1041 |
+| 2014–2020 | −1286 | −1257 | −1250 | −1256 |
+| 2014–2022 | −1439 | −1411 | −1404 | −1411 |
+
+The fit improves up to about 20 imaginary corners in every window and falls
+off after. With $Q = 20$, a street's own record counts for much only on
+long streets.
+
+**The car pull.** For car crashes the strength hardly matters: going from 1
+to 3 or 8 imaginary corners changed the training log-likelihood by about 1
+in the earlier one-off runs, so it is left at 1. With a car shape of about
+0.25, the corner's own car count gets more than half the weight wherever
+the street average is above 0.25 crashes; the street average mainly decides
+what a corner with no car crash gets in place of zero.
+
+**Why only blend C has a spread power to choose.** In C the power decides
+how much one bike crash moves a corner with a low expectation, and the
+training log-likelihood is lower by 2 to 4 with $p = 2$ than with $p = 1$
+in each window. In B the textbook form is used with one fitted shape. Another
+power for the car blend has not been tried; given how little the car pull
+matters, it is unlikely to change much.
+
+### 12.5 Adding the averages of a corner's streets
+
+Riders arrive along both streets, so the bike flow through a corner is the
+sum of the flows on its streets, not their mean (appendix A.7). The sum fit
+the fitting years better than the mean in the earlier one-off runs (AIC
+lower by about 30 to 50; not rerun).
+
+### 12.6 What each choice contributes
+
+One-off runs on the study area, all cyclists, from when the model fitted
+$p$; not rerun since the fixes of 15 to 21 November 2026, which moved the
+model's study-area score by 0.002 at most, or since $p$ was fixed at 1,
+which moved it by 0.001. Average rank score over the three windows (section 4), and the forecast
+log-likelihood summed over the windows with the level set to the actual
+total (higher is better):
+
+| Version | Study area | Los Altos | Log-likelihood, study area |
+|---|---|---|---|
+| First version: mean over streets, pulled to the overall mean, $p = 2$ | 0.817 | 0.796 | −1880 |
+| Sum over streets | 0.824 | 0.792 | −1861 |
+| and $p$ fitted | 0.827 | 0.810 | −1845 |
+| and pulled to the street-length value, $Q = 20$ (the model before $p$ was fixed) | 0.856 | 0.847 | −1792 |
+| Street length alone, no street bike record | 0.849 | 0.842 | −1825 |
+| Crash history with same-street averages (earlier fitted formula) | 0.836 | 0.828 | −1850 |
+
+The pull toward the length-typical value is the largest single gain. Street
+length alone does most of the work of the street term; the street's own
+bike record adds a little, mainly on long streets.
+
+### 12.7 Road and traffic information that was tried
+
+Three kinds of extra information were tried on top of the model in earlier
+one-off runs on the study area (not rerun; scripts not included). Average
+rank score over the three windows:
+
+| Version | Study area, all | Study area, children | Los Altos, all | Los Altos, children |
+|---|---|---|---|---|
+| The model | 0.856 | 0.853 | 0.847 | 0.847 |
+| Pulled toward the typical value for road class, not length | 0.842 | 0.834 | 0.815 | 0.806 |
+| Pulled toward the typical value for class and length | 0.852 | 0.847 | 0.833 | 0.828 |
+| Plus major and minor road class as corner factors | 0.860 | 0.857 | 0.846 | 0.848 |
+| Measured car volume in the value a street is pulled toward | 0.850 | | 0.841 | |
+| Plus modelled school bike trips through the corner | 0.857 | 0.866 | 0.851 | 0.852 |
+| Road-and-traffic model of the Los Altos analysis, refitted | 0.856 | 0.866 | 0.830 | 0.808 |
+
+- **Road class** is a worse target than length. Once the corner's car record
+  is in the model, car crashes already carry what class knows; length adds
+  something else, whether the street is a through route. Class as corner
+  factors improves the training fit a little; the gain on later crashes is
+  within noise.
+- **Measured car volumes** cover 70 streets touching 1,183 of the 4,208
+  intersections. As a separate corner factor they move the rank score by
+  0.003 or less, with a fitted power of about −0.3: given the same crash
+  record, a corner on a busier street has slightly fewer bike crashes.
+- **Modelled school bike trips**, $(1 + \text{trips})^{g}$ with $g \approx
+  0.35$, close the gap to the road-and-traffic model for children across the
+  study area (resampling range +0.003 to +0.024), but not clearly in Los
+  Altos. The term is not in `fit_street_model`; the trips come from a route
+  model that is not in this repository.
+
+### 12.8 Tried and dropped
+
+All on the fitting years first, in earlier one-off runs:
+
+- **Older crashes counting for less.** An old crash predicts later ones
+  about as well as a recent one; no consistent difference across windows.
+- **The street's car record as an extra factor.** Fitted power near zero.
+- **Street bike crashes per car crash, not per corner.** Fits much worse.
+- **Pulling street averages toward a value predicted from the street's car
+  record.** No gain.
+- **Street length as a separate factor beside the street average.** No
+  better than the pull, with one more parameter.
+- **Dividing the corner's car count by its street's car average**, which
+  the theory suggests if bike flow were constant along a street. Worse.
+- **No-fit versions of the product with a fixed shape.** They rank about as
+  well as the hand-built blend (0.82 to 0.83) but are far too concentrated
+  to be read as expected counts.
+
+### 12.9 How the earlier formulas relate to it
+
+Two earlier rankings are still in the code and in the hold-out table. The
+model explains why they worked.
+
+The hand-built blend, `street_blend_score` (also the fallback, section 6),
+is a product of the corner's bike and car counts, each first blended with
+its street mean (appendix A.9). The product is assumption 3; the
+fixed-weight blend of a corner with its street is blend C with $p = 1$; the
+"1 +" keeps a corner with no record from scoring zero, the job the pull does
+in blend A.
+
+The earlier fitted formula, `fit_history_model`, is a negative binomial fit
+on $(1 + x_i)$, $(1 + \text{street bike sum})$ and
+$(1 + \text{street car sum})$, where "street sum" is the sum over a corner's
+streets of the mean at the street's other corners, with no pull. Its fitted
+powers were about 0.8, 1.9 and 0.5 to 1.0. Raw street sums with "1 +" never
+lift a street with no record to the average, so short streets are treated
+as quiet; the power of 1.9 trusts a street's record mainly where it is
+large, which imitates the strong pull; and the "1 +" floors compress the low
+end, as $p < 2$ does.
+
+### 12.10 How this relates to published methods
+
+Parts of the model are standard, parts are close to published methods
+without being the same, and parts are this project's own.
+
+**The same mathematics.**
+
+- Blend C, a model's expectation combined with the site's own count through
+  a gamma–Poisson posterior, is the empirical Bayes estimate of road safety
+  (Hauer 1997; Hauer and others 2002 is the short tutorial). The Highway
+  Safety Manual uses the case $p = 2$, where the weight on the model's
+  expectation is $1/(1 + \alpha\mu)$. With $p = 1$ it is $1/(1 + \alpha)$
+  at every site.
+- The variance $\mu + \alpha\mu^{p}$ is the NB-P family of Greene (2008),
+  with the two usual negative binomial models, NB1 and NB2, as $p = 1$ and
+  $p = 2$.
+- Blend A's weight on a street's own record, $(n - 1)/(n - 1 + Q)$, is a
+  Bühlmann credibility factor (Bühlmann 1967; appendix A.5).
+
+**Close, but not the same.**
+
+- Wang, Zhao and Jackson (2019) compare NB1, NB2 and NB-P for crashes at
+  rural two-lane intersections, and El-Basyouny and Sayed (2006) compare a
+  fixed with a site-varying negative binomial shape on road segments. The
+  question of section 12.2, whether a more flexible spread changes what the
+  model is used for, is theirs; the finding here, a better fit to the counts
+  in some cities with nearly the same order, is for this project's data
+  only.
+- Katicha and Flintsch (2023) combine a spatially smoothed crash estimate
+  with each location's own count by empirical Bayes (their KDEB). The street
+  averages here play the part of their smoothed estimate, but they are
+  averages along named streets and not a kernel over distance, they leave
+  the corner out, they are pulled toward a value typical of the street's
+  length, and a car-crash term stands beside them. KDEB has not been run on
+  these data, so nothing here says which does better.
+
+**This project's own, and not compared with a published method:** street
+averages that leave the corner out and are pulled toward a length-typical
+value; car crashes standing in for car traffic; adding the averages of a
+corner's streets. Their support is the hold-out comparisons of this
+section and no more.
+
+### 12.11 Textbook models fitted to the same data
+
+The model's steps were arrived at by trial on the test windows, so it was
+compared with three models that a statistician would write down first. All
+use the same crashes, the same placement, the same 100-crash floor and the
+same tests (`python -m bike_safety_ca.checks.candidates`, revision
+`4382343`, crash tables of 21 November 2026).
+
+- **Textbook empirical Bayes** (`model/standard_eb.py`). A negative binomial
+  regression (NB2, fitted with statsmodels) of the bike count on the corner's
+  car crashes and the classes of its two main roads, then the usual update
+  with the corner's own count (Hauer and others 2002). No predictor is built
+  from bike crashes.
+- **The same with street context.** Two more regression columns, set before
+  the run by an outside reviewer and not varied: the number of other
+  intersections sharing a named street with the corner, and the car crashes
+  per year at those intersections.
+- **Street effects fitted jointly** (`model/street_effects.py`). The textbook
+  model with a normally distributed effect for each named street, fitted in
+  one step by an approximate method written for this comparison. It has not
+  been checked against a maintained package and stays experimental.
+
+The margins were written down beforehand: a mean loss of no more than 0.005
+of rank score, and 1 percentage point of later crashes in the top 50 and in
+the top 5% of corners, against the model with the power fitted between 1 and
+2. Change from that reference, rankings fitted to and scored on all
+cyclists, 62 windows in 23 cities (5th to 95th percentile over 10,000 draws
+of whole cities in brackets):
+
+| Model | Rank score | Top 25 | Top 50 | Top 5% of corners |
+|---|---|---|---|---|
+| This model, $p = 1$ | −0.0004 (−0.0008 to −0.0001) | −0.30 | +0.04 | +0.14 |
+| Textbook empirical Bayes | −0.0240 (−0.0281 to −0.0204) | −1.40 | −0.76 | −1.24 |
+| With street context | −0.0080 (−0.0104 to −0.0057) | −1.21 | −0.44 | −0.58 |
+| Street effects fitted jointly | −0.0107 (−0.0132 to −0.0085) | −0.45 | −0.68 | −0.40 |
+
+None of the three meets the rank-score margin, so the model was kept.
+Measured against $p = 1$ itself the street-context model loses 0.0075
+(0.0052 to 0.0099), and on the 40 windows whose later period ends in 2022,
+before any provisional records, 0.0077: the conclusion does not depend on
+the reference or on the newest records.
+
+What this does and does not show:
+
+- The two street-context columns recovered about two thirds of the textbook
+  model's rank-score gap on these windows. Much of what this model adds is
+  information about the corner's streets, which a textbook model can use
+  too. The comparison does not separate the rest into better inputs and
+  better machinery.
+- The street-context model is the closest conventional comparator: a
+  standard likelihood, standard software and no predictor built from bike
+  crashes. It loses about half a point of later crashes in the top 50 and
+  the top 5%, which is inside those margins, and 1.2 points in the top 25.
+  It is kept in the comparison command as the standing benchmark for later
+  changes.
+- For rankings fitted to child crashes (18 windows in 7 cities) it loses
+  0.0077 of rank score (0.0006 to 0.0152) and 1.3 points in the top 50
+  (from 3.8 lost to 0.7 gained).
+- Forecast counts were checked on the 40 closed later periods (2019–2022 or
+  2021–2022; whether every agency's records are complete for those years
+  was not audited). Every model forecast the same total to within 0.03% in
+  every window, and over all of them the crashes recorded were 79% of that
+  total. The windows overlap, and this is a mismatch between these periods,
+  not a measured trend. In each model's own top 25 corners the forecast was
+  1.34 times what was recorded for this model with $p = 1$, 1.43 with the
+  power fitted, and 1.62 to 1.69 for the three textbook models. Poisson
+  deviance per intersection, which with equal totals mainly measures where
+  each model puts the crashes, is higher than the reference's by 0.0006 for
+  $p = 1$, 0.0065 for street effects, 0.0076 for street context and 0.0162
+  for the plain textbook model.
+- All of this is on the windows the model was developed on. The
+  street-context model was later scored on cities held back from
+  development, where it is 0.6 points of capture behind this model (section
+  1.2). The other two were not.
+
+The decision record, with the full tables, is
+[plans/model-review-decision.md](../plans/model-review-decision.md).
+
 ## Appendix: derivations
 
-Notation as in section 3.1. Gamma distributions are written with shape and
+Notation as in section 11.1. Gamma distributions are written with shape and
 rate, $\text{Gamma}(s, \beta)$, with mean $s/\beta$ and variance $s/\beta^2$.
 
 ### A.1 The negative binomial
@@ -1733,7 +2007,7 @@ $$
 with $E[y] = \mu$ and $\text{Var}[y] = \mu + \mu^2/s$. Setting
 $s = \mu^{2-p}/\alpha$ gives $\text{Var}[y] = \mu + \alpha\mu^{p}$: $p = 2$ is
 the usual negative binomial with constant shape $1/\alpha$, and $p = 1$ has
-variance $(1 + \alpha)\mu$. The log-likelihood maximised in section 3.5 is the
+variance $(1 + \alpha)\mu$. The log-likelihood maximised in section 11.5 is the
 sum of $\log P(y_i)$ with $\mu_i$ and $s_i$ in place of $\mu$ and $s$.
 
 ### A.2 The posterior mean
@@ -1748,7 +2022,7 @@ E[\lambda \mid y] = \frac{s + y}{s/\mu + 1} = \frac{\mu(s + y)}{s + \mu}
 = w\mu + (1 - w)\,y,
 $$
 
-with $w = s/(s + \mu)$. This is the estimate ranked by (section 3.6).
+with $w = s/(s + \mu)$. This is the estimate ranked by (section 11.6).
 
 ### A.3 The spread power and the weight on a corner's own count
 
@@ -1796,7 +2070,7 @@ P(z = 0) = \left(\frac{R}{R + r}\right)^{S}, \qquad
 P(z = 1) = S\,\frac{r}{R + r}\left(\frac{R}{R + r}\right)^{S}.
 $$
 
-Section 5.5 sums $1 - P(z = 0)$ over intersections for the expected number
+Section 4.5 sums $1 - P(z = 0)$ over intersections for the expected number
 with at least one later crash, and $1 - P(z = 0) - P(z = 1)$ for two or
 more. These treat $\mu_i$ and $s_i$ as known.
 
@@ -1813,13 +2087,13 @@ E[\theta_r \mid \text{others}] = \frac{Q\,t(n_r) + (Y_r - y_i)}{Q + n_r - 1}
 \qquad Z = \frac{n_r - 1}{n_r - 1 + Q},
 $$
 
-which is the formula of section 3.3. The second form needs $n_r > 1$; a
+which is the formula of section 11.3. The second form needs $n_r > 1$; a
 street with one intersection has $Z = 0$ and uses $t(1)$ directly, as the
 first form and the code do. $Z$ is Bühlmann's credibility factor
 (Bühlmann 1967), with $Q$ the ratio of the variance within a street to the
 variance between streets. With $Q = 20$ a street's own record has half the
 weight only at 21 intersections. In the data corners on one street vary
-more than Poisson, so $Q$ is chosen by fit (section 4.4) rather than taken
+more than Poisson, so $Q$ is chosen by fit (section 12.4) rather than taken
 from this derivation. One $Q$ for all lengths implies that the variance of
 $\theta_r$ is proportional to $t(n_r)$.
 
@@ -1862,7 +2136,7 @@ what the mean gives. For corners on one named street they agree.
 
 ### A.8 The typical value for a street length
 
-The Poisson regression of section 3.2 has score equations
+The Poisson regression of section 11.2 has score equations
 
 $$
 \sum_r \bigl(Y_r - n_r t(n_r)\bigr) = 0, \qquad
@@ -1988,15 +2262,15 @@ publisher's or an archive's record, and Greene's variance form against the
 paper itself. The two books were checked for their details and subject only:
 the text of neither was read for this note. Hanley and McNeil, added on 22
 November 2026, was checked against its Crossref record that day. The four
-papers of section 4.10 marked "details only", added on 23 November 2026,
+papers of section 12.10 marked "details only", added on 23 November 2026,
 were checked against their Crossref records for authors, title, journal and
-pages; their text was not read for this note, and what section 4.10 says of
+pages; their text was not read for this note, and what section 12.10 says of
 them follows an outside literature review of their abstracts.
 
 - Hauer, E. (1997). *Observational Before–After Studies in Road Safety:
   Estimating the Effect of Highway and Traffic Engineering Measures on Road
   Safety*. Pergamon, Oxford. xv + 289 pp. ISBN 0-08-043053-8. Regression to
-  the mean and the empirical Bayes method (section 3.6).
+  the mean and the empirical Bayes method (section 11.6).
 - Hauer, E., Harwood, D. W., Council, F. M. and Griffith, M. S. (2002).
   "Estimating safety by the empirical Bayes method: a tutorial."
   *Transportation Research Record* 1784(1), 126–131. doi:10.3141/1784-16.
