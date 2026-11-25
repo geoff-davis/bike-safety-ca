@@ -56,9 +56,10 @@ sources. "Which figures are current" lists them.
 - **It is ahead of the closest model from the road-safety literature by a
   small margin.** A negative binomial regression with the empirical Bayes
   update, given the same street information, captures 28.7%: 0.6 points
-  less (0.2 to 1.0). Past car crashes alone capture 26.7%, so most of the
-  gain over past bike crashes can be had from the car-crash record, and the
-  model adds 2.6 points to that (1.8 to 3.4).
+  less (0.2 to 1.0); in its plain textbook form, 28.3%. Past car crashes
+  alone capture 26.7%, so most of the gain over past bike crashes can be
+  had from the car-crash record, and the model adds 2.6 points to that
+  (1.8 to 3.4).
 - **How it was evaluated.** 64 cities that played no part in building the
   model were split by a fixed rule into 22 for choosing between versions of
   the model and 42 for one final test. The measure, the margins and the two
@@ -137,6 +138,7 @@ share one, so they are drawn together).
 | This model | 29.3% | 43.9% |
 | This model with the spread power fitted | 29.3% | 43.9% |
 | Empirical Bayes regression with street context | 28.7% | 42.9% |
+| Empirical Bayes regression, textbook form | 28.3% | 42.4% |
 | Hand-built blend (the fallback) | 28.3% | 42.3% |
 | Past car crashes alone | 26.7% | 39.6% |
 | Past bike crashes alone | 21.3% | 32.4% |
@@ -149,6 +151,7 @@ This model's lead over each, in percentage points of capture at the top:
 | Past bike crashes alone | +8.0 (+6.8 to +9.1) | 37 of 37 |
 | Past car crashes alone | +2.6 (+1.8 to +3.4) | 30 of 37 |
 | Hand-built blend | +1.0 (+0.4 to +1.5) | |
+| Empirical Bayes regression, textbook form | +0.9 (+0.5 to +1.4) | 25 of 37 |
 | Empirical Bayes regression with street context | +0.6 (+0.2 to +1.0) | 23 of 37 |
 | This model with the spread power fitted | +0.01 (−0.18 to +0.24) | |
 
@@ -162,14 +165,17 @@ Reading the tables:
   crashes: where cars crash, bikes later do. Most of the model's gain over
   bike crashes alone is available from the car record, and what the model
   adds on top is 2.6 points.
-- **Empirical Bayes regression with street context** is the closest
-  standard method: a negative binomial regression of the bike count on the
-  corner's car crashes, the classes of its two main roads, and two columns
-  describing the other intersections on its streets, followed by the usual
-  update with the corner's own count (Hauer and others 2002). It uses
-  standard software and no predictor built from bike crashes. The model is
-  ahead by 0.6 points on average and in 23 of the 37 cities, so the
-  standard method does nearly as well. Section 12.11 describes it.
+- **Empirical Bayes regression, textbook form,** is the standard method of
+  road-safety analysis: a negative binomial regression of the bike count on
+  the corner's car crashes and the classes of its two main roads, followed
+  by the usual update with the corner's own count (Hauer and others 2002).
+  It uses standard software and no predictor built from bike crashes. The
+  model is ahead by 0.9 points on average and in 25 of the 37 cities.
+- **With street context** the same regression has two more columns, which
+  describe the other intersections on the corner's streets. It is the
+  closest standard method: the model is ahead by 0.6 points and in 23 of
+  the 37 cities, so a standard method does nearly as well. Section 12.11
+  describes both.
 - **The spread power** makes no difference: fixing it at 1, as the model
   does, and fitting it give the same result to within 0.2 points.
 
@@ -177,15 +183,16 @@ Which of these were claims and which are descriptions matters. Two claims
 were written down before the final test: that the model beats past bike
 crashes alone, and that it is no worse than the version with the power
 fitted by more than 1 point. Both were met. The comparisons with car
-crashes, the blend and the regression were not declared beforehand; they
-are computed from the same single run and reported as descriptions.
+crashes, the blend and the two regressions were not declared beforehand
+and are reported as descriptions. The textbook form was added after the
+final test had been read, in a second run that reproduced every earlier
+figure exactly.
 
-Two models from the literature were not scored on the held-back cities.
-The regression without the street columns and a version with a random
-effect for each street were compared on the development cities only, where
-both did worse than the regression with street context (section 12.11).
-The kernel-smoothed empirical Bayes method of Katicha and Flintsch (2023)
-has not been run on these data at all.
+Two methods from the literature were not scored on the held-back cities.
+A regression with a random effect for each street was compared on the
+development cities only, where it did worse than the regression with
+street context (section 12.11). The kernel-smoothed empirical Bayes method
+of Katicha and Flintsch (2023) has not been run on these data at all.
 
 ### 1.3 Fatal and severe crashes
 
@@ -320,9 +327,11 @@ Santa Clara, Santa Rosa and Corona by the second alone.
 - **Added after the selection set was scored and before the final test:**
   capture as a share of the best possible list (the second column of
   section 1.2). It is a secondary figure and enters no rule.
-- **Not declared, computed afterwards from the same run:** the comparisons
-  with past car crashes, the hand-built blend and the regression in section
-  1.2.
+- **Not declared, computed afterwards:** the comparisons with past car
+  crashes, the hand-built blend and the two regressions in section 1.2.
+  The textbook form of the regression was not among the lists scored in
+  the final test; it was added afterwards and both sets were scored a
+  second time for it, with every earlier figure unchanged.
 - **Not changed after any result:** the sets, the candidates, the measure
   and the rule.
 
@@ -341,8 +350,9 @@ The configs for the 64 cities are in `config/held_back/`, and
 cities' scores, the results, a manifest of every city (sizes, later
 crashes, the two checks and a hash of its crash table) and a record of the
 revision. The figures here are from the revision tagged
-`evaluation-final-test-run`, on crash tables built on 24 November 2026
-from TIMS exports for 2015 to June 2026 and CCRS.
+`evaluation-final-test-run`, and the textbook-regression row from the one
+tagged `evaluation-described-lists`, on crash tables built on 24 November
+2026 from TIMS exports for 2015 to June 2026 and CCRS.
 
 ## 3. What is forecast
 
@@ -1981,8 +1991,9 @@ What this does and does not show:
   for the plain textbook model.
 - All of this is on the windows the model was developed on. The
   street-context model was later scored on cities held back from
-  development, where it is 0.6 points of capture behind this model (section
-  1.2). The other two were not.
+  development, where it is 0.6 points of capture behind this model, and the
+  plain textbook model, 0.9 behind (section 1.2). The street-effects model
+  was not.
 
 The decision record, with the full tables, is
 [plans/model-review-decision.md](../plans/model-review-decision.md).
