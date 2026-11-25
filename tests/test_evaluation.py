@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ from bike_safety_ca.checks import evaluation
 from bike_safety_ca.checks.evaluation import (
     BIKE,
     BLEND,
+    CARS,
     CONTEXT,
     EVERY,
     POOLED,
@@ -198,3 +200,83 @@ def test_a_folder_with_no_built_city_stops_before_writing(
     with pytest.raises(SystemExit):
         evaluation.main()
     assert "no built city" in capsys.readouterr().err
+
+
+def _records(per_year: dict[int, int]) -> pd.DataFrame:
+    """Made-up injury crashes of one agency: how many in each year, a tenth of them serious."""
+    rows = [
+        {
+            "year": year,
+            "COLLISION_SEVERITY": "2" if number % 10 == 0 else "4",
+            "reporting_agency": "4301",
+            "bike_involved": number % 7 == 0,
+            "collision_date": f"{year}-{1 + number % 12:02d}-15",
+        }
+        for year, count in per_year.items()
+        for number in range(count)
+    ]
+    return pd.DataFrame(rows)
+
+
+@pytest.mark.parametrize(
+    ("changed", "clear", "minor", "agency"),
+    [
+        ({}, True, "not flagged", ""),
+        ({2022: 8}, False, "not flagged", "4301 2022 fall"),
+        ({2021: 40, 2022: 40, 2023: 40, 2024: 40}, False, "flagged", None),
+    ],
+)
+def test_a_city_is_clear_only_when_neither_count_check_flags_it(
+    changed: dict[int, int], clear: bool, minor: str, agency: str | None,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:  # fmt: skip
+    records = _records(dict.fromkeys(range(2015, 2025), 100) | changed)
+    monkeypatch.setattr(evaluation.reporting, "load", lambda *_: records)
+    config = SimpleNamespace(crs="EPSG:26910", first_year=2015)
+    found = evaluation.reporting_checks(config, tmp_path)  # type: ignore[arg-type]
+    assert found["clear"] is clear and found["minor check"] == minor
+    if agency is not None:
+        assert found["agency years"] == agency
+
+
+def _set_of_cities() -> pd.DataFrame:
+    """Made-up scores: six larger cities and two smaller, every model, both outcomes."""
+    rows = []
+    for number in range(8):
+        for outcome, later in ((EVERY, 40 + number), (WORST, 4)):
+            for shift, model in enumerate(evaluation.MODELS):
+                rows.append({"city": f"c{number}", "model": model, "outcome": outcome,
+                             "larger": number < 6, "later crashes": later,
+                             "capture": 30.0 - 2 * shift + 0.1 * number})  # fmt: skip
+    return pd.DataFrame(rows)
+
+
+def test_the_report_gives_each_result_its_cities_and_pairs() -> None:
+    table = _set_of_cities()
+    clear = {f"c{number}": number != 0 for number in range(8)}
+    found = evaluation.report(table, None, clear, draws=50)
+    assert (found["chosen"], found["comparator"]) == (B, H)
+    pairs = lambda rows: [(row["model"], row["other"]) for row in rows]  # noqa: E731
+    assert pairs(found["primary"]) == [(B, BIKE), (B, H)]
+    assert pairs(found["companion"]) == [(B, BIKE), (B, H), (B, CARS)]
+    assert {row["aggregate"] for row in found["companion"]} == {POOLED}
+    assert {row["outcome"] for row in found["companion"]} == {WORST}
+    assert [row["cities"] for row in found["primary"]] == [6, 6]
+    assert [row["cities"] for row in found["without flagged cities"]] == [5, 5]
+    # the smaller cities are compared with both floors, not with the comparator
+    assert pairs(found["smaller cities"]) == [(B, BIKE), (B, CARS)]
+    assert [row["cities"] for row in found["smaller cities"]] == [2, 2]
+    assert found["smaller cities"][0]["difference"] == pytest.approx(8.0)
+    frozen = evaluation.report(table, None, clear, {"chosen": H, "comparator": B}, draws=50)
+    assert "chosen" not in frozen and pairs(frozen["primary"]) == [(H, BIKE), (H, B)]
+
+
+def test_a_set_with_no_clear_city_or_no_smaller_city_still_reports_the_rest() -> None:
+    table = _set_of_cities()
+    none_clear = evaluation.report(table, None, {}, draws=50)
+    assert [row["cities"] for row in none_clear["without flagged cities"]] == [0, 0]
+    assert all(np.isnan(row["difference"]) for row in none_clear["without flagged cities"])
+    assert [row["cities"] for row in none_clear["primary"]] == [6, 6]
+    all_larger = evaluation.report(table[table.larger], None, {}, draws=50)
+    assert [row["cities"] for row in all_larger["smaller cities"]] == [0, 0]
+    json.dumps(none_clear)  # what the command writes

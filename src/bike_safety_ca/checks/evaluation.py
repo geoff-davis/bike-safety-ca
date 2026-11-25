@@ -34,9 +34,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from bike_safety_ca.checks import assignment, reporting
 from bike_safety_ca.checks import cities as cross
-from bike_safety_ca.checks.candidates import top_places
+from bike_safety_ca.checks.candidates import _hash, _revision, top_places
 from bike_safety_ca.checks.holdout import CAR, CYCLISTS
+from bike_safety_ca.config import Config
+from bike_safety_ca.crashes.tims import FALL, RISE
+from bike_safety_ca.io import crs_tag
 from bike_safety_ca.model.crash_history import (
     MIN_CRASHES,
     rank_intersections,
@@ -149,9 +153,16 @@ def compare(
     aggregate of each model recomputed.  ``lower`` and ``upper`` are the 5th
     and 95th percentiles of the difference; a draw with no later crash at all
     is left out of them.  ``cities`` counts those with a later crash, and
-    ``without`` those with none, which are in neither aggregate.
+    ``without`` those with none, which are in neither aggregate.  With no
+    city at all the comparison is returned with no values, not refused.
     """
     rows = table[table.outcome.eq(outcome)]
+    if rows.empty:
+        return {
+            "model": model, "other": other, "outcome": outcome, "aggregate": how,
+            "cities": 0, "without": 0, "units": 0,
+            **dict.fromkeys(("model value", "other value", "difference", "lower", "upper"), float("nan")),
+        }  # fmt: skip
     wide = rows.pivot(index="city", columns="model", values="capture")
     later = rows.groupby("city")["later crashes"].first().reindex(wide.index).to_numpy(float)
     mine, theirs = wide[model].to_numpy(float), wide[other].to_numpy(float)
@@ -215,6 +226,36 @@ def select(table: pd.DataFrame, units: Mapping[str, str] | None = None, **option
     }
 
 
+def reporting_checks(config: Config, folder: Path) -> dict[str, Any]:
+    """The two count checks of a city's records; neither reads a ranking or a score.
+
+    ``minor ratio`` and ``minor check`` are ``reporting.minor_injury_change``
+    on the merged table.  ``agency years`` lists the agency-years from the
+    first fitting year to the last scored year whose injury crashes the
+    agency check calls a fall or a rise (not a "possible" one).  ``clear``
+    is true when the first is not flagged, is assessable, and the second
+    lists nothing.
+    """
+    crashes = reporting.load(folder / "crashes", config.crs, config.first_year)
+    minor = reporting.minor_injury_change(crashes)
+    years_on_record = reporting.all_years(crashes)
+    span = (years_on_record[0], years_on_record[-1]) if years_on_record else None
+    ends = pd.to_datetime(crashes.collision_date, errors="coerce").max() if len(crashes) else None
+    # as ``reporting.diagnose`` flags injury crashes
+    found = reporting.flags(crashes, reporting.MEASURES["injury_crashes"][1], span, ends)
+    certain = found[
+        found.change.isin([FALL, RISE]) & found.year.between(config.first_year, TEST_TO)
+    ]
+    years = [f"{row.reporting_agency} {row.year} {row.change}" for row in certain.itertuples()]
+    return {
+        "minor ratio": minor["ratio"],
+        "minor check": minor["verdict"],
+        "minor reason": minor["reason"],
+        "agency years": "; ".join(years),
+        "clear": minor["verdict"] == reporting.STEADY and not years,
+    }
+
+
 def read_frozen(path: Path) -> dict[str, str]:
     """The written-down choice: a JSON object naming the ``chosen`` model and its ``comparator``.
 
@@ -232,6 +273,46 @@ def read_frozen(path: Path) -> dict[str, str]:
     if frozen["chosen"] == frozen["comparator"]:
         raise ValueError(f"{path}: chosen and comparator are the same model")
     return frozen
+
+
+def report(
+    table: pd.DataFrame,
+    units: Mapping[str, str] | None,
+    clear: Mapping[str, bool],
+    frozen: Mapping[str, str] | None = None,
+    **options: Any,
+) -> dict[str, Any]:
+    """Every result of one set of cities, from ``score_city``'s rows with a ``city`` column.
+
+    Without ``frozen`` the selection rule chooses the model; with it the
+    written-down choice is used.  ``primary`` is the chosen model against
+    past bike crashes alone and against its comparator: the city mean on
+    all injury crashes over the larger cities.  ``companion`` is those two
+    and the chosen model against past car crashes, pooled on fatal or
+    severe crashes.  ``without flagged cities`` repeats ``primary`` over the
+    larger cities that are ``clear`` (a sensitivity result, which has no
+    values when none is).  ``smaller cities`` is the chosen model against
+    the two floors, pooled over the cities under the fitting threshold.
+    """
+    result: dict[str, Any] = {"frozen": dict(frozen)} if frozen else select(table, units, **options)
+    chosen, comparator = (frozen or result)["chosen"], (frozen or result)["comparator"]
+    pairs = [(chosen, BIKE), (chosen, comparator)]
+    larger = table[table.larger]
+    result["primary"] = [compare(larger, a, b, units, **options) for a, b in pairs]
+    result["companion"] = [
+        compare(larger, a, b, units, outcome=WORST, how=POOLED, **options)
+        for a, b in [*pairs, (chosen, CARS)]
+        if WORST in set(table.outcome)
+    ]
+    unflagged = larger[larger.city.map(lambda city: bool(clear.get(city, False)))]
+    result["without flagged cities"] = [
+        compare(unflagged, a, b, units, **options) for a, b in pairs
+    ]
+    smaller = table[~table.larger]
+    result["smaller cities"] = [
+        compare(smaller, chosen, floor, units, how=POOLED, **options) for floor in (BIKE, CARS)
+    ]
+    return result
 
 
 def main() -> None:
@@ -261,6 +342,7 @@ def main() -> None:
     for name, why in left.items():
         log.info("not built, so not scored: %s (%s)", name, why)
     tables = []
+    checks: dict[str, dict[str, Any]] = {}
     for name, (sites, streets, hits) in cross.place(cities).items():
         scored = score_city(
             hits,
@@ -271,6 +353,9 @@ def main() -> None:
         )
         scored.insert(0, "city", name)
         tables.append(scored)
+        config, folder = cities[name]
+        table_path = folder / "crashes" / f"crashes_merged_{crs_tag(config.crs)}.parquet"
+        checks[name] = reporting_checks(config, folder) | {"crash table": _hash(table_path)}
     if not tables:
         parser.error("no built city was found")
     table = pd.concat(tables, ignore_index=True)
@@ -280,17 +365,26 @@ def main() -> None:
         units = dict(zip(named.city, named.unit, strict=True))
     args.out.mkdir(parents=True, exist_ok=True)
     table.to_csv(args.out / "cities.csv", index=False)
-    larger = table[table.larger]
-    result: dict[str, Any] = {"frozen": frozen} if frozen is not None else select(table, units)
-    chosen, comparator = (frozen or result)["chosen"], (frozen or result)["comparator"]
-    pairs = [(chosen, BIKE), (chosen, comparator)]
-    result["primary"] = [compare(larger, a, b, units) for a, b in pairs]
-    result["companion"] = [
-        compare(larger, a, b, units, outcome=WORST, how=POOLED)
-        for a, b in [*pairs, (pairs[0][0], CARS)]
-        if WORST in set(table.outcome)
-    ]
+    result = report(table, units, {city: found["clear"] for city, found in checks.items()}, frozen)
     result["left out"] = left
+    by_city = table[table.model.eq(B)].pivot(
+        index="city", columns="outcome", values="later crashes"
+    )
+    facts = table.groupby("city")[["intersections", "places", "training crashes", "larger"]].first()
+    manifest = facts.join(by_city.add_prefix("later crashes, ")).join(pd.DataFrame(checks).T)
+    manifest.insert(0, "unit", [(units or {}).get(city, city) for city in manifest.index])
+    manifest.to_csv(args.out / "manifest.csv")
+    record = {
+        "revision": _revision(),
+        "configs": str(args.configs),
+        "window": [TRAIN_TO, TEST_FROM, TEST_TO],
+        "margin": MARGIN,
+        "draws": DRAWS,
+        "seed": SEED,
+        "assignment salt": assignment.SALT,
+        "not built": left,
+    }
+    (args.out / "run.json").write_text(json.dumps(record, indent=2) + "\n")
     (args.out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))
 
