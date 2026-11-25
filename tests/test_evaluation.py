@@ -69,6 +69,11 @@ def test_every_model_is_scored_on_both_outcomes_from_the_fitting_years_only(
     assert row["training crashes"] == early.sum() and row["later crashes"] == later.sum()
     assert row.places == 29 and row.intersections == 576  # 5% of 576, rounded up
     assert row.capture == pytest.approx(100 * top_capture(early.astype(float), later, 29))
+    # the best possible list is in order of the later crashes; nothing captures more
+    assert row["best capture"] == pytest.approx(100 * top_capture(later.astype(float), later, 29))
+    assert row["share of best"] == pytest.approx(100 * row.capture / row["best capture"])
+    every = scored[scored.outcome.eq(EVERY)]
+    assert every.capture.le(every["best capture"]).all() and every["share of best"].le(100).all()
     worst = scored[scored.outcome.eq(WORST)]
     assert 0 < worst["later crashes"].iloc[0] < row["later crashes"]
     assert bool(row.larger) and scored[scored.model.eq(B)].fitted.all()
@@ -247,7 +252,8 @@ def _set_of_cities() -> pd.DataFrame:
             for shift, model in enumerate(evaluation.MODELS):
                 rows.append({"city": f"c{number}", "model": model, "outcome": outcome,
                              "larger": number < 6, "later crashes": later,
-                             "capture": 30.0 - 2 * shift + 0.1 * number})  # fmt: skip
+                             "capture": 30.0 - 2 * shift + 0.1 * number,
+                             "share of best": 2 * (30.0 - 2 * shift + 0.1 * number)})  # fmt: skip
     return pd.DataFrame(rows)
 
 
@@ -263,6 +269,12 @@ def test_the_report_gives_each_result_its_cities_and_pairs() -> None:
     assert {row["outcome"] for row in found["companion"]} == {WORST}
     assert [row["cities"] for row in found["primary"]] == [6, 6]
     assert [row["cities"] for row in found["without flagged cities"]] == [5, 5]
+    # the same pairs as a share of the best possible list (twice the capture, as made up here)
+    of_best = found["share of best possible"]
+    assert pairs(of_best) == pairs(found["primary"])
+    assert {row["value"] for row in of_best} == {evaluation.OF_BEST}
+    assert of_best[0]["difference"] == pytest.approx(2 * found["primary"][0]["difference"])
+    assert {row["value"] for row in found["primary"]} == {evaluation.CAPTURE}
     # the smaller cities are compared with both floors, not with the comparator
     assert pairs(found["smaller cities"]) == [(B, BIKE), (B, CARS)]
     assert [row["cities"] for row in found["smaller cities"]] == [2, 2]

@@ -145,3 +145,28 @@ Verification: executed the actual AST-extracted empty-comparison path with a sta
 The handoff reports `make check` passing (712 tests) and a repeated development-only rehearsal. Full pytest/make checks were not independently rerun here because NumPy, pandas and pytest are unavailable. No protected paths or records were opened and no real city was built, fitted or scored.
 
 Ledger: ES-004 closed; ES-005 closed; ES-001 through ES-003 remain closed. Loop evaluation-scoring-2 ends accepted at round 2. The known remaining secondary-measure and revision/dirty-tree limitations retain their stated scope. Implementer releases the reviewer lock. This review does not authorize a commit, push, merge or held-back evaluation run.
+
+## Loop 3 (`evaluation-scoring-3`): handoff, round 1
+
+- Implementer: `bsc-implementer`, pane `wF:p1`. Base commit `48b9b7c`. Snapshot: `/tmp/bsc-review/evaluation-scoring3-r1/` (`staged.diff` against `48b9b7c`). Round 1 of at most 3. Expires (UTC): `2026-11-25T01:43:57Z`.
+- State of the evaluation: the selection set was scored once from `48b9b7c`; B was chosen with H as comparator and written down. No final-test city has been scored.
+- Change, requested by the owner before the final test: a secondary measure. `score_city` adds `best capture` (the capture of a list in order of the later crashes themselves) and `share of best` (capture as a percentage of it); `compare` takes `value` (`capture` by default, or `share of best`) and records it; `report` adds `share of best possible`, the primary pairs on that value. No decision rule, claim or existing result changes: `select`, `primary`, `companion`, the sensitivity and smaller-city results still compare `capture`.
+- What to report: any way this alters an existing result or the selection rule; correctness of the best-possible value, ties and cities with no later crash included.
+- Verification: `make check` passes (712 tests). Not run on any city.
+- Settled by the owner (do not re-report): adding this measure after selection, as secondary only; the plan records when it was added.
+
+## Review — evaluation-scoring-3, round 1
+
+Verdict: **accepted, round 1**. No blocking correctness findings in this secondary-measure addition. ES-001 through ES-005 remain closed.
+
+Ordering sites by later crash count maximizes the primary capture score: its position weights decrease monotonically, so swapping a larger count ahead of a smaller count cannot reduce capture. Equal later counts have the same contribution under any order within their tied block, and the existing fractional tie treatment therefore gives the same maximum. The new `best capture` uses the same city, outcome, denominator and treatment budget as each model score. `100 * capture / best` has the intended percent scale. For positive later totals and a nonempty budget the best value is positive; for no later crashes or no places both values are NaN and the new expression remains undefined rather than assigning zero.
+
+The default comparison value remains raw capture. Inspection and focused execution confirm that selection, primary, companion, sensitivity and smaller-city paths still use capture by default, while only `share of best possible` explicitly requests the normalized column. The new comparison metadata identifies which value was used, including empty comparisons. No margin or verdict is applied to the new secondary output.
+
+Nonblocking wording correction: the `score_city` docstring says “no model could match” the hindsight list. A model can happen to match its observed score, particularly with ties or simple outcomes. Say instead that it is a hindsight maximum, not a prospective benchmark that models are expected to attain. This does not affect the implemented calculation.
+
+Verification: independently enumerated every ranking for 21 budget/count examples (including tied counts, concentrated counts and zero totals) and verified that descending later counts maximize the triangular-weight score. Executed the actual normalization expression extracted from the snapshot for ordinary, perfect and undefined values. Exercised the actual `report` and `select` control flow with synthetic frame/comparison stand-ins in selection and frozen modes, checking that normalized values are requested only for the secondary pair. Read the added tests and the changes to `score_city`/`compare`; full pandas/NumPy fitting and bootstrap tests were not independently run because NumPy, pandas and pytest are unavailable here. The handoff reports `make check` passing (712 tests).
+
+No protected paths or records were opened and no city was built, fitted or scored. The decision to add a secondary measure after selection is treated as settled and disclosed in the handoff; this review does not authorize reconsidering that selection from the new values.
+
+Ledger: no new blocking findings; evaluation-scoring-3 ends accepted at round 1. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or final-test scoring run.
