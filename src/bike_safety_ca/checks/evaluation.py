@@ -53,7 +53,10 @@ log = logging.getLogger(__name__)
 
 B, H, CONTEXT = "B: spread power 1", "H: spread power fitted, 1 to 2", "Street context"
 BIKE, CARS, BLEND = "Past bike crashes", "Past car crashes", "Hand-built blend"
-MODELS = (B, H, CONTEXT, BLEND, BIKE, CARS)
+# The textbook regression without the street columns: scored for description
+# only, never a candidate of the selection rule.
+PLAIN = "Textbook regression"
+MODELS = (B, H, CONTEXT, PLAIN, BLEND, BIKE, CARS)
 EVERY, WORST = "all injury", "fatal or severe"
 WORST_CODES = ("1", "2")
 TRAIN_TO, TEST_FROM, TEST_TO = 2020, 2021, 2024
@@ -103,9 +106,12 @@ def score_city(
         ranked = rank_intersections(early, car, streets, spread_power=power)
         scores[name], fitted[name] = ranked["score"], ranked["fit"] is not None
     years = train_to - first_year + 1
-    context = rank_standard(early, car, classes, years, streets=streets) if years > 0 else None
-    fitted[CONTEXT] = context is not None and context["fit"] is not None
-    scores[CONTEXT] = context["score"] if context is not None and fitted[CONTEXT] else blend
+    for name, with_streets in ((CONTEXT, streets), (PLAIN, None)):
+        standard = (
+            rank_standard(early, car, classes, years, streets=with_streets) if years > 0 else None
+        )
+        fitted[name] = standard is not None and standard["fit"] is not None
+        scores[name] = standard["score"] if standard is not None and fitted[name] else blend
     outcomes = {EVERY: hits}
     if "COLLISION_SEVERITY" in hits:
         severity = hits.COLLISION_SEVERITY.astype("string").str.strip()
@@ -306,7 +312,9 @@ def report(
     severe crashes.  ``without flagged cities`` repeats ``primary`` over the
     larger cities that are ``clear`` (a sensitivity result, which has no
     values when none is).  ``share of best possible`` repeats ``primary``
-    on ``OF_BEST``, a secondary result with no rule.  ``smaller cities`` is the chosen model against
+    on ``OF_BEST``, a secondary result with no rule.  ``other lists`` is the
+    chosen model against each remaining list, as ``primary`` is computed: a
+    description, declared in no claim.  ``smaller cities`` is the chosen model against
     the two floors, pooled over the cities under the fitting threshold.
     """
     result: dict[str, Any] = {"frozen": dict(frozen)} if frozen else select(table, units, **options)
@@ -326,6 +334,12 @@ def report(
     # A secondary result: the primary pairs as a share of the best possible list.
     result["share of best possible"] = [
         compare(larger, a, b, units, value=OF_BEST, **options) for a, b in pairs
+    ]
+    # Descriptions, under no rule: the chosen model against every other list scored.
+    result["other lists"] = [
+        compare(larger, chosen, other, units, **options)
+        for other in MODELS
+        if other not in (chosen, comparator, BIKE) and other in set(table.model)
     ]
     smaller = table[~table.larger]
     result["smaller cities"] = [

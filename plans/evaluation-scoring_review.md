@@ -170,3 +170,27 @@ Verification: independently enumerated every ranking for 21 budget/count example
 No protected paths or records were opened and no city was built, fitted or scored. The decision to add a secondary measure after selection is treated as settled and disclosed in the handoff; this review does not authorize reconsidering that selection from the new values.
 
 Ledger: no new blocking findings; evaluation-scoring-3 ends accepted at round 1. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or final-test scoring run.
+
+## Loop 4 (`evaluation-scoring-4`): handoff, round 1
+
+- Implementer: `bsc-implementer`, pane `wF:p1`. Base commit `0c43573`. Snapshot: `/tmp/bsc-review/evaluation-scoring4-r1/` (`staged.diff`, `tree/`). Round 1 of at most 3. Expires (UTC): `2026-11-25T16:49:03Z`.
+- State of the evaluation: both held-back sets have been scored and reported; the final test met both claims. This change is requested by the owner afterwards, for description only.
+- Change: `score_city` also scores `PLAIN`, the textbook regression without the street columns (`rank_standard` with `streets=None`), with the street-context model's fallback to the blend. `report` adds `other lists`: the chosen model minus every scored list that is not the chosen model, its comparator or past bike crashes, as `primary` is computed. `select`, `read_frozen` and every existing result are unchanged: `PLAIN` is not a candidate and cannot be chosen or frozen.
+- Expected test value changed, with the reason in the test: the made-up table gives each model a capture 2 lower per place down `MODELS`, and past bike crashes moved from four to five places below B when `PLAIN` was listed, so the smaller-city difference is 10 where it was 8. The assertion now derives it from the positions.
+- What to report: any way the new list could alter an existing result, the selection or the frozen-choice check.
+- Verification: `make check` passes (712 tests). Rehearsed on the development cities only; their primary figures are unchanged.
+- Settled by the owner (do not re-report): describing this list after the final test; the plan records when it was added and that both sets are scored a second time for it.
+
+## Review — evaluation-scoring-4, round 1
+
+Verdict: **accepted, round 1**. No correctness findings in this descriptive-list addition. ES-001 through ES-005 remain closed.
+
+The new PLAIN score calls the existing textbook model with `streets=None`, while the context call retains the same street mapping and fitting period. Both use the blend if the textbook fit is unavailable. The shared fitter constructs its design locally rather than modifying the earlier model scores or input classes. `select` still compares only B, H and street context; `read_frozen` still admits only those models. The new list is therefore scored for description but is neither selected nor accepted in either frozen-choice field.
+
+The `other lists` output uses the same larger-city, raw-capture comparison as the primary output, excludes the chosen model, comparator and bike-history pair already reported, and introduces no new verdict. Existing comparisons each create their own seeded generator, so the additional comparison calls do not advance a shared bootstrap stream or alter earlier intervals. The changed synthetic expected difference follows the fixture's positional construction, and the test explicitly explains why it moved from 8 to 10; this is not a change to a real-data expectation.
+
+Verification: executed the actual scoring-loop control flow with synthetic fitter results for successful fits, separate failures and no fitting years. Checked street/no-street arguments, blend fallback and preservation of the pre-existing score entries. Executed the actual report/selection assembly with frame/comparison stand-ins in selection and frozen modes: the descriptive pairs are complete, and all prior result entries match the assembly with only the new output removed. Executed the actual frozen-choice reader with in-memory JSON: PLAIN is rejected as either chosen model or comparator, while B/H remains accepted. Read the new tests and relevant fitter/aggregation dependencies.
+
+These focused checks verify wiring and control flow, not numerical regression fitting or pandas integration. Full pytest/`make check` were not independently rerun because NumPy, pandas and pytest are unavailable here. The handoff reports 712 passing tests and unchanged primary figures in a development-only rehearsal. No protected paths or records were opened and no city was fitted or scored by this review. The owner-authorized descriptive timing after the final test is treated as settled; the supplied final-test outcome was not independently verified.
+
+Ledger: no new findings; evaluation-scoring-4 ends accepted at round 1. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or scoring run.

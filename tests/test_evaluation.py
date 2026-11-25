@@ -87,8 +87,8 @@ def test_a_city_too_small_to_fit_is_scored_by_the_blend_for_every_fitted_model()
     small = score_city(*_city(5, rate=0.004), first_year=2015)
     rows = small[small.outcome.eq(EVERY)].set_index("model")
     assert not rows.larger.any()
-    assert not rows.fitted[[B, H, CONTEXT]].any()
-    assert rows.capture[[B, H, CONTEXT]].eq(rows.capture[BLEND]).all()
+    assert not rows.fitted[[B, H, CONTEXT, evaluation.PLAIN]].any()
+    assert rows.capture[[B, H, CONTEXT, evaluation.PLAIN]].eq(rows.capture[BLEND]).all()
 
 
 def test_a_crash_table_without_severity_is_scored_on_all_crashes_only() -> None:
@@ -275,10 +275,18 @@ def test_the_report_gives_each_result_its_cities_and_pairs() -> None:
     assert {row["value"] for row in of_best} == {evaluation.OF_BEST}
     assert of_best[0]["difference"] == pytest.approx(2 * found["primary"][0]["difference"])
     assert {row["value"] for row in found["primary"]} == {evaluation.CAPTURE}
+    # every list that is in neither primary pair is described against the chosen model
+    assert pairs(found["other lists"]) == [
+        (B, evaluation.CONTEXT), (B, evaluation.PLAIN), (B, evaluation.BLEND), (B, CARS)
+    ]  # fmt: skip
+    assert {row["cities"] for row in found["other lists"]} == {6}
     # the smaller cities are compared with both floors, not with the comparator
     assert pairs(found["smaller cities"]) == [(B, BIKE), (B, CARS)]
     assert [row["cities"] for row in found["smaller cities"]] == [2, 2]
-    assert found["smaller cities"][0]["difference"] == pytest.approx(8.0)
+    # the made-up capture falls by 2 for each place down MODELS, and past bike
+    # crashes are five places below B (four before the textbook regression was listed)
+    steps = evaluation.MODELS.index(BIKE) - evaluation.MODELS.index(B)
+    assert found["smaller cities"][0]["difference"] == pytest.approx(2.0 * steps)
     frozen = evaluation.report(table, None, clear, {"chosen": H, "comparator": B}, draws=50)
     assert "chosen" not in frozen and pairs(frozen["primary"]) == [(H, BIKE), (H, B)]
 
