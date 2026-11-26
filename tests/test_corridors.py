@@ -381,3 +381,22 @@ def test_loading_a_real_area_splits_at_the_limit_and_counts_what_has_no_street(
         "cyclist crashes between corners on no mapped corridor": 1,
         "cyclist crashes between corners": 3,
     }
+
+
+def test_the_corner_part_of_a_corridor_keeps_the_fitted_spread_power(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from bike_safety_ca.model import corridors
+
+    class Seen(Exception):
+        pass
+
+    def stub(*_: object, **options: object) -> dict:
+        raise Seen(options)
+
+    monkeypatch.setattr(corridors, "rank_intersections", stub)
+    empty = pd.Series(dtype=float)
+    with pytest.raises(Seen) as seen:
+        corridors.score_corridors(empty, empty, {}, {}, empty, empty, empty)
+    # ``None`` fits the power: the corridor table was not part of the comparison at power 1.
+    assert seen.value.args[0] == {"spread_power": None}

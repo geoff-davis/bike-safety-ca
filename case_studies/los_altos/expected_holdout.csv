@@ -3,18 +3,18 @@ trained through,tested on,outcome,area,ranking,method,training crashes,later cra
 2018,2019–2022,All cyclists,All intersections,"Bike + car crashes, added","Bike + car crashes, added",449,261,0.758,24.4,46.0,69.7
 2018,2019–2022,All cyclists,All intersections,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",449,261,0.819,24.0,45.0,71.0
 2018,2019–2022,All cyclists,All intersections,Crash history with same-street averages,Crash history with same-street averages,449,261,0.826,27.0,48.0,71.0
-2018,2019–2022,All cyclists,All intersections,Street-length model,street-length model,449,261,0.85,25.0,46.0,72.0
+2018,2019–2022,All cyclists,All intersections,Street-length model,street-length model,449,261,0.85,24.0,44.0,73.0
 2018,2019–2022,All cyclists,Los Altos,Past bike crashes,Past bike crashes,449,45,0.631,7.5,12.8,15.8
 2018,2019–2022,All cyclists,Los Altos,"Bike + car crashes, added","Bike + car crashes, added",449,45,0.737,10.3,16.1,24.1
 2018,2019–2022,All cyclists,Los Altos,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",449,45,0.838,9.0,15.0,26.0
 2018,2019–2022,All cyclists,Los Altos,Crash history with same-street averages,Crash history with same-street averages,449,45,0.844,9.0,14.0,26.0
-2018,2019–2022,All cyclists,Los Altos,Street-length model,street-length model,449,45,0.868,9.0,19.0,29.0
+2018,2019–2022,All cyclists,Los Altos,Street-length model,street-length model,449,45,0.867,9.0,19.0,27.0
 2018,2019–2022,Cyclists 18 or under,All intersections,Past bike crashes,Past bike crashes,174,87,0.586,7.3,9.6,14.3
 2018,2019–2022,Cyclists 18 or under,All intersections,"Bike + car crashes, added","Bike + car crashes, added",174,87,0.75,9.5,11.1,18.7
 2018,2019–2022,Cyclists 18 or under,All intersections,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",174,87,0.837,9.0,11.0,19.0
 2018,2019–2022,Cyclists 18 or under,All intersections,Crash history with same-street averages,Crash history with same-street averages,174,87,0.841,12.0,14.0,16.0
-2018,2019–2022,Cyclists 18 or under,All intersections,Street-length model,street-length model,174,87,0.861,10.0,14.0,18.0
-2018,2019–2022,Cyclists 18 or under,All intersections,All-cyclist ranking,street-length model,174,87,0.857,9.0,14.0,22.0
+2018,2019–2022,Cyclists 18 or under,All intersections,Street-length model,street-length model,174,87,0.859,4.0,14.0,20.0
+2018,2019–2022,Cyclists 18 or under,All intersections,All-cyclist ranking,street-length model,174,87,0.857,9.0,14.0,23.0
 2018,2019–2022,Cyclists 18 or under,Los Altos,Past bike crashes,Past bike crashes,174,18,,,,
 2018,2019–2022,Cyclists 18 or under,Los Altos,"Bike + car crashes, added","Bike + car crashes, added",174,18,,,,
 2018,2019–2022,Cyclists 18 or under,Los Altos,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",174,18,,,,
@@ -25,7 +25,7 @@ trained through,tested on,outcome,area,ranking,method,training crashes,later cra
 2020,2021–2022,All cyclists,All intersections,"Bike + car crashes, added","Bike + car crashes, added",596,114,0.768,17.2,23.0,32.4
 2020,2021–2022,All cyclists,All intersections,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",596,114,0.807,18.0,25.0,31.0
 2020,2021–2022,All cyclists,All intersections,Crash history with same-street averages,Crash history with same-street averages,596,114,0.816,15.0,25.0,32.0
-2020,2021–2022,All cyclists,All intersections,Street-length model,street-length model,596,114,0.837,18.0,25.0,32.0
+2020,2021–2022,All cyclists,All intersections,Street-length model,street-length model,596,114,0.836,17.0,26.0,32.0
 2020,2021–2022,All cyclists,Los Altos,Past bike crashes,Past bike crashes,596,22,,,,
 2020,2021–2022,All cyclists,Los Altos,"Bike + car crashes, added","Bike + car crashes, added",596,22,,,,
 2020,2021–2022,All cyclists,Los Altos,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",596,22,,,,
@@ -35,8 +35,8 @@ trained through,tested on,outcome,area,ranking,method,training crashes,later cra
 2020,2021–2022,Cyclists 18 or under,All intersections,"Bike + car crashes, added","Bike + car crashes, added",221,40,0.771,5.0,6.0,9.0
 2020,2021–2022,Cyclists 18 or under,All intersections,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",221,40,0.841,5.0,5.0,7.0
 2020,2021–2022,Cyclists 18 or under,All intersections,Crash history with same-street averages,Crash history with same-street averages,221,40,0.849,6.0,7.0,8.0
-2020,2021–2022,Cyclists 18 or under,All intersections,Street-length model,street-length model,221,40,0.859,5.0,6.0,9.0
-2020,2021–2022,Cyclists 18 or under,All intersections,All-cyclist ranking,street-length model,221,40,0.851,4.0,7.0,8.0
+2020,2021–2022,Cyclists 18 or under,All intersections,Street-length model,street-length model,221,40,0.858,5.0,6.0,8.0
+2020,2021–2022,Cyclists 18 or under,All intersections,All-cyclist ranking,street-length model,221,40,0.85,4.0,8.0,8.0
 2020,2021–2022,Cyclists 18 or under,Los Altos,Past bike crashes,Past bike crashes,221,9,,,,
 2020,2021–2022,Cyclists 18 or under,Los Altos,"Bike + car crashes, added","Bike + car crashes, added",221,9,,,,
 2020,2021–2022,Cyclists 18 or under,Los Altos,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",221,9,,,,
@@ -47,18 +47,18 @@ trained through,tested on,outcome,area,ranking,method,training crashes,later cra
 2022,2023–latest,All cyclists,All intersections,"Bike + car crashes, added","Bike + car crashes, added",710,218,0.815,22.9,40.4,61.3
 2022,2023–latest,All cyclists,All intersections,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",710,218,0.869,23.0,44.0,64.0
 2022,2023–latest,All cyclists,All intersections,Crash history with same-street averages,Crash history with same-street averages,710,218,0.871,22.0,40.0,66.0
-2022,2023–latest,All cyclists,All intersections,Street-length model,street-length model,710,218,0.886,23.0,43.0,73.0
+2022,2023–latest,All cyclists,All intersections,Street-length model,street-length model,710,218,0.886,26.0,41.0,71.0
 2022,2023–latest,All cyclists,Los Altos,Past bike crashes,Past bike crashes,710,32,0.738,8.0,13.3,20.3
 2022,2023–latest,All cyclists,Los Altos,"Bike + car crashes, added","Bike + car crashes, added",710,32,0.778,8.2,10.2,17.6
 2022,2023–latest,All cyclists,Los Altos,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",710,32,0.813,9.0,10.0,18.0
 2022,2023–latest,All cyclists,Los Altos,Crash history with same-street averages,Crash history with same-street averages,710,32,0.794,9.0,13.0,17.0
-2022,2023–latest,All cyclists,Los Altos,Street-length model,street-length model,710,32,0.821,9.0,14.0,17.0
+2022,2023–latest,All cyclists,Los Altos,Street-length model,street-length model,710,32,0.833,9.0,14.0,19.0
 2022,2023–latest,Cyclists 18 or under,All intersections,Past bike crashes,Past bike crashes,261,76,0.62,5.8,9.9,13.6
 2022,2023–latest,Cyclists 18 or under,All intersections,"Bike + car crashes, added","Bike + car crashes, added",261,76,0.758,6.0,9.4,16.4
 2022,2023–latest,Cyclists 18 or under,All intersections,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",261,76,0.821,7.0,11.0,16.0
 2022,2023–latest,Cyclists 18 or under,All intersections,Crash history with same-street averages,Crash history with same-street averages,261,76,0.824,6.0,11.0,19.0
-2022,2023–latest,Cyclists 18 or under,All intersections,Street-length model,street-length model,261,76,0.843,7.0,13.0,16.0
-2022,2023–latest,Cyclists 18 or under,All intersections,All-cyclist ranking,street-length model,261,76,0.845,8.0,11.0,18.0
+2022,2023–latest,Cyclists 18 or under,All intersections,Street-length model,street-length model,261,76,0.844,6.0,11.0,15.0
+2022,2023–latest,Cyclists 18 or under,All intersections,All-cyclist ranking,street-length model,261,76,0.846,8.0,10.0,18.0
 2022,2023–latest,Cyclists 18 or under,Los Altos,Past bike crashes,Past bike crashes,261,18,,,,
 2022,2023–latest,Cyclists 18 or under,Los Altos,"Bike + car crashes, added","Bike + car crashes, added",261,18,,,,
 2022,2023–latest,Cyclists 18 or under,Los Altos,"Bike x car crashes, blended with street averages","Bike x car crashes, blended with street averages",261,18,,,,

@@ -49,15 +49,18 @@ def test_a_city_limit_with_no_corners_inside_keeps_none(tmp_path: Path) -> None:
 
 def test_each_corner_says_what_the_model_saw(tmp_path: Path) -> None:
     top = ranking.top(_ranking(tmp_path / "r.csv"), 3)
-    assert ranking.why(top.iloc[0]) == (
-        "A major arterial meets an arterial. 1 bike crash and 16 car-only crashes recorded; "
-        "the model expects about 4.2 bike crashes."
+    # Wording changed on purpose: the counts and the estimate both name their years,
+    # and the estimate is not called an expectation, which read as a forecast.
+    assert ranking.why(top.iloc[0], (2015, 2024)) == (
+        "A major arterial meets an arterial. Recorded in 2015–2024: 1 bike crash and "
+        "16 car-only crashes. Model estimate for the same years: about 4.2 bike crashes."
     )
-    # No expected count (the blend) and no second road class.
-    assert (
-        ranking.why(top.iloc[1]) == "Collectors meet. 2 bike crashes and 1 car-only crash recorded."
+    # No estimate (the blend) and no second road class: none is made up.
+    assert ranking.why(top.iloc[1], (2015, 2024)) == (
+        "Collectors meet. Recorded in 2015–2024: 2 bike crashes and 1 car-only crash."
     )
-    marks = ranking.markers(top)
+    assert "Recorded in the years used:" in ranking.why(top.iloc[1])
+    marks = ranking.markers(top, (2015, 2024))
     assert [m["c"] for m in marks] == [1, 2, 3]  # the city's own ranks
     assert [m["r"] for m in marks] == [1, 3, 4]  # the area's
     assert marks[0] == {
@@ -66,7 +69,7 @@ def test_each_corner_says_what_the_model_saw(tmp_path: Path) -> None:
         "n": "Elm Street / Oak Avenue",
         "lat": 34.05,
         "lon": -118.05,
-        "w": ranking.why(top.iloc[0]),
+        "w": ranking.why(top.iloc[0], (2015, 2024)),
     }
 
 
@@ -80,6 +83,9 @@ def test_the_one_pager_lists_the_corners_with_the_credits(tmp_path: Path) -> Non
     assert "| Rank | Rank in area |" in text
     assert "Far Road" not in text and "2015–2024" in text and "TIMS" in text and "CCRS" in text
     assert "rank in area" in text
+    # The estimate's period and meaning are stated, on the page and in each row.
+    assert "not a count per year or a forecast" in text
+    assert text.count("Recorded in 2015–2024:") == 3
     # The reader can find how the model works, and the project that made the page.
     assert f"]({links.MODEL_DOC})" in text and f"]({links.REPO})" in text
     whole = ranking.markdown(top.assign(rank=[1, 2, 3]), "Example", (2015, 2024))
@@ -115,3 +121,22 @@ def test_risk_circles_are_the_citys_corners_expecting_half_a_crash_or_more(tmp_p
     assert ranking.circles(path, (2015, 2024), floor=2)["c"] == [
         [34.05, -118.05, 4.25, "Elm Street / Oak Avenue"]
     ]
+
+
+def test_the_period_is_the_rankings_own_where_it_records_one(tmp_path: Path) -> None:
+    path = _ranking(tmp_path / "r.csv")
+    # A ranking written before it recorded its years: the caller's years stand.
+    assert ranking.period(path, (2015, 2024)) == (2015, 2024)
+    assert ranking.period(path, None) is None
+    pd.read_csv(path).assign(first_year=2016, last_year=2023).to_csv(path, index=False)
+    assert ranking.period(path, (2015, 2024)) == (2016, 2023)
+    # Recorded but empty (no crash was placed): the caller's years again.
+    pd.read_csv(path).assign(first_year=None, last_year=None).to_csv(path, index=False)
+    assert ranking.period(path, (2015, 2024)) == (2015, 2024)
+
+
+def test_the_risk_key_names_the_period_and_does_not_promise_a_forecast() -> None:
+    template = Path(movement.__file__).with_name("movement_map.html").read_text()
+    assert "Estimated bike crashes, ${esc(CIRCLES.y)}" in template
+    assert "Model estimate for ${esc(CIRCLES.y)}" in template
+    assert "model expects" not in template

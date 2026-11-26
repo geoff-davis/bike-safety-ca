@@ -126,6 +126,8 @@ def main() -> None:
     top = ranking.top(args.ranking, args.top) if args.ranking else None
     # None with no crashes to date them: the map is then the streets alone.
     years = (int(crashes.year.min()), int(crashes.year.max())) if len(crashes) else None
+    # The ranking's own years, where it records them: its counts and estimates are for those.
+    ranked_years = ranking.period(args.ranking, years) if args.ranking else years
     if "map" in steps:
         ways = gpd.read_parquet(street_table.path(args.processed / "network", config.crs))
         limit = chosen["city_limit"]
@@ -139,8 +141,8 @@ def main() -> None:
             centre,
             area=outline,
             offline=args.offline,
-            ranked=ranking.markers(top) if top is not None else None,
-            circles=ranking.circles(args.ranking, years) if args.ranking else None,
+            ranked=ranking.markers(top, ranked_years) if top is not None else None,
+            circles=ranking.circles(args.ranking, ranked_years) if args.ranking else None,
         )
         logging.info("wrote %s", written)
         if top is not None and args.pdf:
@@ -157,7 +159,7 @@ def main() -> None:
             for target in print_framings(config.prints, written, args.out, ranked):
                 logging.info("wrote %s", target)
     if top is not None:
-        for written in ranking.write(top, config.city, years, args.out, args.pdf):
+        for written in ranking.write(top, config.city, ranked_years, args.out, args.pdf):
             logging.info("wrote %s", written)
 
 
