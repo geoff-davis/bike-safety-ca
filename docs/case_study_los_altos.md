@@ -72,8 +72,8 @@ Mean rank score over the three windows, street-length model
 
 | | All cyclists | Cyclists 18 or under |
 |---|---|---|
-| Study area | 0.858 | 0.854 |
-| Los Altos | 0.845 (two windows) | too few to score |
+| Study area | 0.857 | 0.854 |
+| Los Altos | 0.850 (two windows) | too few to score |
 
 The study-area test rests on 261, 114 and 218 later cyclist crashes at
 intersections in the three windows, 87, 40 and 76 of them children.
@@ -122,20 +122,20 @@ and last windows, with 45 and 32 later crashes:
 
 | Variant | Intersections | Crashes placed (cyclist) | Study area, all | Study area, children | Los Altos, all (two windows) |
 |---|---|---|---|---|---|
-| As configured | 4,208 | 3,339 (928) | 0.858 | 0.854 | 0.845 |
-| Leaving out the 58 intersections wider than 40 m | 4,150 | 3,173 (896) | 0.858 | 0.858 | 0.865 |
-| Nearness counts whatever streets the report names | 4,208 | 3,410 (934) | 0.857 | 0.854 | 0.838 |
-| Chains of close corners split at 25 m | 4,258 | 3,346 (931) | 0.856 | 0.854 | 0.841 |
-| Census city limit in place of the city's own | 4,208 | 3,339 (928) | 0.858 | 0.854 | 0.847 |
-| Streets of November 2026 | 4,217 | 3,342 (930) | 0.858 | 0.854 | 0.843 |
-| Area built from the city list (295 km²) | 6,912 | 7,164 (1,741) | 0.837 | 0.817 | 0.842 |
+| As configured | 4,208 | 3,339 (928) | 0.857 | 0.854 | 0.850 |
+| Leaving out the 58 intersections wider than 40 m | 4,150 | 3,173 (896) | 0.857 | 0.858 | 0.864 |
+| Nearness counts whatever streets the report names | 4,208 | 3,410 (934) | 0.856 | 0.853 | 0.844 |
+| Chains of close corners split at 25 m | 4,258 | 3,346 (931) | 0.856 | 0.853 | 0.847 |
+| Census city limit in place of the city's own | 4,208 | 3,339 (928) | 0.857 | 0.854 | 0.853 |
+| Streets of November 2026 | 4,217 | 3,342 (930) | 0.857 | 0.854 | 0.849 |
+| Area built from the city list (295 km²) | 6,912 | 7,164 (1,741) | 0.836 | 0.817 | 0.848 |
 
 - **How crashes are placed and corners joined** moves no study-area score by
-  more than 0.004. The Los Altos all-cyclist score moves more, between 0.838
-  and 0.865, as expected of a score on 77 later crashes over two windows.
+  more than 0.004. The Los Altos all-cyclist score moves more, between 0.844
+  and 0.864, as expected of a score on 77 later crashes over two windows.
   Counting nearness for reports that name two other streets (71 more crashes,
   6 of them cyclist crashes, mostly freeway crashes above surface streets)
-  gives the 0.838.
+  gives the 0.844.
 - **The city limit and the street date** move scores by 0.003 at most. With
   the Census outline the saved table no longer matches exactly.
 - **The area** matters most. The fall on the wider area is in the added
@@ -208,7 +208,7 @@ on the study area:
 
 | Later cyclist crashes | Trained on all injury crashes | Trained on visible injury and worse |
 |---|---|---|
-| All injury crashes (593) | 0.858 | 0.855 |
+| All injury crashes (593) | 0.857 | 0.855 |
 | Visible injury and worse (451) | 0.855 | 0.855 |
 
 What this does to the test of the ranking, for 2023 onwards (the second table
@@ -217,12 +217,12 @@ the sensitivity command prints, and the study-area row from
 
 | Rank score, street-length model | All cyclists | Children |
 |---|---|---|
-| Study area, as configured | 0.886 | 0.843 |
-| City-list area, all intersections | 0.835 | 0.779 |
-| City-list area, intersections inside the study area | 0.884 | 0.839 |
-| City-list area, intersections outside it | 0.754 | too few (24) |
-| The same, leaving out Palo Alto | 0.808 | too few (23) |
-| City-list area, each city scored on its own, averaged | 0.858 | 0.804 |
+| Study area, as configured | 0.886 | 0.844 |
+| City-list area, all intersections | 0.837 | 0.780 |
+| City-list area, intersections inside the study area | 0.885 | 0.839 |
+| City-list area, intersections outside it | 0.758 | too few (24) |
+| The same, leaving out Palo Alto | 0.810 | too few (23) |
+| City-list area, each city scored on its own, averaged | 0.858 | 0.803 |
 
 Palo Alto has 883 of the 2,867 intersections outside the study area and 54% of
 the 200 highest-scoring ones, and almost no reported crashes after 2022. Outside

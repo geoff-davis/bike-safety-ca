@@ -38,7 +38,10 @@ COLUMNS = [
     "observed_bike_crashes",
     "car_crashes",
     "method",
+    "spread_power",
     "fallback_reason",
+    "first_year",
+    "last_year",
     "longitude",
     "latitude",
 ]
@@ -101,8 +104,10 @@ def rank(
     ``street_keys`` every street that meets there, as ``junctions.road_key``
     names it.
     ``score`` is what the rank follows.  ``expected_bike_crashes`` is the
-    model's estimate over the years of crashes used, and is empty when the
-    hand-built blend was used, whose score only orders intersections.
+    model's estimate of the recorded crashes over the years of crashes used
+    (``first_year`` to ``last_year``, the same in every row), not a rate per
+    year or a forecast.  It is empty when the hand-built blend was used, whose
+    score only orders intersections.
     ``in_city`` is empty without a city limit.
 
     With ``children`` the ranking is built from child cyclist crashes only.
@@ -131,6 +136,8 @@ def rank(
             "fit on a wider area, or pass --force to build it anyway."
         )
     ranked = crash_history.rank_intersections(bike, car, streets.to_dict())
+    # Every placed crash dates the period, so a child ranking has the same years as the other.
+    used = hits.year
     fit = ranked["fit"]
     points = sites.geometry.to_crs(CRS_WGS84)
     inside: pd.Series = pd.Series(pd.NA, index=sites.index, dtype="boolean")
@@ -150,7 +157,10 @@ def rank(
             "observed_bike_crashes": bike,
             "car_crashes": car,
             "method": ranked["method"],
+            "spread_power": fit["spread_power"] if fit is not None else float("nan"),
             "fallback_reason": ranked["reason"] or "",
+            "first_year": int(used.min()) if len(used) else pd.NA,
+            "last_year": int(used.max()) if len(used) else pd.NA,
             "longitude": points.x.round(6),
             "latitude": points.y.round(6),
         },

@@ -48,6 +48,7 @@ from bike_safety_ca.config import load as load_config
 from bike_safety_ca.download import osm
 from bike_safety_ca.io import atomic_write_json, read_shapes
 from bike_safety_ca.model.crash_history import (
+    SPREAD_POWER,
     fit_street_model,
     rank_intersections,
     rank_score,
@@ -167,7 +168,9 @@ def compare(
         if ranked["fit"] is not None and not extra.empty and later.sum() > 0:
             base = ranked["fit"]
             try:
-                flagged = fit_street_model(early, car, streets, extra=extra)
+                flagged = fit_street_model(
+                    early, car, streets, spread_power=SPREAD_POWER, extra=extra
+                )
             except (RuntimeError, ValueError, FloatingPointError) as error:
                 row["note"] = f"fit with flags failed: {error}"
             else:
