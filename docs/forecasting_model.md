@@ -406,8 +406,7 @@ crashes after it (`checks/holdout.py`). Every config here uses three windows:
 | First year to 2020 | 2021–2022 |
 | First year to 2022 | 2023 to the latest record (June to November 2026, by city) |
 
-The first year is 2014 for the Los Altos study area and 2015 for the 28
-cities (TIMS no longer offers 2014). Children are scored on later child
+The first year is 2015 throughout (TIMS no longer offers 2014). Children are scored on later child
 crashes, with rankings fitted to child crashes and, as a separate row, the
 all-cyclist ranking.
 
@@ -452,71 +451,68 @@ top 100 is 1% of Fresno's intersections and 36% of East Palo Alto's.
 counts that happened, by groups of intersections, and the ratio of summed
 squared errors to summed forecast variance (section 4.5).
 
-### 4.3 Results on the Los Altos study area
+### 4.3 Results for Los Altos, fitted with its neighbours
 
-The study area is the one of the Los Altos case study: two-mile circles
-around the study's public schools plus the city limit, 4,208 intersections,
-803 of them in Los Altos. Later bike crashes in the three windows: 261, 114
-and 218 (children 87, 40 and 76). Rerun:
+Los Altos alone has too few bike crashes for the model to be fitted, so it
+is fitted together with five whole neighbouring cities (Cupertino, Los
+Altos Hills, Mountain View, Palo Alto and Sunnyvale) and read inside its
+own limit: 6,470 intersections, 805 of them in Los Altos. Later bike
+crashes in the three windows: 453, 187 and 337 (children 142, 56 and 106).
+Rerun:
 `python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml`.
 
-Mean rank score over the three windows:
+Until 26 November 2026 the Los Altos results came from a smaller study
+area, two-mile circles around ten public schools plus the city limit
+(4,208 intersections, from 2014). That area has been retired. Wherever a
+later section says "study area", the figure was fitted on it by a one-off
+script and has not been rerun on the six cities.
+
+Mean rank score over the three windows, all six cities:
 
 | Ranking | All cyclists | Children |
 |---|---|---|
-| Past bike crashes | 0.701 | 0.604 |
-| Bike + car crashes, added | 0.780 | 0.760 |
-| Hand-built blend (`street_blend_score`) | 0.832 | 0.833 |
-| Earlier fitted formula (`fit_history_model`) | 0.838 | 0.838 |
-| **Street-length model** (`fit_street_model`) | **0.857** | **0.854** |
-| All-cyclist model, scored on child crashes | | 0.851 |
-| Road-and-traffic model of the Los Altos analysis, refitted (not rerun) | 0.856 | 0.866 |
+| Past bike crashes | 0.684 | 0.606 |
+| Bike + car crashes, added | 0.766 | 0.739 |
+| Hand-built blend (`street_blend_score`) | 0.820 | 0.794 |
+| Earlier fitted formula (`fit_history_model`) | 0.828 | 0.809 |
+| **Street-length model** (`fit_street_model`) | **0.843** | **0.825** |
+| All-cyclist model, scored on child crashes | | 0.818 |
 
 By window, street-length model:
 
 | | 2019–2022 | 2021–2022 | 2023 on |
 |---|---|---|---|
-| All cyclists | 0.850 | 0.836 | 0.886 |
-| Children | 0.859 | 0.858 | 0.844 |
+| All cyclists, six cities | 0.847 | 0.838 | 0.844 |
+| Children, six cities | 0.839 | 0.828 | 0.807 |
+| All cyclists, inside Los Altos | 0.859 | too few (22) | 0.836 |
 
 Inside the Los Altos city limit the middle window has 22 later crashes and
-is left unscored; the mean over the other two is 0.850 for all cyclists. No
-window has 30 later child crashes there. The study-area score is the one to
-quote for the city: its intersections are part of the test.
+is left unscored; the mean over the other two is 0.847 for all cyclists,
+against 0.671 for past bike crashes alone. No window has 30 later child
+crashes there (18, 9 and 19).
 
-Later crashes at the highest-ranked intersections, summed over the three
-windows (top 25 / 50 / 100; rerun, from the same command's `--out` file):
+Later crashes at the highest-ranked intersections of the six cities, summed
+over the three windows (top 25 / 50 / 100; from the same command's `--out`
+file; ties share their places, and counts are rounded):
 
-| Ranking | All cyclists (of 593) | Children (of 203) |
+| Ranking | All cyclists (of 977) | Children (of 304) |
 |---|---|---|
-| Past bike crashes | 51 / 85 / 143 | 15 / 22 / 34 |
-| Bike + car crashes, added | 64 / 109 / 163 | 20 / 26 / 44 |
-| Hand-built blend | 65 / 114 / 166 | 21 / 27 / 42 |
-| Earlier fitted formula | 64 / 113 / 169 | 24 / 32 / 43 |
-| Street-length model | 67 / 111 / 176 | 15 / 31 / 43 |
-| All-cyclist model, on child crashes | | 21 / 32 / 49 |
+| Past bike crashes | 51 / 86 / 149 | 15 / 28 / 41 |
+| Bike + car crashes, added | 50 / 97 / 171 | 9 / 24 / 40 |
+| Hand-built blend | 49 / 103 / 186 | 11 / 26 / 41 |
+| Earlier fitted formula | 63 / 111 / 179 | 20 / 29 / 43 |
+| Street-length model | 49 / 97 / 184 | 10 / 24 / 45 |
+| All-cyclist model, on child crashes | | 10 / 25 / 49 |
 
-At the very top of the list the all-cyclist rankings are level within
-noise. The child-fitted model's top 25 is not: it holds 15 later child
-crashes, as many as past child crashes alone and fewer than the 21 of the
-all-cyclist model. With $p$ fitted it held 22; the difference is one window,
-fitted through 2018 (4 against 10 of 87). These are small counts, but for
-children in this area the top of the all-cyclist list is the better guide.
-The model's gain is further down, mostly in ordering the corners with no
-bike or car crash of their own. Those are 3,340 to 3,530 of the 4,208
-intersections, and 21% to 34% of later bike crashes happened at them; 39% to
-58% happened at corners with no earlier bike crash. Among the corners with
-no crash of either kind the model's rank score is 0.71 to 0.80 (rerun, same
-script as section 11.9). Ranking by past bike crashes cannot order them at
-all.
-
-Resampling intersections in the earlier one-off runs (300 draws, 5% to 95%
-range of the difference in mean rank score; not rerun): the model minus the
-earlier fitted formula was +0.020 (0.015 to 0.026) for all cyclists and
-+0.017 (0.007 to 0.024) for children; the model minus the road-and-traffic
-model was 0.000 (−0.011 to 0.011) and −0.013 (−0.026 to 0.001). The
-resampling treats intersections as independent and does not redo the choice
-of model, so the ranges are narrower than the real uncertainty.
+In the top 25 and top 50 the model is no better than past bike crashes
+alone here, and the earlier fitted formula is ahead of it; the model's gain
+is from the top 100 down, and in the rank score, which is mostly about
+ordering the many corners with little or no crash record. The same was true
+on the former study area. Three figures from that area have not been rerun
+on the six cities: the share of later crashes at corners with no earlier
+crash, the comparison with the road-and-traffic model of the original Los
+Altos analysis (level with this model for all cyclists, 0.856 against
+0.857), and the resampling ranges.
 
 ### 4.4 The tests on many cities
 
@@ -572,7 +568,7 @@ the Census Bureau. Each city is scored over all the intersections it was
 fitted on. The tables in this section are rerun at revision `c87bd4e`:
 
 ```bash
-uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out output/cities
+uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' los_altos --out output/cities
 ```
 
 The run took about six minutes. Its output matched, figure for figure, the
@@ -770,8 +766,8 @@ are more numerous and need less help from the street). It orders
 intersections; it is not an expected count, so the ranking file leaves
 `expected_bike_crashes` empty and no forecast is possible.
 
-How it compares where both can be run: 0.832 against 0.857 for the model on
-the study area (section 4.3), and 0.82 to 0.83 for no-fit versions of the
+How it compares where both can be run: 0.820 against 0.843 for the model on
+Los Altos and its five neighbours (section 4.3), and 0.82 to 0.83 for no-fit versions of the
 model's product. Where the model cannot be fitted it is what is left; the
 better answer is usually to fit on a wider area.
 
@@ -779,7 +775,7 @@ better answer is usually to fit on a wider area.
 
 A small city does not have to fall back. Fit the model on the city together
 with its neighbours, then read the ranking inside the city. The Los Altos
-case study does this with a study area; the pooled configs
+config (`config/los_altos.yaml`) and the pooled configs
 (`config/pool_*.yaml`) do it with whole neighbouring cities in one county.
 The cross-city command fits each pool as a whole and scores it inside the
 limit of every member city, beside that city's score when fitted alone. A
@@ -839,9 +835,10 @@ fit. Two shortages are easy to confuse.
 
 **Too few later crashes to score.** This limits the test, not the ranking.
 Inside the Los Altos city limit the windows hold 18, 9 and 18 later child
-crashes, so the city has no child score of its own. The study-area child
-score (0.854, on 87, 40 and 76) is a result for the study area; how well the
-ranking orders corners inside Los Altos for children is not known.
+crashes, so the city has no child score of its own. The child score of
+the six cities it is fitted with (0.825, on 142, 56 and 106) is a result
+for those six cities; how well the ranking orders corners inside Los
+Altos for children is not known.
 
 **Too few child crashes to build a child ranking from.** This is about the
 fitting years. Each hold-out has an "All-cyclist ranking" row for children:
@@ -856,12 +853,11 @@ cities fitted alone (rerun, cross-city command):
 
 Under 100 child crashes, where the model cannot be fitted and the child
 ranking is the blend, it loses to the all-cyclist ranking every time. At
-100 or more the two are level. In the Los Altos study area, with 174 to 261
-child crashes in the fitting years, they are 0.854 and 0.851. Nowhere in
-these cities does a separate child ranking clearly beat the all-cyclist one.
-At the top of the list the study-area child ranking does worse than the
-all-cyclist one: its top 25 holds 15 of the 203 later child crashes against
-21 (section 4.3).
+100 or more the two are level. In Los Altos and its five neighbours, with
+225 to 367 child crashes in the fitting years, they are 0.825 and 0.818.
+Nowhere in these cities does a separate child ranking clearly beat the
+all-cyclist one. At the top of the list the two are level there: each
+holds 10 of the 304 later child crashes in its top 25 (section 4.3).
 
 So the code and the guide follow these rules:
 
@@ -871,8 +867,8 @@ So the code and the guide follow these rules:
   (which builds the blend).
 - The hold-out prints, under its table, "too few crashes to fit … rank this
   group by the all-cyclist ranking instead" for each such window.
-- Fit wide and report inside the city: a study area or a pool gives the fit
-  enough child crashes. Pooling raised child scores in four of the five
+- Fit wide and report inside the city: a pool of neighbouring cities gives
+  the fit enough child crashes. Pooling raised child scores in four of the five
   cities where one could be scored both ways, each on one or two windows.
 - Where the all-cyclist ranking is used for children, say so. A missing
   child ranking is not a finding of no risk to children.
@@ -1317,8 +1313,8 @@ tables built on 24 November 2026.
 | Section | Figures | Command |
 |---|---|---|
 | 12.2 | Spread power 1 against the fitted power, all cities | `python -m bike_safety_ca.checks.candidates --configs config --out <folder>` |
-| 4.3 | Los Altos study-area rank scores, by window, top 25/50/100 | `python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml --out <file>` |
-| 5.1, 5.5, 6.3, 6.4, 7.3 (level steps) | City table, severity sensitivity, pooled table, child table, level-step counts and table | `python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out <folder>` (about six minutes) |
+| 4.3 | Los Altos rank scores, fitted with its neighbours, by window, top 25/50/100 | `python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml --out <file>` |
+| 5.1, 5.5, 6.3, 6.4, 7.3 (level steps) | City table, severity sensitivity, pooled table, child table, level-step counts and table | `python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' los_altos --out <folder>` (about six minutes) |
 | 5.4 (companion table) | Simulated against real rank scores, nine cities | `python -m bike_safety_ca.checks.attainable --config config/<city>.yaml`, per city |
 | 7.3, 7.4 (yearly flags) | Falls and rises, counts of marks | `python -m bike_safety_ca.checks.reporting --config config/<city>.yaml`, per city |
 

@@ -211,7 +211,11 @@ def test_los_altos_config_loads() -> None:
     assert settings.ccrs_county_code == 43 and "Los Altos" in settings.ccrs_cities
     rule = settings.agency_reassignments[0]
     assert (rule.filed_as, rule.agency, rule.beat_prefix) == ("4312", "4305", "LA")
-    assert settings.municipality_aliases == {"UNINCORPORATED": "SANTA CLARA COUNTY"}
+    # the six whole cities fitted together; no unincorporated county, so no alias for it
+    assert set(settings.ccrs_cities) == {
+        "Cupertino", "Los Altos", "Los Altos Hills", "Mountain View", "Palo Alto", "Sunnyvale"
+    }  # fmt: skip
+    assert settings.municipality_aliases == {} and not settings.area_schools
 
 
 def test_config_rejects_a_window_out_of_order(tmp_path: Path) -> None:

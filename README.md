@@ -155,7 +155,8 @@ that is for an engineer who has looked at the place.
 ## A worked example: Los Altos
 
 Los Altos is where this started. [The case study](docs/case_study_los_altos.md)
-runs every step on the city and the two miles around its schools, with every
+runs every step on the city together with its five neighbours, which gives
+the model enough crashes to be fitted, with every
 setting written down and the expected results kept in `case_studies/`, so it
 can be run again and checked.
 

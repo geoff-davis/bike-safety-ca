@@ -57,7 +57,7 @@ so: across the test cities a ranking built from under 100 child crashes found
 later child crashes less well than the all-cyclist ranking did (see
 `docs/where_the_ranking_helps.md`). A small city can still get a child
 ranking by fitting on a wider area around it and reading the result inside
-its limit, as the Los Altos case study does.
+its limit, as the Los Altos config does.
 
 ## Using it for your city: the steps in order
 
@@ -102,8 +102,7 @@ cut is written in the same form as a download, with a note naming the
 extract, and it takes the ways that touch the area's padded box, as the
 server does: cut from an extract three days newer, Santa Monica's 26,309
 saved ways were all there, plus one. It holds the map of the extract's date,
-so a config that pins `osm_date` (as `config/los_altos.yaml` does) refuses
-it. Reading a regional extract takes
+so a config that pins `osm_date` refuses it. Reading a regional extract takes
 about half a minute and 2.5 GB of memory.
 
 ## Building the crash tables
@@ -174,12 +173,12 @@ uv run python -m bike_safety_ca.crashes --config config/los_altos.yaml \
   CCRS often lack an age, so check how many there are (the yearly summary has
   a column for them) before reading a trend in child crashes.
 
-`config/los_altos.yaml` holds every local choice. To use it for another city,
-copy it, edit `city`, `county`, `crs`, `ccrs_county_code`, `ccrs_cities` and
-the `latitude` and `longitude` box, and delete the settings that are Los
-Altos's own (`agency_reassignments`, `municipality_aliases`, `city_limit_url`,
-`area_schools`, `area_points`, `area_buffer_m`, `osm_date`); left in, they
-would build your study area around Los Altos.
+A config holds every local choice. `config/los_altos.yaml` fits Los Altos
+together with five neighbouring cities, because the city alone has too few
+bike crashes; `config/los_altos_city.yaml` is one city on its own. To set
+up another city, copy the second, edit `city`, `county`, `crs`,
+`ccrs_county_code`, `ccrs_cities` and the `latitude` and `longitude` box,
+and delete `agency_reassignments`, which is Los Altos's own.
 
 Things the code assumes, which may not hold for your city:
 
@@ -401,9 +400,9 @@ serious grade, and scores both on later cyclist crashes (it also says in how
 many windows each came from a fitted model and not the fallback): departments
 differ in how many of those they file (see "Lasting changes of level"
 above), and in the cities tried the ranking was slightly better with them
-kept in. Scores depend on the area: the Los Altos figures in
-`docs/forecasting_model.md` come from a smaller study area around Los Altos
-schools, and the city-list outline gives somewhat lower ones. Street data is
+kept in. Scores depend on the area a city is fitted with: Los Altos is
+fitted together with five neighbouring cities (`config/los_altos.yaml`),
+and alone (`config/los_altos_city.yaml`) it scores lower. Street data is
 © OpenStreetMap contributors, ODbL 1.0; credit them in anything you publish
 from it.
 
@@ -511,7 +510,7 @@ for pieces shorter than 0.5 km.
 ## The same checks over many cities
 
 ```bash
-uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out output/cities
+uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' los_altos --out output/cities
 ```
 
 runs three of the checks above for every config whose city has been built

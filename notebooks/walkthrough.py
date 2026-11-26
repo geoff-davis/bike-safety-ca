@@ -103,7 +103,7 @@ def _(mo):
             processed_path,
             mo.md(
                 "Leave these as they are for the demo. For your own city, copy "
-                "`config/los_altos.yaml`, edit it, build the tables with the commands in "
+                "`config/los_altos_city.yaml`, edit it, build the tables with the commands in "
                 "section 9, and put the file's path and the tables' folder here. Keep "
                 "each city's tables in a folder of their own."
             ),
@@ -507,12 +507,10 @@ def _(ROOT, config_path, data_root, mo):
     mo.md(f"""
     ## 9. Your own city
 
-    1. Copy `config/los_altos.yaml` to `config/<city>.yaml`. Edit `city`,
+    1. Copy `config/los_altos_city.yaml` to `config/<city>.yaml`. Edit `city`,
        `county`, `crs`, `ccrs_county_code`, `ccrs_cities` and the `latitude`
-       and `longitude` box. Delete the settings that are Los Altos's own:
-       `agency_reassignments`, `municipality_aliases`, `city_limit_url`,
-       `area_schools`, `area_points`, `area_buffer_m` and `osm_date`. Left in,
-       they would build your study area around Los Altos.
+       and `longitude` box. Delete `agency_reassignments`, which is Los
+       Altos's own.
     2. Build the area and streets: `python -m bike_safety_ca.network --config config/<city>.yaml`
        (downloads Census outlines and OpenStreetMap streets).
     3. Get the crashes. `python -m bike_safety_ca.crashes download --config config/<city>.yaml`

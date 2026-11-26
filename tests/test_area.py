@@ -14,7 +14,7 @@ from bike_safety_ca.download import schools
 from bike_safety_ca.network import area
 
 CONFIG = replace(
-    settings.load(Path("config/los_altos.yaml")),
+    settings.load(Path("tests/study_area_config.yaml")),
     city="Alder",
     county="Made Up",
     ccrs_cities=("Alder", "Birch", "Unincorporated"),
@@ -111,7 +111,7 @@ def test_area_around_points_joins_circles_with_the_city_limit() -> None:
 
 
 def test_the_case_study_config_asks_for_school_circles() -> None:
-    config = settings.load(Path("config/los_altos.yaml"))
+    config = settings.load(Path("tests/study_area_config.yaml"))
     assert config.area_buffer_m == pytest.approx(3218.688)
     assert len(config.area_schools) == 18 and len(config.area_points) == 1
     assert ("Almond Elementary", "Los Altos Elementary") in config.area_schools
