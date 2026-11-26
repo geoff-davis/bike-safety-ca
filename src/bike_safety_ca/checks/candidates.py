@@ -405,7 +405,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--configs", type=Path, default=Path("config"), help="folder of configs")
     parser.add_argument("--processed", type=Path, default=Path("data/processed"))
-    parser.add_argument("--skip", nargs="*", default=["pool_*"], help="config names to leave out")
+    parser.add_argument(
+        "--skip", nargs="*", default=["pool_*", "los_altos"],
+        help="config names to leave out: the pooled areas, which overlap the cities",
+    )  # fmt: skip
     parser.add_argument(
         "--also", nargs="*", default=[], metavar="NAME=FOLDER",
         help="areas built elsewhere, summarised apart from the cities",

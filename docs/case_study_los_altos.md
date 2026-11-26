@@ -1,50 +1,61 @@
 # Case study: Los Altos
 
-This is the analysis the method was built on, written down so it can be run
-again with this code and checked against the original figures. Every setting
-is in `config/los_altos.yaml`; the expected results are in
+Los Altos on its own has too few bike crashes for the model to be fitted, so
+it is fitted together with five whole neighbouring cities and its ranking is
+read inside its own limit. This note writes the analysis down so it can be
+run again with this code and checked against saved figures. Every setting is
+in `config/los_altos.yaml`; the expected results are in
 `case_studies/los_altos/`. All figures here are totals; no individual crash
 is described.
+
+Until 26 November 2026 the case study used a smaller study area: two-mile
+circles around the study's public schools, joined with the city limit. That
+area has been retired in favour of whole cities, which is how any other
+small city would be handled. The last two sections of this note still
+report results from it and say so.
 
 ## Inputs
 
 | Input | What was used | Can someone else get the same? |
 |---|---|---|
-| TIMS crash exports | SWITRS Query & Map at tims.berkeley.edu. County: Santa Clara. Cities: Cupertino, Los Altos, Los Altos Hills, Mountain View, Palo Alto, Sunnyvale, Unincorporated. No crash filters. Crashes, Parties and Victims CSVs in two batches: 2014–2023 (final), exported 22 August 2026, and 2024–March 2026 (provisional). | Not fully. TIMS no longer offers 2014, and provisional years change. |
-| CCRS records | data.ca.gov dataset `ccrs`, years 2016–2026, county code 43 and the same cities, downloaded 28 October 2026. | Nearly. CCRS is updated monthly, so later downloads have more recent crashes and some corrections. |
-| Road centerlines | The City of Los Altos citywide road-centerline layer, used only to place crashes that have no coordinates. | Yes, from the city's public map service. |
-| City limit | The City of Los Altos city-limit layer, fetched from the city's map service (`city_limit_url` in the config). It is not kept in this repository: the city's website policy does not allow passing its content on without permission. | Yes, the download fetches it. If it fails, the Census outline is used instead and the result differs slightly (see below). |
-| Study area | 2-mile (3,218.7 m) circles around 19 public school sites, joined with the city limit: 124 km². Eighteen schools are named in the config (`area_schools`) and placed from the California Department of Education's public school directory, which the area step downloads; the second Bullis Charter campus is a point placed by hand (`area_points`). The directory is not kept in this repository: the department's copyright statement asks for permission before its material is reproduced. | Yes, while the directory lists these schools at the same coordinates (checked with the copy downloaded in August 2026). If the automated download is turned away, download "Public Schools and Districts (TXT)" from <https://www.cde.ca.gov/ds/si/ds/pubschls.asp> and save it as `data/raw/schools/pubschls.txt`. |
-| Streets | OpenStreetMap as of 22 August 2026 (`osm_date` in the config). © OpenStreetMap contributors, ODbL 1.0. | Yes, the download asks for the map at that time. |
+| TIMS crash exports | SWITRS Query & Map at tims.berkeley.edu. County: Santa Clara. Cities: Cupertino, Los Altos, Los Altos Hills, Mountain View, Palo Alto, Sunnyvale, one export per city. No crash filters. Crashes, Parties and Victims CSVs for 2015 to June 2026. | Nearly. The provisional years (2025 on) change. |
+| CCRS records | data.ca.gov dataset `ccrs`, years 2016–2026, county code 43 and the same cities, as downloaded for the tables of 21 November 2026. | Nearly. CCRS is updated monthly, so later downloads have more recent crashes and some corrections. |
+| City limits and area | Census Bureau place outlines of the six cities; the area fitted is the six together. | Yes, the network step downloads them. |
+| Streets | OpenStreetMap as downloaded for the tables of 21 November 2026. © OpenStreetMap contributors, ODbL 1.0. | Nearly. A later download has later edits. |
 
 ## Settings
 
 From `config/los_altos.yaml`:
 
-- First year 2014; a child is a cyclist aged 18 or under.
+- First year 2015 (TIMS no longer offers 2014); a child is a cyclist aged 18
+  or under.
 - Hold-out windows: fit through 2018 and test on 2019–2022; fit through 2020
   and test on 2021–2022; fit through 2022 and test on 2023 onward.
 - Distances in EPSG:26910 (UTM zone 10N).
 - From 2023 some Los Altos Police reports carry Palo Alto Police's agency code;
   they are recognised by a Los Altos beat or city and counted for Los Altos.
-- Crash reports coded "Unincorporated" are matched to "Santa Clara County" in
-  the centerline layer.
 
 ## Commands
 
-With the TIMS exports in `data/raw/crashes/tims/<batch>/`:
+With each city's TIMS export in its own folder under
+`data/raw/crashes/tims/`:
 
 ```bash
 uv run python -m bike_safety_ca.network --config config/los_altos.yaml
 uv run python -m bike_safety_ca.crashes download --config config/los_altos.yaml
-uv run python -m bike_safety_ca.crashes --config config/los_altos.yaml \
-    --centerlines path/to/road_centerlines.parquet
+uv run python -m bike_safety_ca.crashes --config config/los_altos.yaml
 uv run python -m bike_safety_ca.checks.holdout --config config/los_altos.yaml \
     --expect case_studies/los_altos/expected_holdout.csv
 ```
 
+These read and write under `data/raw/` and `data/processed/`. To keep the
+tables in a folder of their own, as the cross-city check expects
+(`data/processed/los_altos/`), name the folders with each command's `--raw`,
+`--out`, `--processed` and `--crashes` options; the guide describes them.
+
 The last command prints the scores and says whether every figure matches the
-saved table; it exits with an error if any differs.
+saved table; it exits with an error if any differs. The guide gives each
+command's options.
 
 ## What you should get
 
@@ -52,59 +63,59 @@ Crash tables:
 
 | Figure | Value |
 |---|---|
-| TIMS crashes, 2014–March 2026 | 24,883 |
-| of which in 2014 | 1,910 (272 involving a bicycle) |
-| CCRS reports kept | 55,678 |
-| Merged crashes | 59,821 |
+| TIMS crashes, 2015–June 2026 | 15,516 |
+| CCRS reports kept | 35,813 |
+| Merged crashes | 37,474 |
 
-Intersections: 4,208 in the study area, 803 of them in Los Altos.
-
-Of 1,336 located cyclist injury crashes in the study area, 27 have no cyclist
-age recorded, 19 of them in 2026 (of that year's 50), when the records come
-from CCRS alone. They count toward "all cyclists" and not toward the child
-figures.
-
-Of the 6,701 located injury crashes used (cyclist or motor-vehicle-only, 2014
-on), 3,339 are placed at an intersection, 928 of them cyclist crashes.
+Intersections: 6,470 in the six cities, 805 of them in Los Altos.
 
 Mean rank score over the three windows, street-length model
 (`expected_holdout.csv` has every ranking, window and top-25/50/100 count):
 
 | | All cyclists | Cyclists 18 or under |
 |---|---|---|
-| Study area | 0.857 | 0.854 |
-| Los Altos | 0.850 (two windows) | too few to score |
+| The six cities | 0.843 | 0.825 |
+| Los Altos | 0.847 (two windows) | too few to score |
 
-The study-area test rests on 261, 114 and 218 later cyclist crashes at
-intersections in the three windows, 87, 40 and 76 of them children.
+The six-city test rests on 453, 187 and 337 later cyclist crashes at
+intersections in the three windows, 142, 56 and 106 of them children.
+Inside Los Altos, past bike crashes alone score 0.671 over the same two
+windows.
 
 ### What the Los Altos row can and cannot show
 
-The ranking is fitted on the whole study area, 4,208 intersections of which
-803 are in Los Altos, and read inside the city limit. That is what makes a
-child ranking possible here at all: Los Altos alone has 28 to 46 child
-crashes at intersections in the training years, the study area 174 to 261.
+The ranking is fitted on all six cities, 6,470 intersections of which 805
+are in Los Altos, and read inside the city limit. That is what makes a
+fitted ranking possible here at all: fitted alone
+(`config/los_altos_city.yaml`), Los Altos falls back to the hand-built
+blend and scores 0.822 where the six-city fit scores 0.847. The six cities
+have 225 to 367 child crashes at intersections in the training years.
 
 The test is a separate matter. A window with fewer than 30 later crashes is
 left unscored, because a score on so few is close to those crashes' own ranks.
-Inside Los Altos the three windows hold 18, 9 and 18 later child crashes, so
+Inside Los Altos the three windows hold 18, 9 and 19 later child crashes, so
 the city has no child score of its own, and 22 later cyclist crashes of any
 age in the middle window, so its all-cyclist mean covers the other two.
-Before the floor was added this table gave 0.855 and 0.847 for the row; those
-were the same rankings scored on those few crashes.
 
 None of this says the child ranking is unusable in Los Altos. Its
-intersections are part of the study-area test, and that test is the evidence:
-quote 0.854 for children across the study area, not a Los Altos figure.
+intersections are part of the six-city test, and that test is the evidence:
+quote 0.825 for children across the six cities, not a Los Altos figure.
 
-The study area has enough child crashes for a ranking of its own. Scored on
-later child crashes across the study area, the ranking fitted to child
-crashes averages 0.854 and the one fitted to every cyclist crash 0.851 (the
+The six cities have enough child crashes for a ranking of their own. Scored
+on later child crashes across them, the ranking fitted to child crashes
+averages 0.825 and the one fitted to every cyclist crash 0.818 (the
 "All-cyclist ranking" rows of `expected_holdout.csv`). In cities fitted alone
 with fewer than 100 child crashes the all-cyclist ranking did better: see
 "Too few child crashes" in `where_the_ranking_helps.md`.
 
-## What changes the result
+## What changes the result (former study area, not rerun)
+
+This section and the next were run on the former study area (4,208
+intersections, from 2014, with the City of Los Altos's own city limit and
+OpenStreetMap as of 22 August 2026) and have not been repeated on the six
+cities. The command works on any config; the figures are a record. The last
+row of the table is close to today's area: the six cities with the
+unincorporated county between them.
 
 ```bash
 uv run python -m bike_safety_ca.checks.sensitivity --config config/los_altos.yaml \
@@ -143,7 +154,7 @@ and last windows, with 45 and 32 later crashes:
 - **The crash download date.** Later CCRS downloads add crashes to the last
   test window.
 
-## Changes in police reporting
+## Changes in police reporting (former study area, not rerun)
 
 `python -m bike_safety_ca.checks.reporting --config config/los_altos.yaml`
 flags these agency-years in the crash tables used here (injury crashes

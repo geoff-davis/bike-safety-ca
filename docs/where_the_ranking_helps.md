@@ -24,7 +24,7 @@ in this note (the results, pooling, ranking children, lasting changes of
 level, and with and without minor crashes) are then printed by
 
 ```bash
-uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' --out output/cities
+uv run python -m bike_safety_ca.checks.cities --configs config --pool 'pool_*' los_altos --out output/cities
 ```
 
 which also writes the rows behind them. It prints every pooled area a city
@@ -207,8 +207,8 @@ good.
   from putting the many quiet corners below the busy ones. For "where to look
   first", read the top-25/50/100 counts as well: run the hold-out with `--out`
   and see the `found in top …` columns of the file it writes.
-- **Much of it is exposure.** In an earlier one-off run on the Los Altos
-  study area (its script is not included), street length alone scored 0.849 against the model's 0.856 (see
+- **Much of it is exposure.** In an earlier one-off run on the former Los
+  Altos study area (since retired; its script is not included), street length alone scored 0.849 against the model's 0.856 (see
   "What each choice contributes" in
   [the model write-up](forecasting_model.md#126-what-each-choice-contributes)).
 - **It ignores the level.** A forecast wrong by a factor of two everywhere
@@ -282,7 +282,7 @@ good.
 ### Too few crashes to fit the model: pool with similar neighbours
 
 Fit on the city together with its neighbours, then report inside the city.
-The Los Altos case study does this with a study area; the pooled configs
+The Los Altos config (`config/los_altos.yaml`) and the pooled configs
 (`config/pool_*.yaml`) do it with whole neighbouring cities, each scored inside
 its own limit with the hold-out's `--city-limit`.
 
@@ -342,10 +342,10 @@ uv run python -m bike_safety_ca.crashes --config config/$P.yaml \
     --raw data/raw/$P/crashes --out data/processed/$P/crashes
 ```
 
-1. **Config.** Start from an existing `config/pool_*.yaml`, or from a member
-   city's config with any setting that draws its own area removed
-   (`area_file`, `area_schools`, `area_points`, `area_points_file` and
-   `area_buffer_m`; the Los Altos config has some of them).
+1. **Config.** Start from `config/los_altos.yaml` or a `config/pool_*.yaml`,
+   or from a member city's config with any setting that draws its own area
+   removed (`area_file`, `area_schools`, `area_points`, `area_points_file`
+   and `area_buffer_m`).
    List every member under `ccrs_cities`: the area fitted is then those
    cities' Census limits joined together, and the CCRS download fetches all
    of them. `city` names one member; it is a label, and the city whose limit
@@ -382,9 +382,10 @@ with fewer than 30 later crashes unscored. This says what the test can show.
 It does not say the ranking is no good there, and it does not stop you
 ranking: a small city's intersections are part of the wider area's test, and
 that is the evidence for them. In the Los Altos case study the child ranking
-scores 0.854 over the study area, on 87, 40 and 76 later child crashes. Inside
-the city limit the windows hold 18, 9 and 18, so the city has no child score
-of its own, and the study-area score is the one to quote.
+scores 0.825 over the six cities it is fitted on, on 142, 56 and 106 later
+child crashes. Inside the city limit the windows hold 18, 9 and 19, so the
+city has no child score of its own, and the six-city score is the one to
+quote.
 
 **Too few child crashes to build a child ranking from.** This is about the
 training years. Each city's hold-out now has an "All-cyclist ranking" row
@@ -405,17 +406,16 @@ separate child ranking clearly beat the all-cyclist one.
 
 So:
 
-- **Fit wide, report inside the city.** A study area or a pool of similar
-  neighbours gives the fit enough child crashes; read the ranking inside your
+- **Fit wide, report inside the city.** A pool of similar neighbours gives the fit enough child crashes; read the ranking inside your
   own limit. Pooling raised child scores in four of the five cities where
   one could be scored both ways.
 - **With under 100 child crashes in the area you fit, rank children by the
   all-cyclist ranking**, and say plainly that there were too few records to
   rank children on their own. A missing child ranking should not read as "no
   risk to children here". The hold-out prints this advice under its table.
-- **With 100 or more, either ranking will do.** The Los Altos study area has
-  174 to 261 child crashes in its training years and its two rankings are
-  level (0.854 and 0.851).
+- **With 100 or more, either ranking will do.** Los Altos and its five
+  neighbours have 225 to 367 child crashes in their training years and
+  their two rankings are level (0.825 and 0.818).
 - **Quote the test of the area you fitted,** not a score for a part of it that
   has too few later crashes to carry one.
 
@@ -454,7 +454,7 @@ gives:
 | Fresno, highway patrol | 2020–2023 (the police's recovery) | nothing |
 | San Mateo police | nothing | fall 2015–2016 and 2022, possible fall 2021 |
 | San Mateo, highway patrol | 2018 | nothing |
-| Palo Alto police (in the Los Altos study area) | 2022–2025 | fall 2022–2025, possible fall 2026 |
+| Palo Alto police (in the former Los Altos study area) | 2022–2025 | fall 2022–2025, possible fall 2026 |
 | Chico police | nothing | possible fall 2023 |
 | South Lake Tahoe police | nothing | rise 2022–2025, possible rise 2021 |
 | Mountain View police | 2022 (the highway patrol's rise) | nothing |
