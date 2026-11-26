@@ -672,8 +672,8 @@ uv run python -m bike_safety_ca.hospital.ebike \
 
 Use one folder per county; the downloader refuses to mix two. `--pdf` needs
 Google Chrome or Chromium. The pull drives the site one table at a time. By
-default it pulls only the six tables the two reports read; `--all` pulls the
-full set (67 tables, much slower), and `--only` names tables to pull
+default it pulls only the eight tables the two reports read; `--all` pulls the
+full set (69 tables, much slower), and `--only` names tables to pull
 again, such as `--only ed_total_age_groups`.
 
 A hidden count is never worked out from totals or other cells. It enters

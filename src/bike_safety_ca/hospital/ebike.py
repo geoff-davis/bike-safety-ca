@@ -40,7 +40,12 @@ EBIKE = "electric (assisted) bicycle"
 # Younger and older groups are almost wholly hidden.
 GROUPS = ["10-14", "15-19", "20-24", "25-44", "45-64", "65-84"]
 HIDDEN_MAX = rates.HIDDEN[1]
-STATE_TABLES = ("ed_state_bike_cause_age_groups", "hosp_state_bike_cause_age_groups")
+STATE_TABLES = (
+    "ed_state_bike_cause_age_groups",
+    "hosp_state_bike_cause_age_groups",
+    "ed_state_total_age_groups",
+    "hosp_state_total_age_groups",
+)
 # Printed wherever a range is: a reader takes a narrow range for a sure finding.
 NOT_CHANCE = (
     "The ranges cover hidden counts only, not chance: a narrow range is not a precise finding, "
@@ -161,6 +166,41 @@ def admission_ratio(folder: Path) -> tuple[float, float]:
     return math.floor(found["low"] * 100) / 100, math.ceil(found["high"] * 100) / 100
 
 
+def overlap(folder: Path) -> dict[str, tuple[int, int, int, int]]:
+    """For ED visits and admissions, all ages: the cause rows' least and most sum, then the
+    least and most count of unique visits.
+
+    EpiCenter counts a visit under each cause it is coded with, so the cause
+    rows can add up to more than the visits; the two side by side show how
+    much.  Hidden cells hold 1 to 10, as everywhere.
+    """
+    found = {}
+    for outcome in ("ed", "hosp"):
+        by_cause = er.table(folder, f"{outcome}_state_bike_cause_age_groups")
+        rows = rates.cells(by_cause, [CAUSE, AGE], pd.MultiIndex.from_frame(by_cause[[CAUSE, AGE]]))
+        unique = er.table(folder, f"{outcome}_state_total_age_groups")
+        visits = rates.cells(unique, [AGE], pd.Index(unique[AGE], name=AGE))
+        found[outcome] = (
+            int(rows.low.sum()),
+            int(rows.high.sum()),
+            int(visits.low.sum()),
+            int(visits.high.sum()),
+        )
+    return found
+
+
+def _overlap(folder: Path) -> str:
+    """The sentence comparing the cause rows with the unique visits."""
+    parts = []
+    for outcome, what in (("ed", "emergency department visits"), ("hosp", "admissions")):
+        rows_low, rows_high, low, high = overlap(folder)[outcome]
+        parts.append(
+            f"{_span(rows_low, rows_high)} {what} in the cause rows against "
+            f"{_span(low, high)} counted once each"
+        )
+    return f"Over all ages, {parts[0]}, and {parts[1]}."
+
+
 def _data(folder: Path, residents: Path) -> tuple[pd.DataFrame, float, float]:
     """The table by age group and the lowest and highest ratio of actual to expected admissions."""
     er.check_source(folder, None, STATE_YEARS, STATE_YEARS, required=STATE_TABLES)
@@ -266,6 +306,8 @@ def markdown(folder: Path, residents: Path) -> tuple[str, dict[str, str]]:
         "- **Per resident, not per rider.** There is no count of e-bike riders or miles, so "
         "these are not risks of riding.",
         "- **Visits, not people.** One person can have several.",
+        "- **Causes can overlap.** A visit coded under two causes is counted under each, so "
+        "the counts by cause can run a little above the visits (see the appendix).",
         "- **A more serious mix, not proof of cause.** Riders who are admitted may be more "
         "likely to have the bicycle type recorded, which would raise the e-bike share admitted.",
         "",
@@ -276,7 +318,8 @@ def markdown(folder: Path, residents: Path) -> tuple[str, dict[str, str]]:
         "**Counts.** The source table gives emergency department visits and hospital admissions "
         "by cause and age group. It is split into some sixty causes, and most of the e-bike "
         "cells are hidden, so each total below is a range: the least and the most the published "
-        "and hidden cells can add up to. The totals assume no visit appears under two causes.",
+        "and hidden cells can add up to. EpiCenter counts a visit under each cause it is coded "
+        f"with, so these totals can run a little above the visits. {_overlap(folder)}",
         "",
         "| Age | E-bike ED visits | E-bike admissions |",
         "|---|---:|---:|",

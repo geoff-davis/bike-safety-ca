@@ -57,6 +57,12 @@ STATE: dict[str, list[list[int | None]]] = {
         [None, None, None, 40, 45, 20, 90, 110, 30, None],
     ],
 }
+# The same counted once per visit, a little under the cause rows' sum: a visit
+# coded under two causes is counted under each.
+STATE_TOTAL: dict[str, list[int | None]] = {
+    "ed": [105, 2400, 7200, 13350, 9600, 4200, 16100, 16850, 6500, 445],
+    "hosp": [None, 70, 275, 720, 655, 355, 1670, 2540, 1375, 132],
+}
 # Residents in each Census five-year age column in 2016, growing 0.5% a year.
 RESIDENTS = {COUNTY: 62_000, "Rest of the state": 2_000_000}
 
@@ -102,6 +108,8 @@ def build_tables(folder: Path) -> None:
             for age, count in zip(GROUPS, counts, strict=True)
         ]
         _save(folder, f"{outcome}_state_bike_cause_age_groups", pd.DataFrame(rows), None)
+        unique = pd.DataFrame({report.AGE: GROUPS, "Count": STATE_TOTAL[outcome]})
+        _save(folder, f"{outcome}_state_total_age_groups", unique, None)
 
 
 def build_residents(folder: Path) -> None:

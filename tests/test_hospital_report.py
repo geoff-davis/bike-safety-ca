@@ -67,6 +67,11 @@ def _county_tables(folder: Path, county: str = "Alder", years=(2016, 2024)) -> N
         ]
         state = epicenter.STATEWIDE_YEARS
         _save(folder, f"{outcome}_state_bike_cause_age_groups", pd.DataFrame(rows), None, state)
+        # Counted once per visit: a little under the cause rows' sum.
+        unique = pd.DataFrame(
+            {report.AGE: GROUPS, "Count": [2 * (20 + 3 * i) + 5 for i in range(10)]}
+        )
+        _save(folder, f"{outcome}_state_total_age_groups", unique, None, state)
 
 
 def _residents(folder: Path, monkeypatch) -> None:
@@ -334,21 +339,16 @@ def test_the_age_key_points_say_they_cover_only_groups_shown(tmp_path, monkeypat
     assert "Of the age groups shown" not in text
 
 
-def _state_visits(folder: Path) -> None:
-    """A statewide visits table with round totals: 700 published and two hidden cells a group."""
-    rows = [
-        {report.CAUSE: cause, report.AGE: age, "Count": count}
-        for age in GROUPS
-        for cause, count in zip(CAUSES, (40, 30, None, None))
-    ]
-    name = "ed_state_bike_cause_age_groups"
-    _save(folder, name, pd.DataFrame(rows), None, epicenter.STATEWIDE_YEARS)
+def _state_visits(folder: Path, counts: list[int | None]) -> None:
+    """A statewide table of unique visits by age group."""
+    unique = pd.DataFrame({report.AGE: GROUPS, "Count": counts})
+    _save(folder, "ed_state_total_age_groups", unique, None, epicenter.STATEWIDE_YEARS)
 
 
 def test_the_figures_match_ones_worked_out_by_hand(tmp_path, monkeypatch):
     """Alder has 3,000 residents in each of the 18 five-year age bands, Birch 9,000, every year."""
     _county_tables(tmp_path / "alder")
-    _state_visits(tmp_path / "alder")
+    _state_visits(tmp_path / "alder", [72] * 10)
     _residents(tmp_path / "pep", monkeypatch)
     text, _ = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
     # By year: 100 visits among 18 x 3,000 residents is 185 per 100,000.  The 90% range is the
@@ -363,25 +363,53 @@ def test_the_figures_match_ones_worked_out_by_hand(tmp_path, monkeypatch):
     assert "| 10–14 | 80 | 296 | 15 | 55.6 |" in text
     # 25-44 is four bands: 90 / 108,000 = 83; 30 / 108,000 = 27.8.
     assert "| 25–44 | 90 | 83 | 30 | 27.8 |" in text
-    # Against the state, 2023-2024.  Each of the ten source age groups has 70 published visits
-    # statewide and two hidden cells: 72 to 90, so 720 to 900 in all.  Alder holds 3,000 of
-    # every 12,000 residents at every age, so a quarter is expected there: 180 to 225.
-    assert "statewide rate | **180 to 225** |" in text
+    # Against the state, 2023-2024.  Each of the ten source age groups has 72 unique visits
+    # statewide, 720 in all.  Alder holds 3,000 of every 12,000 residents at every age, so a
+    # quarter is expected there: 180, one figure because nothing is hidden.
+    assert "statewide rate | **180** |" in text
     # Alder's visits: 40 + 95 in 2023 and 40 + 100 in 2024.
     assert "Emergency department visits by Alder County residents | **275** |" in text
-    # The ratio's range: the 5% point against the most expected, the 95% against the least.
-    low = stats.gamma.ppf(0.05, 275 + 0.5, scale=1 / 225)
-    high = stats.gamma.ppf(0.95, 275 + 0.5, scale=1 / 180)
-    assert (round(low, 2), round(high, 2)) == (1.11, 1.69)
-    assert "| 90% range for the ratio, allowing for chance | **1.11 to 1.69** |" in text
-    # The ratio itself is plain division: 275 / 225 = 1.22 and 275 / 180 = 1.53.
-    assert "| Ratio of the two (1.00 is the state average) | **1.22 to 1.53** |" in text
-    assert (
-        "statewide rates: 1.22 to 1.53 times as many (90% range allowing for chance: 1.11 to"
-        in text
-    )
+    # The ratio's range: the 5% and 95% points of a gamma with shape 275.5 and rate 180.
+    low, high = stats.gamma.ppf([0.05, 0.95], 275 + 0.5, scale=1 / 180)
+    assert (round(low, 2), round(high, 2)) == (1.38, 1.69)
+    assert "| 90% range for the ratio, allowing for chance | **1.38 to 1.69** |" in text
+    # The ratio itself is plain division: 275 / 180 = 1.53.
+    assert "| Ratio of the two (1.00 is the state average) | **1.53** |" in text
+    assert "statewide rates: 1.53 times as many (90% range allowing for chance: 1.38 to" in text
     assert "- **Alder County has more visits than its ages predict.** In 2023–2024" in text
-    assert "against 180 to 225 expected" in text
+    assert "against 180 expected" in text
+
+
+def test_a_hidden_statewide_count_makes_the_expected_count_a_range(tmp_path, monkeypatch):
+    _county_tables(tmp_path / "alder")
+    # Nine groups of 74 and one hidden: 667 to 676 statewide, a quarter of it in Alder.
+    _state_visits(tmp_path / "alder", [None] + [74] * 9)
+    _residents(tmp_path / "pep", monkeypatch)
+    text, _ = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
+    assert "statewide rate | **167 to 169** |" in text
+    # 275 / 169 = 1.63 and 275 / 166.75 = 1.65.
+    assert "| Ratio of the two (1.00 is the state average) | **1.63 to 1.65** |" in text
+    # The 5% point against the most expected, the 95% against the least.
+    low = stats.gamma.ppf(0.05, 275 + 0.5, scale=1 / 169)
+    high = stats.gamma.ppf(0.95, 275 + 0.5, scale=1 / 166.75)
+    assert f"**{low:.2f} to {high:.2f}** |" in text and (round(low, 2), round(high, 2)) == (
+        1.47,
+        1.82,
+    )
+
+
+def test_the_statewide_rates_ignore_the_cause_rows(tmp_path, monkeypatch):
+    """The cause rows count a visit under each cause it is coded with: doubling them changes nothing."""
+    _county_tables(tmp_path / "alder")
+    _state_visits(tmp_path / "alder", [72] * 10)
+    _residents(tmp_path / "pep", monkeypatch)
+    before, _ = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
+    name = "ed_state_bike_cause_age_groups"
+    saved = tables.table(tmp_path / "alder", name).drop(columns="kind", errors="ignore")
+    saved["Count"] = saved.Count * 2
+    _save(tmp_path / "alder", name, saved, None, epicenter.STATEWIDE_YEARS)
+    after, _ = report.markdown(tmp_path / "alder", tmp_path / "pep", "Alder")
+    assert after == before
 
 
 def _uncredited(text: str) -> list[str]:
@@ -449,8 +477,16 @@ def test_the_ebike_ranges_say_they_leave_chance_out(tmp_path, monkeypatch):
         ]
         name = f"{outcome}_state_bike_cause_age_groups"
         _save(tmp_path / "state", name, pd.DataFrame(rows), None, epicenter.STATEWIDE_YEARS)
+        # Ten visits a group were coded under both causes.
+        unique = pd.DataFrame({report.AGE: ebike.GROUPS, "Count": bike + electric - 10})
+        name = f"{outcome}_state_total_age_groups"
+        _save(tmp_path / "state", name, unique, None, epicenter.STATEWIDE_YEARS)
     _residents(tmp_path / "pep", monkeypatch)
     text, _ = ebike.markdown(tmp_path / "state", tmp_path / "pep")
+    assert (
+        "Over all ages, 3,600 emergency department visits in the cause rows against 3,540 "
+        "counted once each, and 1,020 admissions in the cause rows against 960 counted once each."
+    ) in " ".join(text.split())
     # 70 of 270 admitted against 100 of 500: 420 admissions against 6 x 270 x 0.2 = 324 expected.
     assert ebike.admission_ratio(tmp_path / "state") == (1.29, 1.30)
     assert "hidden counts only, not chance" in ebike.NOT_CHANCE

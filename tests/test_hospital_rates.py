@@ -509,9 +509,10 @@ def test_a_range_that_includes_1_is_not_called_in_line_with_the_state():
         )[0]
         assert first.startswith("- **Alder County cannot be told apart from the state.**")
         assert "in line with" not in first and " more " not in first and "fewer" not in first
-        # 26 / 20 is exactly 1.30; only the range that allows for chance reaches 1.
+        # 26 / 20 is exactly 1.30; only the range that allows for chance reaches 1.  An
+        # exact expected count prints as one figure.
         assert first.endswith(
-            "against 20 to 20 expected from their ages at statewide rates: 1.30 times as many "
+            "against 20 expected from their ages at statewide rates: 1.30 times as many "
             f"(90% range allowing for chance: {low:.2f} to {high:.2f}, which includes 1)."
         )
         assert "could be anywhere" not in first
