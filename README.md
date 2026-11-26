@@ -137,6 +137,13 @@ and cannot show here. [How the forecasting model
 works](docs/forecasting_model.md) gives its assumptions, the formula, the
 tests and the crash records behind it.
 
+The model has since been scored on cities it was not built on. On 37
+cities held back from its development, fitted through 2020 and scored on
+2021 to 2024, its list captured 29.3% of later bike crashes at the top
+against 21.3% for past bike crashes alone, and was ahead in every city. [The model write-up](docs/forecasting_model.md#1-how-well-it-performs)
+has the measure, the comparison with a standard model from the road-safety
+literature, and how the evaluation was set up.
+
 ## What it does not tell you
 
 What is ranked is expected police-recorded bike crashes, not risk per rider.

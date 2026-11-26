@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (final test set): West Sacramento alone, Census
+# place 84816.  Not for development: see config/held_back/README.md.
+city: West Sacramento
+county: Yolo
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 10N, metres.
+crs: EPSG:26910
+ccrs_county_code: 57
+ccrs_cities:
+  - West Sacramento
+latitude: [38.30, 38.80]
+longitude: [-121.79, -121.31]

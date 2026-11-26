@@ -24,7 +24,6 @@ import argparse
 import hashlib
 import json
 import logging
-import math
 import subprocess
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -43,6 +42,7 @@ from bike_safety_ca.model.crash_history import (
     rank_intersections,
     rank_score,
     street_blend_score,
+    top_capture,
     top_share,
 )
 from bike_safety_ca.model.standard_eb import rank_standard
@@ -78,18 +78,26 @@ REFERENCE = FITTED_POWER
 FITTED_METHODS = (cross.FITTED, standard_eb.FITTED, street_effects.FITTED)
 
 TOPS = (25, 50, 100)
-TOP_SHARE = 0.05  # of the area's intersections, rounded up
+TOP_PERCENT = 5  # of the area's intersections, rounded up
+# The primary measure of the evaluation plan: ``top_capture`` up to that many places.
+CAPTURE = "capture at the top"
 MEASURES = (
     "rank score",
     "rank score, no past bike crash",
     *(f"top {k} share" for k in TOPS),
     "top 5% share",
+    CAPTURE,
 )
 # Summarised as well when the table has it; lower is better.
 COUNT_MEASURE = "deviance per intersection"
 # Intersections by forecast, highest first: the first 25, the next 75, the rest.
 BANDS = {"top 25": (0, 25), "26 to 100": (25, 100), "the rest": (100, None)}
 DRAWS, SEED = 10_000, 20261123
+
+
+def top_places(sites: int) -> int:
+    """``TOP_PERCENT`` of ``sites``, rounded up, in whole numbers: 7 of 140, not 8."""
+    return -(-sites * TOP_PERCENT // 100)
 
 
 def score_windows(
@@ -133,7 +141,7 @@ def score_windows(
         chosen = hits[hits.group.isin(groups) & years]
         return chosen.groupby("site").size().reindex(sites, fill_value=0)
 
-    cut = math.ceil(TOP_SHARE * len(sites))
+    cut = top_places(len(sites))
     rows = []
     for train_to, test_from, test_to in windows:
         car = count([CAR], 0, train_to)
@@ -227,6 +235,7 @@ def score_windows(
                                 for k in TOPS
                             },
                             "top 5% share": 100 * in_cut / total if total else float("nan"),
+                            CAPTURE: 100 * top_capture(score, later, cut),
                             "top 50 shared with reference": float("nan")
                             if shared is None
                             else int((top & shared).sum()),

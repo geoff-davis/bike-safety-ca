@@ -1,0 +1,19 @@
+# A held-back city of the evaluation (final test set): Santa Maria alone, Census
+# place 69196.  Not for development: see config/held_back/README.md.
+city: Santa Maria
+county: Santa Barbara
+crash_source: tims+ccrs
+# TIMS no longer offers 2014.
+first_year: 2015
+child_max_age: 18
+# The evaluation's one window: fitted through 2020, scored on 2021 to 2024.
+holdout_windows:
+  - [2020, 2021, 2024]
+
+# UTM zone 10N, metres.
+crs: EPSG:26910
+ccrs_county_code: 42
+ccrs_cities:
+  - Santa Maria
+latitude: [34.68, 35.19]
+longitude: [-120.71, -120.16]
