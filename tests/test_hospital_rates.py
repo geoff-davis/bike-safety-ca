@@ -465,6 +465,16 @@ def test_the_page_keeps_a_chart_with_its_heading_and_table():
     assert "First paragraph." not in "".join(kept) and "on its own" not in "".join(kept)
 
 
+def test_points_between_a_heading_and_its_chart_stay_with_both():
+    from bike_safety_ca.hospital import pdf
+
+    text = "## By age\n\n- **A point.**\n\n<!-- chart: one -->\n\n*A note.*\n\nAfter."
+    page = pdf.page(text, {"one": "<svg></svg>"})
+    kept = re.findall(r'<div class="keep">(.*?)</div>', page, flags=re.S)
+    assert len(kept) == 1 and kept[0].startswith("<h2>By age</h2>")
+    assert "<ul>" in kept[0] and kept[0].endswith("</figure>") and "After." not in kept[0]
+
+
 def test_key_points_follow_the_figures():
     yearly = pd.DataFrame({"rate": [80.0, 110.0, 90.0]}, index=[2016, 2020, 2024])
     ages = pd.DataFrame(
