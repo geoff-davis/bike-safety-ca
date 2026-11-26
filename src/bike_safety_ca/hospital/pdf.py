@@ -62,9 +62,10 @@ code { font-size: 9pt; }
     % CREDIT
 )
 
-# What stays on one page where it fits: a chart or table with the headings over it, a table
-# with its chart above and its note below, and any heading with the paragraph or list under
-# it.  So a table is not carried over leaving its chart behind, and no heading ends a page.
+# What stays on one page where it fits: a chart or table with the headings over it, a chart
+# with the headings and the one paragraph or list between them, a table with its chart above
+# and its note below, and any heading with the paragraph or list under it.  So a table is not
+# carried over leaving its chart behind, and no heading ends a page.
 
 
 def _block(tag: str) -> str:
@@ -75,8 +76,10 @@ def _block(tag: str) -> str:
 _HEADS = rf"(?:{_block('h2')}\s*|{_block('h3')}\s*)"
 _TABLE = rf"{_block('table')}(?:\s*{_block('p')})?"
 _LIST = rf"(?:{_block('ul')}|{_block('blockquote')})"
+_FIGURE = rf"{_block('figure')}(?:\s*{_TABLE})?"
 KEPT = re.compile(
-    rf"{_HEADS}*(?:{_block('figure')}(?:\s*{_TABLE})?|{_TABLE}|{_block('p')}\s*{_LIST})"
+    rf"{_HEADS}+(?:{_block('p')}|{_block('ul')})\s*{_FIGURE}"
+    rf"|{_HEADS}*(?:{_block('figure')}(?:\s*{_TABLE})?|{_TABLE}|{_block('p')}\s*{_LIST})"
     rf"|{_HEADS}+(?:{_block('p')}|{_block('ul')})",
     re.S,
 )

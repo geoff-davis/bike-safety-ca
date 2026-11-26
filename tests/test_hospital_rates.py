@@ -465,6 +465,16 @@ def test_the_page_keeps_a_chart_with_its_heading_and_table():
     assert "First paragraph." not in "".join(kept) and "on its own" not in "".join(kept)
 
 
+def test_points_between_a_heading_and_its_chart_stay_with_both():
+    from bike_safety_ca.hospital import pdf
+
+    text = "## By age\n\n- **A point.**\n\n<!-- chart: one -->\n\n*A note.*\n\nAfter."
+    page = pdf.page(text, {"one": "<svg></svg>"})
+    kept = re.findall(r'<div class="keep">(.*?)</div>', page, flags=re.S)
+    assert len(kept) == 1 and kept[0].startswith("<h2>By age</h2>")
+    assert "<ul>" in kept[0] and kept[0].endswith("</figure>") and "After." not in kept[0]
+
+
 def test_key_points_follow_the_figures():
     yearly = pd.DataFrame({"rate": [80.0, 110.0, 90.0]}, index=[2016, 2020, 2024])
     ages = pd.DataFrame(
@@ -509,9 +519,10 @@ def test_a_range_that_includes_1_is_not_called_in_line_with_the_state():
         )[0]
         assert first.startswith("- **Alder County cannot be told apart from the state.**")
         assert "in line with" not in first and " more " not in first and "fewer" not in first
-        # 26 / 20 is exactly 1.30; only the range that allows for chance reaches 1.
+        # 26 / 20 is exactly 1.30; only the range that allows for chance reaches 1.  An
+        # exact expected count prints as one figure.
         assert first.endswith(
-            "against 20 to 20 expected from their ages at statewide rates: 1.30 times as many "
+            "against 20 expected from their ages at statewide rates: 1.30 times as many "
             f"(90% range allowing for chance: {low:.2f} to {high:.2f}, which includes 1)."
         )
         assert "could be anywhere" not in first

@@ -27,7 +27,9 @@ def _ages() -> dict[str, tuple[int, int]]:
     """The age range each saved table was pulled for, by file name."""
     found = {}
     for outcome in epicenter.OUTCOMES:
-        for name, ages, _groups, outcomes in epicenter.QUERIES + epicenter.STATEWIDE_QUERIES:
+        for name, ages, _groups, outcomes in (
+            epicenter.QUERIES + epicenter.STATEWIDE_QUERIES + epicenter.TREND_QUERIES
+        ):
             if outcome in (outcomes or ("ed", "hosp")):
                 found[f"{outcome}_{name}.csv"] = ages
     return found
@@ -78,7 +80,9 @@ def check_source(
         if name.startswith("hosp") and f"{definition} case definition" not in text:
             raise ValueError(f"{name} does not use the {definition} case definition")
         found = epicenter.filters(text)
-        first, last = state_years if state else years
+        first, last = (
+            epicenter.YEARS if "_state_trend_" in name else state_years if state else years
+        )
         if found.get("County of Residence") != (None if state else county) or (
             f"from {first} to {last} " not in text
         ):

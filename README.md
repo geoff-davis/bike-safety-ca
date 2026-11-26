@@ -37,7 +37,9 @@ visits for bicycle injuries by year, and visits and admissions by age group
 over the same years, with rates per resident. The county's visits are set
 against what California's rates would give once its residents' ages are
 allowed for. Counts under 11 stay hidden, as the state requires. A separate
-statewide report compares injuries on electric bicycles with other bicycles.
+statewide report compares injuries on electric bicycles with other bicycles, and a
+statewide profile splits them by age, sex, e-bike or not, and whether a motor
+vehicle was involved.
 
 [![First page of a county hospital report on made-up counts: key points and emergency department visits by year](docs/images/sample_hospital_report.png)](docs/demo/hospital_sample.pdf)
 
@@ -196,7 +198,7 @@ its PDFs can be published with the TIMS and CCRS credits.
 
 The hospital downloader opens the state's EpiCenter site in a browser window
 and waits for you to read its user agreement and click "I Agree" yourself; it
-never accepts the agreement for you. By default it pulls only the six tables
+never accepts the agreement for you. By default it pulls only the twenty tables
 the reports need. Hidden counts (under 11) are never worked out from
 other figures, and every chart credits the California Department of Public
 Health.

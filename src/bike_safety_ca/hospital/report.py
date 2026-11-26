@@ -39,7 +39,7 @@ TABLES = (
     "ed_total_year_adult",
     "ed_total_age_groups",
     "hosp_total_age_groups",
-    "ed_state_bike_cause_age_groups",
+    "ed_state_total_age_groups",
 )
 
 
@@ -82,12 +82,14 @@ def by_age(folder: Path, name: str, residents: pd.DataFrame) -> pd.DataFrame:
 def state_rates(folder: Path, outcome: str, residents: pd.DataFrame) -> pd.DataFrame:
     """Lowest and highest statewide cases per resident-year by age group.
 
-    The statewide table is split by cause, so each age group's total is the
-    sum of many cells, some hidden: the total is known only as a range.
+    The counts are unique visits by age group.  The table split by cause is
+    not used: EpiCenter counts a visit under each cause it is coded with, so
+    its rows add up to more than the visits.  A hidden cell makes its group's
+    total a range.
     """
-    saved = er.table(folder, f"{outcome}_state_bike_cause_age_groups")
-    known = rates.cells(saved, [CAUSE, AGE], pd.MultiIndex.from_frame(saved[[CAUSE, AGE]]))
-    groups = [population.age_group(label) for label in known.index.get_level_values(AGE)]
+    saved = er.table(folder, f"{outcome}_state_total_age_groups")
+    known = rates.cells(saved, [AGE], pd.Index(saved[AGE], name=AGE))
+    groups = [population.age_group(label) for label in known.index]
     total = known.groupby(groups)[["low", "high"]].sum()
     people = residents.groupby("age_group").residents.sum()
     return total.div(people, axis=0).reindex(ORDER)
@@ -252,7 +254,7 @@ def key_points(
     first_point = (
         f"- **{county} County {standing}.** In {STATE_YEARS[0]}–{STATE_YEARS[1]} its residents "
         f"made {state['observed']:,} emergency department visits for bicycle injuries, against "
-        f"{state['expected_low']:,.0f} to {state['expected_high']:,.0f} expected from their "
+        f"{_expected(state)} expected from their "
         f"ages at statewide rates: {_ratio(state)} times as many (90% range allowing for "
         f"chance: {state['ratio_low']:.2f} to {state['ratio_high']:.2f}, {where})."
     )
@@ -281,6 +283,12 @@ def key_points(
         f"- **Visits peaked in {peak}** at {yearly.rate.loc[peak]:.0f} per 100,000 residents and "
         f"were {yearly.rate.loc[last]:.0f} in {last}, against {yearly.rate.loc[first]:.0f} in {first}.",
     ]
+
+
+def _expected(state: dict[str, float]) -> str:
+    """The visits expected at statewide rates: one figure, or a range when a statewide count is hidden."""
+    low, high = f"{state['expected_low']:,.0f}", f"{state['expected_high']:,.0f}"
+    return low if low == high else f"{low} to {high}"
 
 
 def _ratio(state: dict[str, float]) -> str:
@@ -435,8 +443,7 @@ def markdown(
         "| | |",
         "|---|---:|",
         f"| Emergency department visits by {county} County residents | **{state['observed']:,}** |",
-        "| Visits expected if each age group had the statewide rate | "
-        f"**{state['expected_low']:,.0f} to {state['expected_high']:,.0f}** |",
+        f"| Visits expected if each age group had the statewide rate | **{_expected(state)}** |",
         f"| Ratio of the two (1.00 is the state average) | **{_ratio(state)}** |",
         "| 90% range for the ratio, allowing for chance | "
         f"**{state['ratio_low']:.2f} to {state['ratio_high']:.2f}** |",
@@ -477,11 +484,11 @@ def markdown(
         ">",
         "> **Ratio** = the county's visits ÷ its expected visits",
         "",
-        "A ratio of 1.30 means 30% more visits than the county's ages predict. The expected "
-        "count is a range here because the statewide table on hand is split by cause and many "
-        "of its cells are hidden; it also assumes no visit appears under two causes. The "
-        "ratio is the plain division. Its 90% range allows for chance in the county's own "
-        "count: it is where the underlying ratio could plausibly lie.",
+        "A ratio of 1.30 means 30% more visits than the county's ages predict. The statewide "
+        "visits are counted once each, by age group; were a statewide count hidden, the "
+        "expected count would be a range. The ratio is the plain division. Its 90% range "
+        "allows for chance in the county's own count: it is where the underlying ratio could "
+        "plausibly lie.",
         "",
         "**Small counties.** With all 58 counties, each ratio would be a blend:",
         "",
