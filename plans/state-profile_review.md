@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: complete (loop 2, round 1 accepted)
+- Status: complete (loop 3, round 3 accepted)
 - Next action: commit when the user approves
-- Base commit: `6bb1805` (branch state-totals, PR #30, not yet merged); snapshot: `/tmp/bsc-review/state-profile-2-r1/`
+- Base commit: `ef1d782` (branch state-profile, PR #33, stacked on PR #30); snapshot: `/tmp/bsc-review/state-profile-3-r3/`
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -176,3 +176,137 @@ Focused verification (no real records):
 Full pytest/`make check`, real SciPy/statsmodels integration, pandas aggregation and a rendered PDF were not independently exercised because this review environment lacks NumPy, pandas, SciPy, pytest and Markdown. The handoff reports lint/types and 658 passing tests plus a real-report check by the implementer. No protected paths or real records were opened and no download, report publication or browser agreement action was performed. The implementer's real-table coding checks and report values were supplied context, not independently reproduced. The user's revised suppression rule, coded-injury estimand, e-bike floor and midpoint-based group selection were treated as settled.
 
 Ledger: no new findings; state-profile-2 ends accepted at round 1. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or publication.
+
+## Loop 3
+
+- Loop ID and round: `state-profile-3`, round 1 of at most 3
+- Implementer (the reviewer replies to this name): `bsc-implementer-2` (Claude), pane `wF:p4`, worktree `/home/geoff/Projects/personal/bike-safety-ca-state-profile`
+- Reviewer: `bsc-reviewer` (Codex), pane `wF:p2`
+- Authorized scope: review requests and replies only
+- Expires (UTC): `2026-11-26T02:26Z`
+
+## Handoff — state-profile-3, round 1
+
+- Tier: Standard. Scope: the staged diff against `ef1d782` (loops 1 and 2
+  are committed there and accepted).
+- Intended behavior: key points for the two trend charts, asked for by the
+  user once the trend tables were pulled. Each chart gets an `###` heading
+  with its points between it and the chart (so `pdf.KEPT` holds them together).
+  - `_change(before, after)`: a signed percentage change, rounded outwards
+    (floor of the lowest, ceiling of the highest, after rounding to nine
+    places), "from none" when the earlier figure can be zero.
+  - `ebike_counts`: coded injuries treated by year from `EBIKE_CODES`, for
+    e-bikes and others, from `state_trend_bike_cause_mech_year`.
+  - `trend_points`: the broad age group whose ED rate grew most over the whole
+    span (with its admissions); the two that grew most from the year before
+    `EBIKE_CODES` to the last; the year the motor-vehicle share was lowest,
+    against the first and last; and the change in e-bike and other-bike
+    injuries treated from `EBIKE_CODES` to the last year, with the caveat that
+    coders taking up the new code is part of any rise. Groups are chosen by
+    the middle of each range, as in loop 2.
+- Verification: `make format`, `make check` | staged tree | lint, mypy, 659 passed | slow deselected | bsc-implementer-2.
+  The real report was regenerated with the pulled trend tables (not shared).
+- Condition inventory:
+
+  | Condition | Test or probe | Caught / survived / not exercised | Note |
+  | --- | --- | --- | --- |
+  | growth over the span, by hand (+20 to +32%) | test_the_profile_figures_match_ones_worked_out_by_hand | caught | |
+  | ties since 2022 keep age order | same test | caught | |
+  | e-bike and other counts and changes | same test | caught | |
+  | negative, ranged and from-zero changes | test_a_change_is_signed_and_rounded_outwards | caught | |
+
+- Settled decisions (do not re-report): those of loops 1 and 2; points are
+  descriptive and claim no cause (the user's guesses about the pandemic and
+  e-bikes are not written into the report).
+- Known limitations: none known. Every year in the span has a row in each
+  trend frame (`_row` reads an absent group as zero).
+
+## Review — state-profile-3, round 1
+
+Verdict: **changes required, round 1**. One confirmed correctness finding in the new trend headlines. The accepted group-selection method and descriptive scope are not reopened.
+
+### SP-001 — growth headlines are unconditional when the selected rates decline or stay flat (confirmed, blocking, medium)
+
+Location: `src/bike_safety_ca/hospital/profile.py:702–708`; the recent-period expectation in `tests/test_hospital_profile.py` also assumes this wording for unchanged rates.
+
+The maximum endpoint ratio is not necessarily an increase, but both new ED-rate headlines always say “grew most.” For synthetic rates of 100 in 2016, 95 in 2022 and 90 in 2024 for every group, the actual output says:
+
+- “Over 2016–2024, emergency visits grew most for ages under 15” followed by “100 in 2016, 90 in 2024 (-10%).”
+- “From 2022 to 2024, emergency visits grew most for ages under 15 and 15–24” followed by -5% changes for both groups.
+
+The same two-group sentence can say both groups grew when only the first increased and the second declined. The existing fixture already covers a flat recent period but asserts the unconditional “grew most” text rather than checking its direction. These headlines are the main new feature, so describing declines or no change as growth breaks the intended descriptive output even though the following numbers are correct.
+
+Keep the settled midpoint ranking and tie order. Make the lead neutral or choose wording that agrees with the selected changes: increases, unchanged figures, falls, or a mixed pair. Do not require changing which groups are selected. Add regression cases for all-flat, all-declining and mixed-direction groups, and correct the current flat-period text expectation.
+
+Verification: executed the actual AST-extracted `trend_points` with synthetic endpoint frames and scalar-access stand-ins. Both false-growth sentences above were produced directly. No real report or source records were used.
+
+### Other checks and scope
+
+The endpoint suppression arithmetic in `_change` matches the supplied -10%, +20 to +32% and from-zero examples in focused execution. Exact noninteger changes currently use nearest-percent rounding (the `low == high` branch), while uncertain ranges round outward; that is consistent with the existing report formatter's exact-versus-range convention, although the helper's docstring could state the distinction. The new count aggregation uses the same ED-plus-admission coded-injury table and starts at the first full e-bike-code year. The added heading/list/chart placement is consistent with the previously reviewed PDF keep rule.
+
+Full pytest/`make check` were not independently rerun because NumPy, pandas, SciPy, pytest and Markdown are unavailable here. The handoff reports 659 passing checks and a regenerated real report; those empirical results were not independently reproduced. The focused harness exercises the actual new text/control flow with synthetic frames, not pandas aggregation or rendered PDF layout. No protected paths or real records were opened and no report was generated from real data.
+
+Ledger: SP-001 open. Request round 2 with a fresh snapshot after confirming/fixing the finding. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or publication.
+
+## Handoff — state-profile-3, round 2
+
+- SP-001 (trend leads claim growth regardless of direction): fixed.
+  `_rose(before, after)` is True only when every figure the ranges allow rose,
+  False when every one fell, else None. Groups are still picked by the middle
+  of each range, ties in age order.
+  - Whole span: "grew most for ages X" only if X clearly rose; "fell in every
+    age group, least for ages X" only if every group clearly fell; otherwise
+    "no age group's emergency visits clearly grew; the highest change was for
+    ages X".
+  - Since the year before e-bike codes: "grew most for ages X and Y" only if
+    both clearly rose; otherwise "the highest changes in emergency visits were
+    for ages X and Y". The signed changes follow in the text either way.
+- Tests: `test_trend_leads_claim_growth_only_where_rates_clearly_rose` covers
+  rising, falling (100/95/90 and 100/95/80; no "grew" anywhere), mixed and
+  flat cases. The flat-period expectation in the by-hand test now asserts the
+  neutral lead.
+- Verification: `make format`, `make check` | staged tree | lint, mypy, 660 passed | slow deselected | bsc-implementer-2.
+
+## Review — state-profile-3, round 2
+
+Verdict: **changes required, round 2**. SP-001 remains open for one suppression-range case; the exact rising/falling/flat/mixed cases from round 1 are fixed.
+
+### SP-001 — the neutral branch makes an unsupported claim about all age groups (confirmed, blocking, medium)
+
+Location: `hospital/profile.py`, the `span_lead` branch containing “no age group's emergency visits clearly grew” in `trend_points`.
+
+`most` is selected by the ratio of range midpoints, not by certainty of an increase. Therefore, the selected group's uncertain direction does not imply that no other group clearly increased. Concrete synthetic example, with both groups at 100 in 2016:
+
+- A is 90–150 in 2024: midpoint growth ratio 1.20, but `_rose` is None.
+- B is exactly 110 in 2024: ratio 1.10, and `_rose` is True.
+
+A is correctly selected under the settled ranking, but the actual headline reads “no age group's emergency visits clearly grew; the highest change was for ages a,” although B clearly grew. The new exact-only regression cases do not exercise this distinction.
+
+Use neutral wording about the selected group alone, or verify every group's direction before making a universal statement. The midpoint choice and tie order can remain exactly as implemented. Add a regression with the ranged A and clearly increasing B above. This is the remaining instance of SP-001, not a new group-selection requirement.
+
+Verification: executed the actual AST-extracted `_rose`, `_change` and `trend_points` with synthetic endpoint/frame access stand-ins. Confirmed the corrected exact-case leads and reproduced the false universal statement above while `_rose(B)` returns True. Full pytest/`make check` were not independently rerun because the numerical/dataframe/test dependencies remain unavailable here; the handoff reports 660 passing checks. No real records or protected paths were opened and no real report was regenerated.
+
+Ledger: SP-001 open; other reviewed direction fixes retained. Request round 3 with a fresh snapshot after confirming/fixing this case; round 3 is the last round of state-profile-3. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or publication.
+
+## Handoff — state-profile-3, round 3
+
+- SP-001 (ranged case): fixed. The fallback lead no longer speaks of every
+  group: it reads "the highest change in emergency visits was for ages X",
+  about the chosen group alone. "Fell in every age group" is still checked
+  against every group; "grew most" still needs the chosen group (or both of
+  the pair) to have clearly risen. The pair's fallback ("the highest changes
+  in emergency visits were for ages X and Y") already made no universal claim.
+- Tests: the ranged regression from round 2 (A 100 to 90–150, B 100 to 110)
+  asserts the chosen-group lead and no "no age group" or "grew"; the test
+  helper now takes (low, high) ranges. The flat case asserts the same lead.
+- Verification: `make format`, `make check` | staged tree | lint, mypy, 660 passed | slow deselected | bsc-implementer-2.
+
+## Review — state-profile-3, round 3 (final)
+
+Verdict: **accepted, round 3**. SP-001 closed; no open correctness findings in this loop.
+
+The fallback lead now describes the selected group alone and no longer infers that every other group lacks a clear increase. The A 100→90–150 / B 100→110 counterexample retains A under the settled midpoint ranking, uses a neutral lead and makes no false universal claim. The explicit all-groups check remains for “fell in every age group,” while “grew” remains conditional on the selected group's (or both selected groups') clear increase. The regression helper and assertions now cover ranged inputs as well as the exact cases.
+
+Verification: executed the actual AST-extracted `_rose`, `_change` and `trend_points` with synthetic endpoint/frame access stand-ins for rising, falling, flat, mixed-direction and the ranged counterexample. All direction checks pass, group selection is preserved, and the worked +20 to +32% change remains unchanged. Read the final fix and regression assertions. Full pytest/`make check` and rendered-report checks were not independently run because this review environment lacks the numerical/dataframe/test dependencies; the handoff reports 660 passing checks. No protected paths or real records were opened and no real report was regenerated.
+
+Final ledger: SP-001 closed. State-profile-3 ends accepted at round 3 of 3; no further round requested. Implementer releases the reviewer lock. Review does not authorize a commit, push, merge or publication.

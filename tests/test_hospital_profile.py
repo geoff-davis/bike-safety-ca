@@ -196,6 +196,16 @@ def test_the_profile_figures_match_ones_worked_out_by_hand(tmp_path, monkeypatch
     assert "| 2016 | 1,516.6 to 1,666.7 |" in text and "| 2024 | 2,000.0 |" in text
     # Motor vehicle in (40 + 20) + (20 + 20) of 220; e-bikes 80 of 220, from 2023 only.
     assert "| 2016 | 45% | — |" in text and "| 2024 | 45% | 36% |" in text
+    # Trend key points.  Under 15: ED 91 to 100 in 2016, 120 in 2024: +20 to +32%.  Every
+    # group grows alike from 2022, so the first two in order; e-bikes 80 a year, others 140.
+    assert (
+        "**Over 2016–2024, emergency visits grew most for ages under 15:** 1,516.6 to 1,666.7 "
+        "in 2016, 2,000.0 in 2024 (+20 to +32%)"
+    ) in text
+    # Flat from 2022 in every group: no growth is claimed.
+    assert "the highest changes in emergency visits were for ages under 15 and 15–24:**" in text
+    assert "**E-bike injuries treated, 2023 to 2024: +0%; other bicycles: +0%.**" in text
+    assert "E-bikes: 80 in 2023, 80 in 2024." in text
 
 
 def test_the_chance_intervals_match_standard_ones():
@@ -254,3 +264,60 @@ def test_the_census_download_keeps_only_a_county_table(tmp_path):
     good.write_text("SUMLEV,STATE,COUNTY,STNAME,CTYNAME,YEAR,POPESTIMATE\n")
     bad.write_text("<html>not found</html>\n")
     assert population._holds_county_table(good) and not population._holds_county_table(bad)
+
+
+def test_a_change_is_signed_and_rounded_outwards():
+    def figure(low, high):
+        return pd.Series({"low": low, "high": high})
+
+    assert profile._change(figure(100, 100), figure(90, 90)) == "-10%"
+    assert profile._change(figure(91, 100), figure(120, 120)) == "+20 to +32%"
+    assert profile._change(figure(0, 5), figure(10, 10)) == "from none"
+
+
+def _trend(**groups):
+    """ED and admission rates per group: (2016, 2022, 2024) figures, each a number or a
+    (low, high) range."""
+    years = (2016, 2022, 2023, 2024)
+
+    def frame(values):
+        a, b, c = values
+        rows = dict(zip(years, (a, b, b, c), strict=True))
+        ends = {y: v if isinstance(v, tuple) else (v, v) for y, v in rows.items()}
+        return pd.DataFrame(
+            {y: {"low": lo, "high": hi, "suppressed": False} for y, (lo, hi) in ends.items()}
+        ).T.infer_objects()
+
+    frames = {g: frame(v) for g, v in groups.items()}
+    share = pd.DataFrame({y: {"low": 0.3, "high": 0.3} for y in years}).T
+    counts = pd.DataFrame({y: {"low": 10.0, "high": 10.0} for y in (2023, 2024)}).T
+    return profile.trend_points(
+        {"ed": frames, "hosp": frames}, share, {True: counts, False: counts}
+    )["trend_rates"]
+
+
+@pytest.fixture
+def trend_years(monkeypatch):
+    monkeypatch.setattr(profile, "TREND_YEARS", (2016, 2024))
+
+
+def test_trend_leads_claim_growth_only_where_rates_clearly_rose(trend_years):
+    rising = _trend(A=(100, 100, 150), B=(100, 100, 120))
+    assert "grew most for ages a:**" in rising[0]
+    assert "grew most for ages a and b:**" in rising[1]
+    falling = _trend(A=(100, 95, 90), B=(100, 95, 80))
+    assert "fell in every age group, least for ages a:**" in falling[0]
+    assert "highest changes in emergency visits were for ages a and b:**" in falling[1]
+    assert "grew" not in "".join(falling)
+    # One rising, one falling: the first lead may say so, the pair may not.
+    mixed = _trend(A=(100, 100, 130), B=(100, 100, 90))
+    assert "grew most for ages a:**" in mixed[0]
+    assert "highest changes in emergency visits were for ages a and b:**" in mixed[1]
+    flat = _trend(A=(100, 100, 100), B=(100, 100, 90))
+    assert "the highest change in emergency visits was for ages a:**" in flat[0]
+    assert "grew" not in flat[0]
+    # A ranged figure with the highest middle (1.20) but no clear direction, beside a group
+    # that clearly grew: the lead says nothing of every group.
+    ranged = _trend(A=(100, 100, (90, 150)), B=(100, 100, 110))
+    assert "the highest change in emergency visits was for ages a:**" in ranged[0]
+    assert "no age group" not in ranged[0] and "grew" not in ranged[0]

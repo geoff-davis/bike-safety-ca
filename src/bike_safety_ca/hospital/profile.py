@@ -650,12 +650,111 @@ def charts(
     }
 
 
+def _change(before: pd.Series, after: pd.Series) -> str:
+    """The change from one figure to another as a signed percentage, rounded outwards."""
+    if not before["low"] or not before["high"]:
+        return "from none"
+    low, high = after["low"] / before["high"] - 1, after["high"] / before["low"] - 1
+    # Rounded to nine places first, so float noise is not taken outwards.
+    one, two = math.floor(round(low * 100, 9)), math.ceil(round(high * 100, 9))
+    if low == high:
+        one = two = round(low * 100)
+    return f"{one:+d}%" if one == two else f"{one:+d} to {two:+d}%"
+
+
+def _rose(before: pd.Series, after: pd.Series) -> bool | None:
+    """True if every figure the ranges allow rose, False if every one fell, else None."""
+    if after["low"] > before["high"]:
+        return True
+    if after["high"] < before["low"]:
+        return False
+    return None
+
+
+def ebike_counts(folder: Path) -> dict[bool, pd.DataFrame]:
+    """Coded injuries treated by year, for e-bikes (True, from ``EBIKE_CODES``) and others."""
+    kinds = _treated(folder, "state_trend_bike_cause_mech_year", ["year", "ebike"])
+    years = range(EBIKE_CODES, TREND_YEARS[1] + 1)
+    return {e: _frame({y: _row(kinds, (y, e)) for y in years}) for e in (True, False)}
+
+
+def trend_points(
+    trends: dict[str, dict[str, pd.DataFrame]],
+    vehicle: pd.DataFrame,
+    counts: dict[bool, pd.DataFrame],
+) -> dict[str, list[str]]:
+    """Key points for the trend charts, worked out from their figures."""
+    first, last = TREND_YEARS
+    before = EBIKE_CODES - 1  # the last year before e-bike codes were in full use
+    ed, hosp = trends["ed"], trends["hosp"]
+
+    def growth(frame: pd.DataFrame, start: int) -> float:
+        return float(_middle(frame).loc[last] / _middle(frame).loc[start])
+
+    most = max(ed, key=lambda g: growth(ed[g], first))
+    since = sorted(ed, key=lambda g: growth(ed[g], before), reverse=True)
+
+    def rose(group: str, start: int) -> bool | None:
+        return _rose(_at(ed[group], start), _at(ed[group], last))
+
+    # The leads say "grew" only of rates that clearly rose; groups are still picked by the
+    # middle of each range.
+    whole = rose(most, first)
+    if whole:
+        span_lead = f"emergency visits grew most for ages {most.lower()}"
+    elif all(rose(g, first) is False for g in ed):
+        span_lead = f"emergency visits fell in every age group, least for ages {most.lower()}"
+    else:
+        # Said of the chosen group alone: another may have clearly grown by less.
+        span_lead = f"the highest change in emergency visits was for ages {most.lower()}"
+    pair = f"ages {since[0].lower()} and {since[1].lower()}"
+    if rose(since[0], before) and rose(since[1], before):
+        recent_lead = f"emergency visits grew most for {pair}"
+    else:
+        recent_lead = f"the highest changes in emergency visits were for {pair}"
+
+    def ed_text(group: str, start: int) -> str:
+        a, b = _at(ed[group], start), _at(ed[group], last)
+        return f"{_rate_text(a)} in {start}, {_rate_text(b)} in {last} ({_change(a, b)})"
+
+    low_year = int(str(_middle(vehicle).idxmin()))  # a year
+
+    def count_text(ebike: bool) -> str:
+        a, b = _at(counts[ebike], EBIKE_CODES), _at(counts[ebike], last)
+        return (
+            f"{_span(a['low'], a['high'])} in {EBIKE_CODES}, {_span(b['low'], b['high'])} in {last}"
+        )
+
+    return {
+        "trend_rates": [
+            f"- **Over {first}–{last}, {span_lead}:** "
+            f"{ed_text(most, first)} per 100,000. Their admissions: "
+            f"{_rate_text(_at(hosp[most], first))} in {first}, "
+            f"{_rate_text(_at(hosp[most], last))} in {last}.",
+            f"- **From {before} to {last}, {recent_lead}:** {ed_text(since[0], before)} for "
+            f"{since[0].lower()}; {ed_text(since[1], before)} for {since[1].lower()}.",
+        ],
+        "trend_vehicle": [
+            f"- **The share with a motor vehicle involved was lowest in {low_year}** "
+            f"({_share_text(_at(vehicle, low_year))}), against {_share_text(_at(vehicle, first))} "
+            f"in {first} and {_share_text(_at(vehicle, last))} in {last}.",
+            f"- **E-bike injuries treated, {EBIKE_CODES} to {last}: "
+            f"{_change(*(_at(counts[True], y) for y in (EBIKE_CODES, last)))}; other bicycles: "
+            f"{_change(*(_at(counts[False], y) for y in (EBIKE_CODES, last)))}.** E-bikes: "
+            f"{count_text(True)}. Other bicycles: "
+            f"{count_text(False)}. Part of a "
+            "rise in e-bike injuries may be coders taking up the new code.",
+        ],
+    }
+
+
 def trend_section(folder: Path, residents: Path) -> tuple[list[str], list[str], dict[str, str]]:
     """The trends' Markdown (body and appendix tables) and charts."""
     from bike_safety_ca.hospital import charts as draw
 
     trends = trend_rates(folder, residents)
     vehicle_years, ebike_years = trend_kinds(folder)
+    points = trend_points(trends, vehicle_years, ebike_counts(folder))
     keys = list(dict.fromkeys(BROAD.values()))
     colours = dict(zip(keys, (draw.FIRST, draw.SECOND, draw.THIRD, draw.FOURTH), strict=True))
     drawn = {
@@ -672,10 +771,18 @@ def trend_section(folder: Path, residents: Path) -> tuple[list[str], list[str], 
     body = [
         f"## Trends, {TREND_YEARS[0]}–{TREND_YEARS[1]}",
         "",
+        "### Visits and admissions per resident",
+        "",
+        *points["trend_rates"],
+        "",
         "<!-- chart: trend_rates -->",
         "",
         "Visits and admissions per 100,000 residents in each year, each visit counted once. "
         f"Bands: a 95% interval for chance. {CREDIT}",
+        "",
+        "### Motor vehicles and e-bikes",
+        "",
+        *points["trend_vehicle"],
         "",
         "<!-- chart: trend_vehicle -->",
         "",
