@@ -382,7 +382,11 @@ at an intersection if it lies within 35 m of it, or if the report says it
 happened at the intersection of two streets that meet there, within 100 m.
 Nearness does not count when the report names two streets and neither meets
 at that intersection: that is a freeway crash above a surface street, or a
-wrong coordinate. Mapped corners within 25 m of each other are one
+wrong coordinate. A crash recorded just outside the area's outline, up to
+100 m, counts at an intersection inside it by the same rules, unless an
+intersection beyond the outline fits it better: a corner on a city limit
+has reports with points on both sides of the line. Mapped corners within
+25 m of each other are one
 intersection, as are the two halves of a divided road's crossing; a few
 chains of close corners therefore come out wide, and the intersection table's
 `span_m` column says how wide.

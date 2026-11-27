@@ -21,6 +21,7 @@ from bike_safety_ca import config as settings
 from bike_safety_ca.cli import chosen_steps
 from bike_safety_ca.io import read_shapes
 from bike_safety_ca.network import area as outlines
+from bike_safety_ca.network import junctions
 from bike_safety_ca.network import streets as street_table
 from bike_safety_ca.report import crashes as crash_table
 from bike_safety_ca.report import movement, ranking, summary
@@ -104,7 +105,10 @@ def main() -> None:
     chosen = outlines.chosen(config, args.processed / "boundaries", args.area)
     assert chosen["area"] is not None
     outline = read_shapes(chosen["area"]).to_crs(config.crs).union_all()
-    crashes = crash_table.load(args.crashes, config, outline)
+    # Read out to the edge reach: the map also shows a crash recorded just
+    # outside the outline when its intersection is inside (``shown`` below).
+    nearby = crash_table.load(args.crashes, config, outline.buffer(junctions.EDGE_REACH_M))
+    crashes = nearby[nearby.geometry.within(outline)]
     parties = pd.read_parquet(args.crashes / "parties_merged.parquet")
     if "summary" in steps:
         scopes = {"area": crashes, config.city.lower().replace(" ", "_"): crashes[crashes.in_city]}
@@ -132,8 +136,15 @@ def main() -> None:
         ways = gpd.read_parquet(street_table.path(args.processed / "network", config.crs))
         limit = chosen["city_limit"]
         centre = read_shapes(limit).geometry if limit is not None else None
+        # A cyclist crash recorded just outside the outline is drawn when the
+        # ranking counts it: at an intersection inside (``assign_in_area``).
+        sites, names = junctions.build_junctions(ways, outline)
+        at_edge = junctions.assign_in_area(
+            crash_table.cyclists(nearby), sites.geometry, names, ways, outline
+        ).index
+        shown = nearby[nearby.geometry.within(outline) | nearby.merged_id.isin(at_edge)]
         written = movement.build(
-            crashes,
+            shown,
             parties[movement.PARTY_COLUMNS],
             ways,
             config,

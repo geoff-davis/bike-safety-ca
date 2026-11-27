@@ -215,10 +215,12 @@ def test_a_small_town_is_ranked_as_worked_out_by_hand(tmp_path: Path) -> None:
         ("car-2", 2016, (300, 305), (), None),
         ("car-3", 2023, (297, 300), (), None),
         # Not counted: a second report of adult-2, a crash before the first year,
-        # and one 25 m from Ash and Second but outside the outline.
+        # and one on Ash 140 m beyond the outline.  (It used to sit 5 m beyond,
+        # 25 m from Ash and Second; a crash there now counts at that corner,
+        # which the next test covers.)
         ("duplicate", 2017, (303, 1), (30,), "adult-2"),
         ("too-early", 2015, (300, -4), (25,), None),
-        ("outside", 2020, (325, 0), (33,), None),
+        ("outside", 2020, (460, 0), (33,), None),
     ]
     crash_folder, ways, area = _town(tmp_path, crashes)
     table, summary = ranking.rank(TOWN, crash_folder, ways, area)
@@ -276,6 +278,22 @@ def test_a_small_town_is_ranked_as_worked_out_by_hand(tmp_path: Path) -> None:
         assert feature["geometry"]["coordinates"] == pytest.approx([longitude, latitude], abs=1e-6)
         assert feature["properties"]["longitude"] == pytest.approx(longitude, abs=1e-6)
         assert feature["properties"]["latitude"] == pytest.approx(latitude, abs=1e-6)
+
+
+def test_a_crash_recorded_just_outside_the_outline_counts_at_its_corner(tmp_path: Path) -> None:
+    # The outline ends 20 m east of Second Avenue.  A report at Ash and Second
+    # can carry a point on either side of that line.
+    crashes: list[Crash] = [
+        ("inside", 2019, (298, 0), (30,), None),
+        ("just-outside", 2020, (325, 0), (33,), None),  # 5 m beyond, 25 m from the corner
+        ("car-just-outside", 2021, (322, 3), (), None),
+        ("far-outside", 2020, (460, 0), (40,), None),  # 140 m beyond
+    ]
+    crash_folder, ways, area = _town(tmp_path, crashes)
+    table, summary = ranking.rank(TOWN, crash_folder, ways, area)
+    corner = table.set_index("streets").loc["Ash Street / Second Avenue"]
+    assert (corner.observed_bike_crashes, corner.car_crashes) == (2, 1)
+    assert summary["bike_crashes"] == 2 and summary["car_crashes"] == 1
 
 
 def test_a_child_ranking_is_refused_at_99_crashes_and_made_at_100(
