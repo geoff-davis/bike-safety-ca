@@ -213,18 +213,24 @@ def placed(
 ) -> tuple[gpd.GeoDataFrame, pd.Series, pd.DataFrame]:
     """Intersections inside ``outline``, their street names, and the crashes placed at them.
 
-    The two options are passed to ``assign_crashes`` and ``build_junctions``.
+    The two options are passed to ``assign_in_area`` and ``build_junctions``.
+    A crash recorded just outside the outline counts at an intersection
+    inside it.
     """
     from bike_safety_ca.crashes import groups
     from bike_safety_ca.network import junctions
     from bike_safety_ca.network import streets as street_table
 
-    sites, streets = junctions.build_junctions(
-        gpd.read_parquet(ways, columns=street_table.COLUMNS), outline, max_cluster_m
-    )
-    crashes = groups.load(crash_folder, config.crs, config.child_max_age, outline)
+    lines = gpd.read_parquet(ways, columns=street_table.COLUMNS)
+    sites, streets = junctions.build_junctions(lines, outline, max_cluster_m)
+    # Out to the edge reach: a crash at a corner on the outline can be
+    # recorded a few metres outside it (see ``assign_in_area``).
+    reach = outline.buffer(junctions.EDGE_REACH_M)
+    crashes = groups.load(crash_folder, config.crs, config.child_max_age, reach)
     crashes = crashes[crashes.group.isin([*CYCLISTS, CAR]) & crashes.year.ge(config.first_year)]
-    hits = junctions.assign_crashes(crashes, sites.geometry, streets, check_names)
+    hits = junctions.assign_in_area(
+        crashes, sites.geometry, streets, lines, outline, check_names, max_cluster_m
+    )
     return sites, streets, hits
 
 

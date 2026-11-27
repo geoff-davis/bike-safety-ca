@@ -16,6 +16,7 @@ from collections.abc import Iterable
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import shapely
 from scipy.spatial.distance import pdist
 from shapely.geometry.base import BaseGeometry
 
@@ -124,6 +125,10 @@ NO_CONTROL = "None mapped"
 
 PAIR_GAP_M = 40.0  # the two halves of a divided road are closer than this
 LANE_WINDOW_M = 150.0  # a road's lane count is taken over this distance from the intersection
+# The farthest a crash can lie from the intersection it is placed at (the
+# reach of the name match in ``assign_crashes``).  Crashes this far beyond an
+# area's outline can still belong to an intersection inside it.
+EDGE_REACH_M = 100.0
 WIDE = "4+"
 NOT_WIDE = "≤3 or untagged"
 
@@ -248,6 +253,14 @@ def _split_chains(pts: gpd.GeoDataFrame, limit: float) -> pd.Series:
 def build_junctions(
     ways: gpd.GeoDataFrame, area: BaseGeometry, max_cluster_m: float | None = None
 ) -> tuple[gpd.GeoDataFrame, pd.Series]:
+    """Find intersections on ``ways`` inside ``area``: see ``_build_junctions``."""
+    junctions, streets, _ = _build_junctions(ways, area, max_cluster_m)
+    return junctions, streets
+
+
+def _build_junctions(
+    ways: gpd.GeoDataFrame, area: BaseGeometry, max_cluster_m: float | None = None
+) -> tuple[gpd.GeoDataFrame, pd.Series, pd.DataFrame]:
     """Find intersections on ``ways`` inside ``area`` and describe their roads.
 
     ``ways`` needs ``osm_id``, ``highway``, ``name``, ``lanes``, ``node_ids``
@@ -274,6 +287,9 @@ def build_junctions(
     the widest road is typically four lanes or more near the intersection (see
     ``lanes_near``) and ``NOT_WIDE`` otherwise; OSM does not separate two lanes
     from two lanes plus a centre turn lane reliably enough for a third group.
+
+    Last, the nodes joined into each intersection: ``node``, ``iid`` (the
+    intersection) and the node's ``x`` and ``y``.
     """
     crs = ways.crs
     ways = ways[ways.highway.isin(HIGHWAY_RANK) & ways.intersects(area)]
@@ -370,7 +386,8 @@ def build_junctions(
     typical = lanes_near(ways, lanes, junctions.geometry, streets)
     widest = pd.concat([junctions.lanes.astype(float), typical], axis=1).max(axis=1)
     junctions["lanes"] = np.where(widest.ge(4), WIDE, NOT_WIDE)
-    return junctions, streets
+    made_of = joined.loc[joined.iid.isin(junctions.index), ["node", "iid", "x", "y"]]
+    return junctions, streets, made_of.reset_index(drop=True)
 
 
 def osm_control(points: gpd.GeoSeries, tags: gpd.GeoDataFrame) -> pd.Series:
@@ -508,6 +525,61 @@ def assign_crashes(
     named = cand.drop_duplicates("merged_id").set_index("merged_id").index_right
     site = named.combine_first(near.set_index("merged_id").index_right).astype(int)
     return crashes.set_index("merged_id").loc[site.index].assign(site=site)
+
+
+def assign_in_area(
+    crashes: gpd.GeoDataFrame,
+    points: gpd.GeoSeries,
+    streets: pd.Series,
+    ways: gpd.GeoDataFrame,
+    area: BaseGeometry,
+    check_names: bool = True,
+    max_cluster_m: float | None = None,
+) -> pd.DataFrame:
+    """``assign_crashes`` for an area's intersections, crashes just beyond its edge included.
+
+    ``points`` and ``streets`` are the intersections of ``area`` as
+    ``build_junctions`` gives them.  A crash inside the area is placed as
+    before.  A crash outside it, within ``EDGE_REACH_M``, used to be dropped
+    even when its intersection lies inside: police coordinates at a corner on
+    a city limit fall on either side of the line.  Such a crash is now placed
+    among the area's intersections and those beyond the edge together, and
+    counted only if the one it gets is in the area, so a crash that belongs
+    to a corner outside is not pulled to one inside.  Pass crashes loaded out
+    to ``area.buffer(EDGE_REACH_M)``; any farther out are ignored.
+
+    The intersections beyond the edge are built out to twice the reach: a
+    crash at the reach can be claimed by one as far again beyond it.  Built
+    on the wider area, a corner of ``area`` near the edge can come out as a
+    second, shifted intersection centred outside it, since nodes across the
+    line join it.  An intersection of the wider build that holds a node
+    inside ``area`` is that corner again, not a neighbour, and is left out,
+    so the area's own stands.
+    """
+    inside = crashes.geometry.within(area)
+    hits = assign_crashes(crashes[inside], points, streets, check_names)
+    beyond = crashes[~inside & crashes.geometry.within(area.buffer(EDGE_REACH_M))]
+    if beyond.empty or points.empty:
+        return hits
+    wider, wider_streets, members = _build_junctions(
+        ways, area.buffer(2 * EDGE_REACH_M), max_cluster_m
+    )
+    # The area's intersections are made of the nodes inside it (``pts.within``
+    # in ``_build_junctions``), so these are the wider ones that share a node.
+    node_inside = np.asarray(shapely.within(shapely.points(members.x, members.y), area))
+    shared = set(members.iid.to_numpy()[node_inside])
+    centred_outside = ~wider.geometry.within(area).to_numpy()
+    outer = wider.loc[centred_outside & ~wider.index.isin(shared), ["geometry"]]
+    # Numbered after the area's intersections; they are not counted.
+    start = int(max(points.index.max(), wider.index.max())) + 1
+    renumber = {old: start + i for i, old in enumerate(outer.index)}
+    every_point = pd.concat([points, outer.geometry.rename(index=renumber)])
+    every_street = pd.concat([streets, wider_streets.reindex(outer.index).rename(index=renumber)])
+    extra = assign_crashes(
+        beyond, gpd.GeoSeries(every_point, crs=points.crs), every_street, check_names
+    )
+    extra = extra[extra.site.isin(points.index)]
+    return pd.concat([hits, extra])
 
 
 def count_at(hits: pd.DataFrame, index: Iterable[object]) -> pd.Series:

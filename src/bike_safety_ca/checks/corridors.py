@@ -394,12 +394,16 @@ def load(
 
     lines = gpd.read_parquet(ways, columns=street_table.COLUMNS)
     sites, streets = junctions.build_junctions(lines, outline)
-    crashes = groups.load(crash_folder, config.crs, config.child_max_age, outline)
+    # Crashes just outside the outline are read too: those at an intersection
+    # inside it count there (``assign_in_area``); the rest are dropped below.
+    reach = outline.buffer(junctions.EDGE_REACH_M)
+    crashes = groups.load(crash_folder, config.crs, config.child_max_age, reach)
     crashes = crashes[crashes.group.isin([*CYCLISTS, CAR]) & crashes.year.ge(config.first_year)]
     if not crashes.merged_id.is_unique:
         raise ValueError("crash table has repeated merged_id values")
-    # assign_crashes returns only the crashes at an intersection, by merged_id.
-    site = junctions.assign_crashes(crashes, sites.geometry, streets).site
+    # Only the crashes at an intersection are returned, by merged_id.
+    site = junctions.assign_in_area(crashes, sites.geometry, streets, lines, outline).site
+    crashes = crashes[crashes.geometry.within(outline) | crashes.merged_id.isin(site.index)]
     at = crashes.merged_id.map(site).dropna()
     city = config.city if limit is not None else None
     key = piece(city)
