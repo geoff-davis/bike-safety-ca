@@ -74,12 +74,12 @@ Mean rank score over the three windows, street-length model
 
 | | All cyclists | Cyclists 18 or under |
 |---|---|---|
-| The six cities | 0.843 | 0.825 |
-| Los Altos | 0.847 (two windows) | too few to score |
+| The six cities | 0.844 | 0.825 |
+| Los Altos | 0.849 (two windows) | too few to score |
 
-The six-city test rests on 453, 187 and 337 later cyclist crashes at
-intersections in the three windows, 142, 56 and 106 of them children.
-Inside Los Altos, past bike crashes alone score 0.671 over the same two
+The six-city test rests on 458, 189 and 340 later cyclist crashes at
+intersections in the three windows, 144, 57 and 106 of them children.
+Inside Los Altos, past bike crashes alone score 0.680 over the same two
 windows.
 
 ### What the Los Altos row can and cannot show
@@ -88,8 +88,8 @@ The ranking is fitted on all six cities, 6,470 intersections of which 805
 are in Los Altos, and read inside the city limit. That is what makes a
 fitted ranking possible here at all: fitted alone
 (`config/los_altos_city.yaml`), Los Altos falls back to the hand-built
-blend and scores 0.822 where the six-city fit scores 0.847. The six cities
-have 225 to 367 child crashes at intersections in the training years.
+blend and scores 0.818 where the six-city fit scores 0.849. The six cities
+have 227 to 371 child crashes at intersections in the training years.
 
 The test is a separate matter. A window with fewer than 30 later crashes is
 left unscored, because a score on so few is close to those crashes' own ranks.
@@ -124,21 +124,21 @@ windows:
 
 | Variant | Intersections | Crashes placed (cyclist) | Six cities, all | Six cities, children | Los Altos, all (two windows) |
 |---|---|---|---|---|---|
-| As configured | 6,470 | 6,367 (1,479) | 0.843 | 0.825 | 0.847 |
-| Leaving out the 112 intersections wider than 40 m | 6,358 | 6,039 (1,427) | 0.842 | 0.825 | 0.851 |
-| Nearness counts whatever streets the report names | 6,470 | 6,576 (1,485) | 0.843 | 0.823 | 0.845 |
-| Chains of close corners split at 25 m | 6,559 | 6,382 (1,481) | 0.842 | 0.825 | 0.845 |
+| As configured | 6,470 | 6,427 (1,494) | 0.844 | 0.825 | 0.849 |
+| Leaving out the 112 intersections wider than 40 m | 6,358 | 6,099 (1,442) | 0.844 | 0.824 | 0.851 |
+| Nearness counts whatever streets the report names | 6,470 | 6,653 (1,501) | 0.843 | 0.823 | 0.847 |
+| Chains of close corners split at 25 m | 6,559 | 6,443 (1,496) | 0.843 | 0.824 | 0.847 |
 
-- **How crashes are placed and corners joined** moves no six-city score by
-  more than 0.002, and the Los Altos score by 0.004 at most.
+- **How crashes are placed and corners joined** moves no score by more
+  than 0.002.
 - **The area** matters more than any of these. On the former study area
   (two-mile circles around the schools, 4,208 intersections, from 2014) the
   same model scored 0.857 for all cyclists and 0.854 for children, and 0.850
   inside Los Altos. For all cyclists the whole difference is in the last
-  test window (0.844 on the six cities against 0.886; the first two windows
-  score 0.847 and 0.838 against 0.850 and 0.836). The six cities take in
+  test window (0.845 on the six cities against 0.886; the first two windows
+  score 0.848 and 0.838 against 0.850 and 0.836). The six cities take in
   all of Palo Alto, whose police reports nearly stop in 2022: see the next
-  section. The child score is lower in every window (0.839, 0.828 and 0.807
+  section. The child score is lower in every window (0.837, 0.830 and 0.807
   against 0.859, 0.858 and 0.844), which reporting does not explain.
 - **Not rerun here:** streets of another date, and the city's own city limit
   in place of the Census outline. On the former study area each moved scores
@@ -210,18 +210,18 @@ on the six cities:
 
 | Later cyclist crashes | Trained on all injury crashes | Trained on visible injury and worse |
 |---|---|---|
-| All injury crashes (977) | 0.843 | 0.836 |
-| Visible injury and worse (732) | 0.843 | 0.837 |
+| All injury crashes (987) | 0.844 | 0.837 |
+| Visible injury and worse (739) | 0.844 | 0.838 |
 
 What this does to the test of the ranking, for 2023 onwards (the city-by-city
 table the sensitivity command prints):
 
 | Rank score, street-length model | All cyclists | Children |
 |---|---|---|
-| The six cities, scored together | 0.844 | 0.807 |
+| The six cities, scored together | 0.845 | 0.807 |
 | Each city scored on its own, averaged | 0.858 | 0.814 |
 
-The window holds 337 later cyclist crashes at intersections, 106 of them
+The window holds 340 later cyclist crashes at intersections, 106 of them
 children. Scored together, a Palo Alto intersection with a high score and
 no reported crash after 2022 counts against the ranking every time it is
 compared with a corner in another city that has one.
