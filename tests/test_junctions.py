@@ -499,3 +499,116 @@ def test_an_untyped_name_with_two_typed_streets_stays_on_its_own() -> None:
         ]
     ).assign(oneway="yes")
     assert jn.road_lanes(opposing).tolist() == [2.0, 2.0]
+
+
+def test_a_crash_just_outside_the_area_counts_at_an_intersection_inside_it() -> None:
+    # Main Street crosses Oak 5 m inside the area's east edge and Elm 35 m beyond it.
+    ways = _ways(
+        [
+            ("secondary", "Main Street", None, [(-400, 0), (0, 0), (40, 0), (400, 0)]),
+            ("residential", "Oak Avenue", None, [(0, -200), (0, 0), (0, 200)]),
+            ("residential", "Elm Street", None, [(40, -200), (40, 0), (40, 200)]),
+        ]
+    )
+    area = box(-300, -300, 5, 300)
+    sites, streets = jn.build_junctions(ways, area)
+    assert len(sites) == 1  # Oak; Elm is outside
+    oak = sites.index[0]
+    crashes = _crashes(
+        [
+            ("inside", (-3, 0), "MAIN ST", "PINE ST", "N", 300),
+            ("just_outside", (12, 0), "MAIN ST", "PINE ST", "N", 300),  # 12 m from Oak
+            ("at_the_next_corner", (33, 0), "MAIN ST", "PINE ST", "N", 300),  # nearer Elm
+            ("named", (70, 0), "MAIN ST", "OAK AVE", "Y", 0),  # coded at Oak, 70 m off
+            ("too_far", (200, 0), "MAIN ST", "OAK AVE", "Y", 0),  # beyond the edge reach
+        ]
+    )
+    hits = jn.assign_in_area(crashes, sites.geometry, streets, ways, area)
+    assert hits.site.to_dict() == {"inside": oak, "just_outside": oak, "named": oak}
+    # Cut to the area first, as before, only the crash inside is counted.
+    inside = crashes[crashes.geometry.within(area)]
+    assert jn.assign_crashes(inside, sites.geometry, streets).site.to_dict() == {"inside": oak}
+    # With every crash inside the area the two agree.
+    assert jn.assign_in_area(inside, sites.geometry, streets, ways, area).equals(
+        jn.assign_crashes(inside, sites.geometry, streets)
+    )
+
+
+def test_a_crash_beyond_the_edge_goes_to_a_better_match_farther_out() -> None:
+    # Oak Avenue meets Main Street twice: 1 m inside the area and 110 m beyond
+    # its edge.  A report coded at Main and Oak, 90 m beyond the edge, is 91 m
+    # from the first and 20 m from the second, which lies past the edge reach.
+    ways = _ways(
+        [
+            ("secondary", "Main Street", None, [(-400, 0), (-1, 0), (110, 0), (400, 0)]),
+            ("residential", "Oak Avenue", None, [(-1, -200), (-1, 0), (-1, 200)]),
+            ("residential", "Oak Avenue", None, [(110, -200), (110, 0), (110, 200)]),
+        ]
+    )
+    area = box(-300, -300, 0, 300)
+    sites, streets = jn.build_junctions(ways, area)
+    assert len(sites) == 1
+    crashes = _crashes([("coded", (90, 0), "MAIN ST", "OAK AVE", "Y", 0)])
+    assert jn.assign_in_area(crashes, sites.geometry, streets, ways, area).empty
+
+
+def test_a_corner_joined_with_a_node_across_the_edge_keeps_its_crashes() -> None:
+    # Oak is 5 m inside the edge and Elm 15 m beyond it, 20 m apart: one
+    # intersection when both are in view, centred outside the area.  The area's
+    # own intersection is Oak alone, and a crash between the two counts there.
+    ways = _ways(
+        [
+            ("secondary", "Main Street", None, [(-400, 0), (0, 0), (20, 0), (400, 0)]),
+            ("residential", "Oak Avenue", None, [(0, -200), (0, 0), (0, 200)]),
+            ("residential", "Elm Street", None, [(20, -200), (20, 0), (20, 200)]),
+        ]
+    )
+    area = box(-300, -300, 5, 300)
+    sites, streets = jn.build_junctions(ways, area)
+    wider, _ = jn.build_junctions(ways, area.buffer(2 * jn.EDGE_REACH_M))
+    assert len(sites) == 1 and len(wider) == 1
+    assert not wider.geometry.iloc[0].within(area)  # the joined centre is outside
+    crashes = _crashes([("between", (12, 0), "MAIN ST", "PINE ST", "N", 300)])
+    hits = jn.assign_in_area(crashes, sites.geometry, streets, ways, area)
+    assert hits.site.to_dict() == {"between": sites.index[0]}
+
+
+def test_a_long_chain_across_the_edge_is_still_the_areas_own_corner() -> None:
+    # Cross streets every 20 m from Oak, 5 m inside the edge, to 160 m beyond:
+    # in the wider view they chain into one intersection centred 80 m out,
+    # farther from Oak than any fixed distance would allow for.
+    cross = [(0.0, "Oak Avenue")] + [(float(x), f"Lane {x} Street") for x in range(20, 180, 20)]
+    main: list[tuple[float, float]] = [(-400, 0), *[(x, 0.0) for x, _ in cross], (400, 0)]
+    rows: list[tuple[str, str | None, str | None, list[tuple[float, float]]]] = [
+        ("secondary", "Main Street", None, main)
+    ]
+    rows += [("residential", name, None, [(x, -200), (x, 0), (x, 200)]) for x, name in cross]
+    ways = _ways(rows)
+    area = box(-300, -300, 5, 300)
+    sites, streets = jn.build_junctions(ways, area)
+    wider, _ = jn.build_junctions(ways, area.buffer(2 * jn.EDGE_REACH_M))
+    assert len(sites) == 1 and len(wider) == 1
+    assert wider.geometry.iloc[0].distance(sites.geometry.iloc[0]) > 60
+    crashes = _crashes([("coded", (70, 0), "MAIN ST", "OAK AVE", "Y", 0)])
+    hits = jn.assign_in_area(crashes, sites.geometry, streets, ways, area)
+    assert hits.site.to_dict() == {"coded": sites.index[0]}
+
+
+def test_a_separate_corner_beyond_the_edge_with_the_same_streets_keeps_its_crash() -> None:
+    # Main and Oak meet 5 m inside the edge; 40 m on, outside, Main meets Elm
+    # where another piece of Oak ends.  The two are separate intersections
+    # (their street names differ), and a crash 10 m from the second is its own.
+    ways = _ways(
+        [
+            ("secondary", "Main Street", None, [(-400, 0), (0, 0), (40, 0), (400, 0)]),
+            ("residential", "Oak Avenue", None, [(0, -200), (0, 0), (0, 200)]),
+            ("residential", "Oak Avenue", None, [(40, 0), (40, 200)]),
+            ("residential", "Elm Street", None, [(40, -200), (40, 0)]),
+        ]
+    )
+    area = box(-300, -300, 5, 300)
+    sites, streets = jn.build_junctions(ways, area)
+    wider, _ = jn.build_junctions(ways, area.buffer(2 * jn.EDGE_REACH_M))
+    assert len(sites) == 1 and len(wider) == 2
+    crashes = _crashes([("at_elm", (30, 0), "MAIN ST", "ELM ST", "N", 300)])
+    assert jn.assign_in_area(crashes, sites.geometry, streets, ways, area).empty

@@ -1230,6 +1230,35 @@ freeway above a surface street or a wrong point, and the next nearest
 intersection within 35 m that it could describe is tried. Crashes at no
 intersection are not used by this model.
 
+**Crashes at the edge of the area (changed 26 November 2026).** Crashes
+used to be cut to the area's outline before being placed, so a corner a few
+metres inside a city limit lost every report whose point fell on the other
+side of the line. A crash recorded up to 100 m outside the outline now
+counts at an intersection inside it by the rules above, unless an
+intersection beyond the outline fits it better. This adds about 1% to the
+crashes placed across the held-back cities, next to nothing in some (11
+crashes in San Francisco) and more where busy corners lie on the limit (6%
+in Davis). Every figure in this write-up was computed before the
+change. The held-back evaluation of sections 1 and 2 was run again with it,
+with the same frozen choice and nothing re-chosen:
+
+| | Before | After |
+|---|---|---|
+| Final test, model against past bike crashes (37 cities) | +7.96 (+6.79 to +9.14) | +7.98 (+6.81 to +9.19) |
+| Final test, model against the fitted-power version | +0.01 (−0.18 to +0.24) | +0.01 (−0.18 to +0.24) |
+| Final test, model's capture at the top | 29.26 | 29.21 |
+| Final test, ahead of past bike crashes in | 37 of 37 | 37 of 37 |
+| Selection cities, model against past bike crashes (21 cities) | +7.43 (+6.00 to +8.89) | +7.15 (+5.80 to +8.54) |
+| Selection cities, model against the fitted-power version | +0.38 (+0.06 to +0.78) | +0.36 (+0.05 to +0.76) |
+
+Both claims stand unchanged. On the final-test cities the other
+all-injury comparisons of section 1 move by less than 0.1 point. The
+fatal-and-serious comparisons move more: from +8.00 to +8.13 against past
+bike crashes, from +2.62 to +2.87 against past car crashes, and from −0.39
+(−0.73 to −0.10) to −0.31 (−0.66 to 0.00) against the fitted-power
+version. No city changes between the larger and
+smaller groups, and none changes between a fitted model and the fallback.
+
 Share of located cyclist injury crashes counted at an intersection, from
 each city's first year to the latest record (rerun, one-off script calling
 `build_junctions` and `assign_crashes` on each city):
